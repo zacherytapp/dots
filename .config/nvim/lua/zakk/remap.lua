@@ -9,8 +9,8 @@ vim.keymap.set("v", "<S-Tab>", "<gv")
 vim.keymap.set("v", "<Tab>", ">gv")
 
 -- Saleforce remaps
-vim.keymap.set("n", "<C-s>", ":w <cr> | :AsyncRun -mode=term -pos=bottom -rows=10 sfdx force:source:deploy -p \"%\" -l NoTestRun -w 5<cr>")
-vim.keymap.set("i", "<C-s>", ":w <cr> | :AsyncRun -mode=term -pos=bottom -rows=10 sfdx force:source:deploy -p \"%\" -l NoTestRun -w 5<cr>")
+vim.keymap.set("n", "<C-s>", ":w <cr> :AsyncRun -mode=term -pos=bottom -rows=10 sfdx force:source:deploy -p \"%\" -l NoTestRun -w 5<cr>")
+vim.keymap.set("i", "<C-s>", ":w <cr> :AsyncRun -mode=term -pos=bottom -rows=10 sfdx force:source:deploy -p \"%\" -l NoTestRun -w 5<cr>")
 
 vim.keymap.set("n", "<C-e>", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 sfdx force:source:push<cr>")
 vim.keymap.set("i", "<C-e>", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 sfdx force:source:push<cr>")
