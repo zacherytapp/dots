@@ -15,7 +15,8 @@ vim.keymap.set("i", "<C-s>", ":w <cr> :AsyncRun -mode=term -pos=bottom -rows=10 
 vim.keymap.set("n", "<C-e>", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 sfdx force:source:push<cr>")
 vim.keymap.set("i", "<C-e>", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 sfdx force:source:push<cr>")
 
-vim.keymap.set("n", "<leader>cl", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 force:apex:class:create -d ../force-app/main/default/classes -n ")
+vim.keymap.set("n", "<leader>cc", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 force:apex:class:create -d force-app/main/default/classes -n ")
+vim.keymap.set("n", "<leader>ct", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 force:apex:trigger:create -d force-app/main/default/triggers -n ")
 
 vim.keymap.set("n", "<leader>al", ":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:term sfdx force:apex:log:tail --color <bar> tee /tmp/apexlogs.log<CR>")
 
