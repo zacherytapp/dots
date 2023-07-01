@@ -3,8 +3,6 @@ local lsp = require("lsp-zero")
 lsp.preset("recommended")
 
 lsp.ensure_installed({
-	'tsserver',
-	'eslint',
 	'apex_ls'
 })
 
@@ -13,10 +11,16 @@ local cmp_select = {behavior = cmp.SelectBehavior.Select}
 
 lsp.nvim_workspace()
 
+require'lspconfig'.apex_ls.setup {
+  apex_jar_path = '/home/zakk/.config/nvim/after/plugin/apex-jorje-lsp.jar',
+  apex_enable_semantic_errors = false, -- Whether to allow Apex Language Server to surface semantic errors
+  apex_enable_completion_statistics = false, -- Whether to allow Apex Language Server to collect telemetry on code completion usage
+}
+
 local cmp_mappings = lsp.defaults.cmp_mappings({
   ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
   ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
-  ['<C-y>'] = cmp.mapping.confirm({ select = true }),
+  ['<Return>'] = cmp.mapping.confirm({ select = true }),
   ["<C-Space>"] = cmp.mapping.complete(),
 })
 
