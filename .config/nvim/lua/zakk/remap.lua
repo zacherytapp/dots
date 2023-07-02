@@ -22,8 +22,8 @@ vim.keymap.set("n", "<leader>al", ":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:ter
 
 -- Test
 vim.keymap.set("n", "<leader>tt", "?@IsTest<CR>j0f(hyiw<C-w>s<C-w>j12<C-w>-:term sfdx apex:run:test -y -r human -w 5 -t \"%:t:r\".<C-r>\"<CR>")
-vim.keymap.set("n", "<leader>tc", ":AsyncRun -mode=term -pos=bottom -rows=10 -close=0 sfdx apex:run:test -c -r human -w 5 -n \"%:t:r\"<CR>")
-vim.keymap.set("n", "<leader>tl", "<C-w>s<C-w>j12<C-w>-:term sfdx force:apex:test:run -r human --testlevel RunLocalTests -w 15")
+vim.keymap.set("n", "<leader>tc", "<C-w>s<C-w>j12<C-w>-:term sfdx apex:run:test -c -r human -w 5 -n \"%:t:r\"<CR>")
+vim.keymap.set("n", "<leader>tl", "<C-w>s<C-w>j12<C-w>-:term sfdx force:apex:test:run -r human --testlevel RunLocalTests -w 15<CR>")
 
 -- Logs
 vim.keymap.set("n", "<leader>l", ":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:term sfdx force:apex:log:tail --color -u <bar> tee /tmp/apexlogs.log<C-left><C-left><C-left>")

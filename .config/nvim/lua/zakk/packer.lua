@@ -13,6 +13,7 @@ local ensure_packer = function()
 end
 
 local packer_bootstrap = ensure_packer()
+
 vim.cmd [[packadd packer.nvim]]
 
 return require('packer').startup(function(use)
@@ -28,6 +29,11 @@ return require('packer').startup(function(use)
 
     use 'ellisonleao/gruvbox.nvim'
     use 'Mofiqul/dracula.nvim'
+
+    -- These optional plugins should be loaded directly because of a bug in Packer lazy loading
+    use 'nvim-tree/nvim-web-devicons' -- OPTIONAL: for file icons
+    use 'lewis6991/gitsigns.nvim' -- OPTIONAL: for git status
+    use 'romgrk/barbar.nvim'
 
     use('nvim-treesitter/nvim-treesitter', {run = ':TSUpdate'})
     use('nvim-treesitter/playground')
