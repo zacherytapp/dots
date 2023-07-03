@@ -117,6 +117,8 @@ source $ZSH/oh-my-zsh.sh
 
 # alias config='/usr/bin/git --git-dir=$HOME/.cfg/.git/ --work-tree=$HOME'
 alias config='/usr/bin/git --git-dir=/home/zakk/.cfg/ --work-tree=/home/zakk'
+alias sf_project="sfdx force:project:create --manifest --projectname $1"
+alias sf_connect="sfdx force:auth:web:login --setdefaultusername --setalias $1"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
