@@ -29,6 +29,7 @@ return require('packer').startup(function(use)
 
     use 'ellisonleao/gruvbox.nvim'
     use 'Mofiqul/dracula.nvim'
+    use { "catppuccin/nvim", as = "catppuccin" }
 
     -- These optional plugins should be loaded directly because of a bug in Packer lazy loading
     use 'nvim-tree/nvim-web-devicons' -- OPTIONAL: for file icons

@@ -78,9 +78,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-	git
-	zsh-autosuggestions
-	zsh-syntax-highlighting
+    git
+    zsh-autosuggestions
+    zsh-syntax-highlighting
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -121,6 +121,4 @@ alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
 alias python="python3"
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
