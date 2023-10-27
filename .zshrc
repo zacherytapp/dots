@@ -121,4 +121,7 @@ alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
 alias python="python3"
 
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
 
