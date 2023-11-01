@@ -4,6 +4,15 @@ return {
   priority = 1000,
   opts = {},
   config = function ()
-  	vim.cmd.colorscheme 'tokyonight-night'
+    require('tokyonight').setup({
+      style = 'night',
+      transparent = true,
+      terminal_colors = true,
+      styles = {
+        sidebars = 'transparent',
+        floats = 'transparent'
+      }
+    })
+    vim.cmd.colorscheme 'tokyonight'
   end
 }
