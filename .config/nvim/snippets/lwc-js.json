@@ -1,0 +1,327 @@
+{
+  "LWC Async/Await": {
+    "body": [
+      "try {",
+        "\tconst result = await ${1:apexMethodName}({ apexMethodParams });",
+        "} catch (error) {",
+        "\tconsole.error(error)",
+        "}"
+    ],
+    "description": "Then/Catch",
+    "prefix": "asyncAwait",
+    "scope": "javascript"
+  },
+  "LWC constructor": {
+    "body": [
+      "constructor() {",
+        "\t$0",
+        "}"
+    ],
+    "description": "constructor.",
+    "prefix": "constructor",
+    "scope": "javascript"
+  },
+  "LWC CurrentPageReference": {
+    "body": [
+      "import { CurrentPageReference } from 'lightning/navigation';",
+      "@wire(CurrentPageReference)",
+      "pageRef;"
+    ],
+    "description": "CurrentPageReference.",
+    "prefix": "currentPageReference",
+    "scope": "javascript"
+  },
+  "LWC CustomEvent": {
+    "body": [
+      "new CustomEvent('${1:eventName}', {",
+        "\tdetail: ${2:details},",
+        "\tbubbles: false,",
+        "\tcomposed: false",
+        "});"
+    ],
+    "description": "CustomEvent",
+    "prefix": "customEvent",
+    "scope": "javascript"
+  },
+  "LWC disconnectedCallback": {
+    "body": [
+      "disconnectedCallback() {",
+        "",
+        "}"
+    ],
+    "description": "disconnectedCallback.",
+    "prefix": "disconnectedCallback",
+    "scope": "javascript"
+  },
+  "LWC dispatchEvent": {
+    "body": [
+      "this.dispatchEvent(${1:customEvent});"
+    ],
+    "description": "dispatchEvent",
+    "prefix": "dispatchEvent",
+    "scope": "javascript"
+  },
+  "LWC ErrorCallback": {
+    "body": [
+      "errorCallback(error, stack) {",
+        "\t",
+        "}"
+    ],
+    "description": "errorCallback.",
+    "prefix": "errorCallback",
+    "scope": "javascript"
+  },
+  "LWC ForEach": {
+    "body": [
+      "${1:array}.forEach((item, index) => {",
+        "\t$0",
+        "});"
+    ],
+    "description": "The forEach() method executes a provided function once for each array element.",
+    "prefix": "forEach",
+    "scope": "javascript"
+  },
+  "LWC getObjectInfo": {
+    "body": [
+      "import { getObjectInfo } from 'lightning/uiObjectInfoApi';",
+      "import ${1:objectName} from '@salesforce/schema/${2:objectApiName}';",
+      "",
+      "@wire(getObjectInfo, { objectApiName: ${1:objectName} })",
+      "${3:propertyOrFunction};"
+    ],
+    "description": "getObjectInfo",
+    "prefix": "getObjectInfo",
+    "scope": "javascript"
+  },
+  "LWC getPicklistValues": {
+    "body": [
+      "import { getPicklistValues } from 'lightning/uiObjectInfoApi';",
+      "import ${1:fieldName} from '@salesforce/schema/${2:objectApiName}.${3:fieldApiName}';",
+      "",
+      "@wire(getPicklistValues, { recordTypeId: '012000000000000AAA', fieldApiName: ${1:fieldName} })",
+      "${4:propertyOrFunction};"
+    ],
+    "description": "getPicklistValues",
+    "prefix": "getPicklistValues",
+    "scope": "javascript"
+  },
+  "LWC getRecord": {
+    "body": [
+      "import { getRecord } from 'lightning/uiRecordApi';",
+      "",
+      "@wire(getRecord, { recordId: '${1:recordId}', fields: ${2:fields} })",
+      "${3:propertyOrFunction};"
+    ],
+    "description": "getRecord",
+    "prefix": "getRecord",
+    "scope": "javascript"
+  },
+  "LWC getRecords": {
+    "body": [
+      "import { getRecords } from 'lightning/uiRecordApi';",
+      "",
+      "@wire(getRecords, { records: [ { recordIds: '${1:recordIds}', fields: ${2:fields} } ] })",
+      "${3:propertyOrFunction};"
+    ],
+    "description": "getRecords",
+    "prefix": "getRecords",
+    "scope": "javascript"
+  },
+  "LWC Import Apex Method": {
+    "body": [
+      "import ${1:apexMethodName} from '@salesforce/apex/${2:Namespace}.${3:ClassName}.${4:apexMethodReference}';"
+    ],
+    "description": "Import apex method.",
+    "prefix": "importApexMethod",
+    "scope": "javascript"
+  },
+  "LWC Import Custom Label": {
+    "body": [
+      "import ${1:labelName} from '@salesforce/label/${2:labelReference}';"
+    ],
+    "description": "Import custom label.",
+    "prefix": "importLabel",
+    "scope": "javascript"
+  },
+  "LWC Import Field": {
+    "body": [
+      "import ${1:fieldName} from '@salesforce/schema/${2:objectApiName}.${3:fieldApiName}';"
+    ],
+    "description": "Import Field.",
+    "prefix": "importField",
+    "scope": "javascript"
+  },
+  "LWC Import Has Permission": {
+    "body": [
+      "import has${1:PermissionName} from '@salesforce/userPermission/${1:PermissionName}';"
+    ],
+    "description": "Import hasPermission.",
+    "prefix": "importHasPermission",
+    "scope": "javascript"
+  },
+  "LWC Import NavigationMixin": {
+    "body": [
+      "import { NavigationMixin } from 'lightning/navigation';"
+    ],
+    "description": "Import NavigationMixin.",
+    "prefix": "importNavigationMixin",
+    "scope": "javascript"
+  },
+  "LWC Import Object": {
+    "body": [
+      "import ${1:objectName} from '@salesforce/schema/${2:objectApiName}';"
+    ],
+    "description": "Import Object.",
+    "prefix": "importObject",
+    "scope": "javascript"
+  },
+  "LWC Import UserId": {
+    "body": [
+      "import userId from '@salesforce/user/Id';"
+    ],
+    "description": "Import UserId.",
+    "prefix": "importUserId",
+    "scope": "javascript"
+  },
+  "LWC Map": {
+    "body": [
+      "${1:array}.map((item, index) => {",
+        "\treturn {",
+          "\t\t$0",
+          "\t}",
+          "});"
+    ],
+    "description": "The map() method creates a new array populated with the results of calling a provided function on every element in the calling array.",
+    "prefix": "map",
+    "scope": "javascript"
+  },
+  "LWC Message Channel": {
+    "body": [
+      "import ${1:channelName} from '@salesforce/messageChannel/${2:channelReference}';"
+    ],
+    "description": "Import message channel.",
+    "prefix": "importMessageChannel",
+    "scope": "javascript"
+  },
+  "LWC Navigate": {
+    "body": [
+      "this[NavigationMixin.Navigate]({",
+        "\ttype: '${1|standard__app,comm__externalRecordPage,comm__externalRecordRelationshipPage,standard__component,standard__knowledgeArticlePage,comm__loginPage,standard__managedContentPage,comm__namedPage,standard__navItemPage,standard__objectPage,standard__recordPage,standard__recordRelationshipPage,standard__webPage|}',",
+        "\tattributes: {",
+          "\t\t$0 // Different per page type. ",
+          "\t\t// Check documentation: https://developer.salesforce.com/docs/component-library/documentation/en/lwc/lwc.reference_page_reference_type",
+          "\t},",
+          "\tstate: {",
+            "\t\t$0 // Different per page type.",
+            "\t}",
+            "});"
+    ],
+    "description": "NavigationMixin.Navigate.",
+    "prefix": "navigate",
+    "scope": "javascript"
+  },
+  "LWC querySelector": {
+    "body": [
+      "this.template.querySelector('${1:element}');"
+    ],
+    "description": "querySelector",
+    "prefix": "querySelector",
+    "scope": "javascript"
+  },
+  "LWC querySelectorAll": {
+    "body": [
+      "this.template.querySelectorAll('${1:element}');"
+    ],
+    "description": "querySelectorAll",
+    "prefix": "querySelectorAll",
+    "scope": "javascript"
+  },
+  "LWC refreshApex": {
+    "body": [
+      "import { refreshApex } from '@salesforce/apex';"
+    ],
+    "description": "refreshApex.",
+    "prefix": "importRefreshApex",
+    "scope": "javascript"
+  },
+  "LWC render": {
+    "body": [
+      "render() {",
+        "\t$0",
+        "}"
+    ],
+    "description": "render.",
+    "prefix": "render",
+    "scope": "javascript"
+  },
+  "LWC renderedCallback": {
+    "body": [
+      "initialRender = true;",
+      "renderedCallback() {",
+        "\tif (!this.initialRender) {",
+          "\t\treturn;",
+          "\t}",
+          "\t$0 // Your code here.",
+          "\tthis.initialRender = false;",
+          "}"
+    ],
+    "description": "renderedCallback.",
+    "prefix": "renderedCallback",
+    "scope": "javascript"
+  },
+  "LWC ShowToastEvent": {
+    "body": [
+      "import { ShowToastEvent } from 'lightning/platformShowToastEvent';",
+      "new ShowToastEvent({ '${1:title}', '${2:message}', '${3:variant}' });"
+    ],
+    "description": "ShowToastEvent.",
+    "prefix": "showToastEvent",
+    "scope": "javascript"
+  },
+  "LWC Static Resource": {
+    "body": [
+      "import ${1:resourceName} from '@salesforce/resourceUrl/${2:resourceName}';"
+    ],
+    "description": "Import static resource.",
+    "prefix": "importStaticResource",
+    "scope": "javascript"
+  },
+  "LWC Then/Catch": {
+    "body": [
+      "${1:apexMethodName}({ apexMethodParams })",
+      ".then(result => {",
+        "\t",
+        "})",
+        ".catch(error => {",
+          "\tconsole.error(error)",
+          "});"
+    ],
+    "description": "Then/Catch",
+    "prefix": "thenCatch",
+    "scope": "javascript"
+  },
+  "LWC Wire Method": {
+    "body": [
+      "@wire(${1:apexMethodName}, { apexMethodParams })",
+      "${5:wiredName}({ error, data }) {",
+        "\tif (data) {",
+          "\t\t$0",
+          "\t} else if (error) {",
+          "\t\tconsole.error(error);",
+          "\t}",
+          "}"
+    ],
+    "description": "wireMethod.",
+    "prefix": "wireMethod",
+    "scope": "javascript"
+  },
+  "LWC Wire Property": {
+    "body": [
+      "@wire(${1:apexMethodName}, { apexMethodParams })",
+      "${5:property};"
+    ],
+    "description": "wireProperty.",
+    "prefix": "wireProperty",
+    "scope": "javascript"
+  }
+}

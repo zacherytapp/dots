@@ -5,6 +5,9 @@ return {
 		-- Snippet Engine & its associated nvim-cmp source
 		'L3MON4D3/LuaSnip',
 		'saadparwaiz1/cmp_luasnip',
+		'hrsh7th/cmp-path',
+		'onsails/lspkind.nvim',
+		'hrsh7th/cmp-buffer',
 
 		-- Adds LSP completion capabilities
 		'hrsh7th/cmp-nvim-lsp',
@@ -15,7 +18,9 @@ return {
 	config = function ()
 		local cmp = require 'cmp'
 		local luasnip = require 'luasnip'
-		require('luasnip.loaders.from_vscode').lazy_load()
+
+		require("luasnip.loaders.from_vscode").lazy_load()
+		require("luasnip.loaders.from_vscode").lazy_load({paths = "/home/zakk/.config/nvim/snippets/"})
 		luasnip.config.setup {}
 
 		cmp.setup {
@@ -56,6 +61,7 @@ return {
 			sources = {
 				{ name = 'nvim_lsp' },
 				{ name = 'luasnip' },
+				{ name = 'path' },
 			},
 		}
 	end
