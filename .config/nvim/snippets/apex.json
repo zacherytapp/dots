@@ -1,4 +1,52 @@
 {
+  	"Default header for Apex classes": {
+		"prefix": "header Apex",
+		"body": [
+		"/**",
+		 "* @description: $1",
+		 "* @author: Zakk Tapp, Craftsman Technology Group",
+		 "* @group: $2",
+		 "* @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		 "* @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		 "*/"
+		],
+		"description": "Default header for Apex classes"
+	},
+	"MIT License Header": {
+    "prefix": "header mit-license",
+    "body": [
+      "/**",
+      " * MIT License",
+      " * ",
+      " * Copyright (c) $CURRENT_YEAR, Zakk Tapp",
+      " * ",
+      " * Permission is hereby granted, free of charge, to any person obtaining a copy",
+      " * of this software and associated documentation files (the \"Software\"), to deal",
+      " * in the Software without restriction, including without limitation the rights",
+      " * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+      " * copies of the Software, and to permit persons to whom the Software is",
+      " * furnished to do so, subject to the following conditions:",
+      " * ",
+      " * The above copyright notice and this permission notice shall be included in all",
+      " * copies or substantial portions of the Software.",
+      " * ",
+      " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+      " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+      " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+      " * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+      " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+      " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+      " * SOFTWARE.",
+      " * ",
+			" * @description: $1",
+			" * @author: Zakk Tapp",
+			" * @group: $2",
+			" * @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		  " * @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+			" */"
+    ],
+    "description": "Inserts the MIT License header comment."
+  },
   "Apex method description - short": {
     "prefix": "description",
     "body": [
@@ -250,9 +298,9 @@
   "For loop for elements of an array": {
     "body": [
       "for (Integer ${1:loopVariable} = 0; ${1:loopVariable} < ${2:selectedArray}.size(); ${1:loopVariable}++) {",
-        "\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
-        "\t$0",
-        "}"
+	"\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
+	"\t$0",
+	"}"
     ],
     "description": "Create for loop for elements of an array",
     "prefix": [
@@ -264,9 +312,9 @@
   "For loop for elements of an array in reversed order": {
     "body": [
       "for (Integer ${1:loopVariable} = ${2:selectedArray}.size()-1; ${1:loopVariable} >= 0; ${1:loopVariable}--) {",
-        "\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
-        "\t$0",
-        "}"
+	"\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
+	"\t$0",
+	"}"
     ],
     "description": "Create for loop for elements of an array in reversed order",
     "prefix": [
@@ -278,9 +326,9 @@
   "For loop for entries of a Map": {
     "body": [
       "for (${1:SelectedMapKeyType} ${2:keyVariableName} : ${3:selectedMap}.keySet()) {",
-        "\t${4:SelectedMapValueType} ${5:valueVariableName} = ${3:selectedMap}.get(${2:keyVariableName});",
-        "\t$0",
-        "}"
+	"\t${4:SelectedMapValueType} ${5:valueVariableName} = ${3:selectedMap}.get(${2:keyVariableName});",
+	"\t$0",
+	"}"
     ],
     "description": "Create for loop for entries of a Map",
     "prefix": [
@@ -292,13 +340,13 @@
   "For Loop for queried SObjects": {
     "body": [
       "for (${1:Type} ${2:variable} : [SELECT ${3:fieldsList} FROM ${1:Type}) {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
       ],
       "description": "Create for loop for results of SOQL query",
       "prefix": [
-        "forSoql",
-        "foro"
+	"forSoql",
+	"foro"
       ],
       "scope": "apex,apex-anon"
   },
@@ -306,8 +354,8 @@
     "body": [
       "@future",
       "public static void ${1:methodName}() {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "Future method.",
     "prefix": [
@@ -319,8 +367,8 @@
   "If": {
     "body": [
       "if(${1:condition}) {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "If statement",
     "prefix": "if",
@@ -329,10 +377,10 @@
   "If Else": {
     "body": [
       "if(${1:condition}) {",
-        "\t$0",
-        "} else {",
-        "\t",
-        "}"
+	"\t$0",
+	"} else {",
+	"\t",
+	"}"
     ],
     "description": "If statement",
     "prefix": [
@@ -344,9 +392,9 @@
   "Instance Of": {
     "body": [
       "if (${1:Variable} instanceof ${2:Type}) {",
-        "\t${2:Type} ${3:castVariable} = (${2:Type}) ${1:Variable};",
-        "\t$0",
-        "}"
+	"\t${2:Type} ${3:castVariable} = (${2:Type}) ${1:Variable};",
+	"\t$0",
+	"}"
     ],
     "description": "Check instance of and downcast",
     "prefix": [
@@ -359,8 +407,8 @@
     "body": [
       "@InvocableMethod(label='${1:Label}' description='${2:Description}' category='${3:Category}')",
       "public static List<${4:Type}> ${5:methodName}() {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "Invocable method.",
     "prefix": [
@@ -431,8 +479,8 @@
   "Lazy instantiation": {
     "body": [
       "if (${1:selectedVariable} == null) {",
-        "\t${1:selectedVariable} = new ${2:SelectedVariableType}($0);",
-        "}"
+	"\t${1:selectedVariable} = new ${2:SelectedVariableType}($0);",
+	"}"
     ],
     "description": "Lazy instantiation",
     "prefix": "lazy",
@@ -767,8 +815,8 @@
   "System Run As": {
     "body": [
       "System.runAs(${1:user}) {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "System Run As User statement.",
     "prefix": [
@@ -781,11 +829,11 @@
     "body": [
       "@IsTest",
       "static void ${1:testMethodName}() {",
-        "\t$0",
-        "\tTest.startTest();",
-        "\t",
-        "\tTest.stopTest();",
-        "}"
+	"\t$0",
+	"\tTest.startTest();",
+	"\t",
+	"\tTest.stopTest();",
+	"}"
     ],
     "description": "Test setup for creating data before test methods run.",
     "prefix": [
@@ -919,8 +967,8 @@
     "body": [
       "@TestSetup",
       "static void setup() {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "Test setup for creating data before test methods run.",
     "prefix": [
@@ -944,10 +992,10 @@
   "Try Catch": {
     "body": [
       "try {",
-        "\t$0",
-        "} catch (${1:exceptionType}) {",
-        "\t",
-        "}"
+	"\t$0",
+	"} catch (${1:exceptionType}) {",
+	"\t",
+	"}"
     ],
     "description": "Try Catch statement.",
     "prefix": [
@@ -959,12 +1007,12 @@
   "Try Catch Finally": {
     "body": [
       "try {",
-        "\t$0",
-        "} catch (${1:exceptionType}) {",
-        "\t",
-        "} finally {",
-        "\t",
-        "}"
+	"\t$0",
+	"} catch (${1:exceptionType}) {",
+	"\t",
+	"} finally {",
+	"\t",
+	"}"
     ],
     "description": "Try Catch statement.",
     "prefix": [
@@ -1066,8 +1114,8 @@
   "While": {
     "body": [
       "while (${1:condition}) {",
-        "\t$0",
-        "}"
+	"\t$0",
+	"}"
     ],
     "description": "While statement.",
     "prefix": [

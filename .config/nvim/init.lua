@@ -18,6 +18,8 @@ vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
 
+  'skywind3000/asyncrun.vim',
+
   -- Git related plugins
   'tpope/vim-fugitive',
   'tpope/vim-rhubarb',

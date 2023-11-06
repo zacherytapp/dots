@@ -121,7 +121,7 @@ return {
 			apex_jar_path = apex_jar_path,
 			apex_enable_semantic_errors = false,
 			apex_enable_completion_statistics = false,
-			filetypes = { 'apex' },
+			filetypes = { 'apex', 'apexcode' },
 			root_dir = lspconfig.util.root_pattern('sfdx-project.json'),
 
 			-- `mason_lspconfig.setup_handlers` doesn't handle manually configured languages, we need to manually attach below actions

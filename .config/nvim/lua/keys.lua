@@ -8,10 +8,10 @@ vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = tr
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 -- Tab stuff
-vim.keymap.set("n", "<S-Tab>", "<<")
-vim.keymap.set("n", "<Tab>", ">>")
+-- vim.keymap.set("n", "<S-Tab>", "<<")
+-- vim.keymap.set("n", "<Tab>", ">>")
+-- vim.keymap.set("v", "<Tab>", ">gv")
 vim.keymap.set("v", "<S-Tab>", "<gv")
-vim.keymap.set("v", "<Tab>", ">gv")
 vim.keymap.set("n", "<A-t>", ":tabnew<CR>")
 
 -- Salesforce remaps

@@ -8,6 +8,8 @@ return {
 		'hrsh7th/cmp-path',
 		'onsails/lspkind.nvim',
 		'hrsh7th/cmp-buffer',
+		'hrsh7th/cmp-emoji',
+		"onsails/lspkind.nvim",
 
 		-- Adds LSP completion capabilities
 		'hrsh7th/cmp-nvim-lsp',
@@ -16,6 +18,7 @@ return {
 		'rafamadriz/friendly-snippets',
 	},
 	config = function ()
+		local lspkind = require 'lspkind'
 		local has_words_before = function()
 			unpack = unpack or table.unpack
 			local line, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -70,7 +73,16 @@ return {
 			sources = {
 				{ name = 'nvim_lsp' },
 				{ name = 'luasnip' },
+				{ name = 'buffer' },
 				{ name = 'path' },
+				{ name = 'emoji' },
+			},
+			-- configure lspkind for vs-code like pictograms in completion menu
+			formatting = {
+				format = lspkind.cmp_format({
+					maxwidth = 50,
+					ellipsis_char = "...",
+				}),
 			},
 		}
 	end
