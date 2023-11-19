@@ -83,3 +83,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = highlight_group,
   pattern = '*',
 })
+
+vim.opt.spelllang = 'en_us'
+vim.opt.spell = true
+
+vim.cmd.highlight('DiagnosticUnderlineError guisp=#ff0000 gui=undercurl')

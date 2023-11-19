@@ -51,6 +51,8 @@ return {
           "typescript",
           "typescriptreact",
           "yaml",
+          "apex",
+          "cls"
         },
       })
     })
