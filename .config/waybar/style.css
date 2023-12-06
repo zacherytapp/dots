@@ -36,6 +36,7 @@ window#waybar {
 
 /* right module */
 #pulseaudio,
+#idle_inhibitor,
 #bluetooth,
 #network,
 #disk,

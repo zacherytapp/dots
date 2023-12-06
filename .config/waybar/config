@@ -3,7 +3,7 @@
     "ipc" : true,
     "modules-left": ["sway/workspaces", "mpd"],
     "modules-center": ["clock"],
-    "modules-right": [ "pulseaudio", "custom/pipe", "bluetooth", "custom/pipe", "network", "custom/pipe", "disk", "custom/pipe", "memory", "custom/pipe", "cpu", "custom/pipe", "backlight", "custom/pipe", "battery", "tray","custom/power"],
+    "modules-right": [ "pulseaudio", "idle_inhibitor", "custom/pipe", "bluetooth", "custom/pipe", "network", "custom/pipe", "disk", "custom/pipe", "memory", "custom/pipe", "cpu", "custom/pipe", "backlight", "custom/pipe", "battery", "tray","custom/power"],
 
     "wlr/workspaces": {
       "format": "{icon}",
@@ -32,26 +32,33 @@
       "persistent_workspaces": {},
       "disable-markup": true,
       "format-icons": {
-        "1": "",
+        "1": "1",
         /* "1": "❶", */
-        "2": "",
+        "2": "2",
         /* "2": "❷", */
-        "3": "",
+        "3": "3",
         /* "3": "❸", */
         /* "4": "❹", */
-        "4": "",
-        "5": "❺",
-        "6": "❻",
-        "7": "❼",
-        "8": "",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
         /* "8": "❽", */
-        "9": "❾",
-        "0": "",
+        "9": "9",
+        "0": "0",
         "focused": "",
         "urgent": "",
         "default": ""
       }
     },
+"idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": "",
+      "deactivated": ""
+    }
+  },
     "hyprland/window": { "format": "👉 {}", "separate-outputs": false },
     "tray": {
     },
