@@ -10,7 +10,7 @@
 set $mod Mod4
 # Home row direction keys, like vim
 set $left h
-set $down j
+set $down 
 set $up k
 set $right l
 # Your preferred terminal emulator
@@ -145,7 +145,7 @@ output * bg ~/.config/walls/gruvbox1.png fill
     # We just use 1-10 as the default.
 #
 # Layout stuff:
-#
+
     # You can "split" the current object of your focus with
     # $mod+b or $mod+v, for horizontal and vertical splits
     # respectively.
@@ -211,8 +211,8 @@ gaps inner 10
 # GTK
 exec {
     # gsettings set org.gtk.Settings.FileChooser window-size '(1000, 500)'
-    gsettings set org.gnome.desktop.interface gtk-theme 'Catppuccin-Mocha-Standard-Sky-Dark'
-    gsettings set org.gnome.desktop.interface.wm.preferences theme 'Catppuccin-Mocha-Standard-Sky-Dark'
+    gsettings set org.gnome.desktop.interface gtk-theme Gruvbox-Dark-B
+    gsettings set org.gnome.desktop.interface.wm.preferences theme Gruvbox-Dark-B
     # gsettings set org.gnome.desktop.interface icon-theme 'Sweet-Rainbow'
     # gsettings set org.gnome.desktop.interface cursor-size '48'
     # gsettings set org.gnome.desktop.interface font-name 'Roboto Slab 10'
