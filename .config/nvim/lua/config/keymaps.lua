@@ -22,13 +22,13 @@ vim.keymap.set("n", "<leader>cl", "<cmd>bel term sfdx force:apex:class:create -n
 vim.keymap.set(
   "n",
   "<C-s>",
-  ':TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
+  ':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
   { desc = "SFDC - Deploy Source (Normal Mode)" }
 )
 vim.keymap.set(
   "i",
   "<C-s>",
-  ':TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
+  ':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
   { desc = "SFDC - Deplay Source (Normal Mode)" }
 )
 

@@ -7,7 +7,8 @@
 		 "* @author: Zakk Tapp, Craftsman Technology Group",
 		 "* @group: $2",
 		 "* @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		 "* @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		 "* @modified on: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		 "* @modified by: Zakk Tapp, Craftsman Technology Group",
 		 "*/"
 		],
 		"description": "Default header for Apex classes"
@@ -42,7 +43,8 @@
 			" * @author: Zakk Tapp",
 			" * @group: $2",
 			" * @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		  " * @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		  " * @modified on: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		   "* @modified by: Zakk Tapp, Craftsman Technology Group",
 			" */"
     ],
     "description": "Inserts the MIT License header comment."
