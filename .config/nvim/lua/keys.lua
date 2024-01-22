@@ -2,20 +2,20 @@
 -- Keymaps for better default experience
 -- See `:help vim.keymap.set()`
 
-vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", { silent = true })
-local Terminal = require("toggleterm.terminal").Terminal
-local path = vim.fn.expand("%")
-local sf_cmd = "sf project deploy start --source-dir % -l NoTestRun -w 5"
-local sf_save = Terminal:new({
-	-- on_open = function(term)
-	-- 	local path = vim.fn.expand("%")
-	-- 	local sf_cmd = "<cmd>sf project deploy start --source-dir " .. path .. " -l NoTestRun -w 5<CR>"
-	-- 	vim.api.nvim_buf_set_keymap(term.bufnr, "n", "q", sf_cmd, { noremap = true, silent = true })
-	-- end,
-	cmd = sf_cmd,
-	direction = "float",
-	close_on_exit = false,
-})
+-- vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", { silent = true })
+-- local Terminal = require("toggleterm.terminal").Terminal
+-- local path = vim.fn.expand("%")
+-- local sf_cmd = "sf project deploy start --source-dir % -l NoTestRun -w 5"
+-- local sf_save = Terminal:new({
+-- on_open = function(term)
+-- 	local path = vim.fn.expand("%")
+-- 	local sf_cmd = "<cmd>sf project deploy start --source-dir " .. path .. " -l NoTestRun -w 5<CR>"
+-- 	vim.api.nvim_buf_set_keymap(term.bufnr, "n", "q", sf_cmd, { noremap = true, silent = true })
+-- end,
+-- 	cmd = sf_cmd,
+-- 	direction = "float",
+-- 	close_on_exit = false,
+-- })
 
 -- Remap for dealing with word wrap
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
@@ -30,13 +30,13 @@ vim.keymap.set("v", "<S-Tab>", "<gv")
 vim.keymap.set("n", "<A-t>", ":tabnew<CR>")
 
 -- Salesforce remaps
--- vim.keymap.set("n", "<leader>cl", "<cmd>bel term sfdx force:apex:class:create -n")
--- vim.keymap.set(
--- 	"n",
--- 	"<C-s>",
--- 	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
--- 	{ desc = "SFDC - Deploy Source (Normal Mode)" }
--- )
+vim.keymap.set("n", "<leader>cl", "<cmd>bel term sfdx force:apex:class:create -n")
+vim.keymap.set(
+	"n",
+	"<C-s>",
+	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
+	{ desc = "SFDC - Deploy Source (Normal Mode)" }
+)
 vim.keymap.set("n", "<C-s>", function()
 	vim.cmd("w")
 	sf_save:toggle()
