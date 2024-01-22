@@ -1,51 +1,52 @@
 -- bootstrap lazy.nvim, LazyVim and your plugins
-vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
 
 --    `:help lazy.nvim.txt` for more info
-local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system {
-    'git',
-    'clone',
-    '--filter=blob:none',
-    'https://github.com/folke/lazy.nvim.git',
-    '--branch=stable', -- latest stable release
-    lazypath,
-  }
+	vim.fn.system({
+		"git",
+		"clone",
+		"--filter=blob:none",
+		"https://github.com/folke/lazy.nvim.git",
+		"--branch=stable", -- latest stable release
+		lazypath,
+	})
 end
 
 vim.opt.rtp:prepend(lazypath)
 
-require('lazy').setup({
+require("lazy").setup({
 
-  'skywind3000/asyncrun.vim',
+	"skywind3000/asyncrun.vim",
 
-  -- Git related plugins
-  'tpope/vim-fugitive',
-  'tpope/vim-rhubarb',
+	-- Git related plugins
+	"tpope/vim-fugitive",
+	"tpope/vim-rhubarb",
 
-  -- Detect tabstop and shiftwidth automatically
-  'tpope/vim-sleuth',
+	-- Detect tabstop and shiftwidth automatically
+	"tpope/vim-sleuth",
+	"RRethy/vim-illuminate",
 
-  -- Useful plugin to show you pending keybinds.
-  { 'folke/which-key.nvim', opts = {} },
+	-- Useful plugin to show you pending keybinds.
+	{ "folke/which-key.nvim", opts = {} },
 
-  {
-    -- Add indentation guides even on blank lines
-    'lukas-reineke/indent-blankline.nvim',
-    -- See `:help ibl`
-    main = 'ibl',
-    opts = {},
-  },
+	{
+		-- Add indentation guides even on blank lines
+		"lukas-reineke/indent-blankline.nvim",
+		-- See `:help ibl`
+		main = "ibl",
+		opts = {},
+	},
 
-  -- "gc" to comment visual regions/lines
-  { 'numToStr/Comment.nvim', opts = {} },
+	-- "gc" to comment visual regions/lines
+	{ "numToStr/Comment.nvim", opts = {} },
 
-  { import = 'plugins' }
+	{ import = "plugins" },
 }, {})
 
-require 'opts'
-require 'keys'
+require("opts")
+require("keys")
 
 -- vim: ts=2 sts=2 sw=2 et
