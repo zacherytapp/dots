@@ -30,17 +30,24 @@ vim.keymap.set("v", "<S-Tab>", "<gv")
 vim.keymap.set("n", "<A-t>", ":tabnew<CR>")
 
 -- Salesforce remaps
-vim.keymap.set("n", "<leader>cl", "<cmd>bel term sfdx force:apex:class:create -n")
+-- vim.keymap.set("n", "<leader>cl", "<cmd>bel term sfdx force:apex:class:create -n")
+-- vim.keymap.set(
+-- 	"n",
+-- 	"<C-s>",
+-- 	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
+-- 	{ desc = "SFDC - Deploy Source (Normal Mode)" }
+-- )
+-- vim.keymap.set("n", "<C-s>", function()
+-- 	vim.cmd("w")
+-- 	sf_save:toggle()
+-- end, { desc = "SFDC - Deploy Source (Normal Mode)" })
+
 vim.keymap.set(
 	"n",
 	"<C-s>",
 	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
-	{ desc = "SFDC - Deploy Source (Normal Mode)" }
+	{ desc = "SFDC - Deplay Source (Insert Mode)" }
 )
-vim.keymap.set("n", "<C-s>", function()
-	vim.cmd("w")
-	sf_save:toggle()
-end, { desc = "SFDC - Deploy Source (Normal Mode)" })
 
 vim.keymap.set(
 	"i",
