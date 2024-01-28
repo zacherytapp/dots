@@ -70,7 +70,6 @@ vim.o.timeoutlen = 300
 -- Set completeopt to have a better completion experience
 vim.o.completeopt = "menuone,noselect"
 
--- NOTE: You should make sure your terminal supports this
 vim.o.termguicolors = true
 
 -- [[ Highlight on yank ]]
@@ -83,6 +82,37 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	group = highlight_group,
 	pattern = "*",
 })
+
+-- helper function
+local function update_hl(group, tbl)
+	local old_hl = vim.api.nvim_get_hl(0, { name = group })
+	local new_hl = vim.tbl_extend("force", old_hl, tbl)
+	vim.api.nvim_set_hl(0, group, new_hl)
+end
+
+update_hl("TSParameter", { italic = true })
+update_hl("String", { italic = true })
+update_hl("StartifyPath", { italic = true })
+update_hl("StartifySlash", { italic = true })
+update_hl("CmpItemKind", { italic = true })
+update_hl("TSKeyword", { italic = true })
+update_hl("Comment", { italic = true })
+update_hl("Identifier", { italic = true })
+update_hl("Conditional", { italic = true })
+update_hl("TSMethod", { italic = true })
+update_hl("TSEmphasis", { italic = true })
+update_hl("TSComment", { italic = true })
+update_hl("TSConditional", { italic = true })
+update_hl("TSFunction", { italic = true })
+update_hl("TSFuncBuiltin", { italic = true })
+update_hl("TSParameter", { italic = true })
+update_hl("TSKeywordReturn", { italic = true })
+update_hl("TSKeywordFunction", { italic = true })
+update_hl("TSLabel", { italic = true })
+update_hl("TSString", { italic = true })
+update_hl("TSRepeat", { italic = true })
+update_hl("TSVariable", { italic = true })
+update_hl("TSVariableBuiltin", { italic = true })
 
 vim.opt.spelllang = "en_us"
 vim.opt.spell = true

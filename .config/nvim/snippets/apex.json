@@ -1,19 +1,19 @@
 {
-  	"Default header for Apex classes": {
-		"prefix": "header Apex",
-		"body": [
-		"/**",
-		 "* @description: $1",
-		 "* @author: Zakk Tapp, Craftsman Technology Group",
-		 "* @group: $2",
-		 "* @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		 "* @modified on: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		 "* @modified by: Zakk Tapp, Craftsman Technology Group",
-		 "*/"
-		],
-		"description": "Default header for Apex classes"
-	},
-	"MIT License Header": {
+  "Default header for Apex classes": {
+    "prefix": "header Apex",
+    "body": [
+      "/**",
+      "* @description: $1",
+      "* @author: Zakk Tapp, Craftsman Technology Group",
+      "* @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "* @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "* @group: $2",
+      "* @see: $3",
+      "*/"
+    ],
+    "description": "Default header for Apex classes"
+  },
+  "MIT License Header": {
     "prefix": "header mit-license",
     "body": [
       "/**",
@@ -39,94 +39,59 @@
       " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
       " * SOFTWARE.",
       " * ",
-			" * @description: $1",
-			" * @author: Zakk Tapp",
-			" * @group: $2",
-			" * @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		  " * @modified on: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-		   "* @modified by: Zakk Tapp, Craftsman Technology Group",
-			" */"
+      " * @description $1",
+      " * @group $2",
+      " * @see $3",
+      " * @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      " * @modified ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      " */"
     ],
     "description": "Inserts the MIT License header comment."
   },
   "Apex method description - short": {
     "prefix": "description",
-    "body": [
-      "/**",
-      "* @description $1",
-      "*/"
-    ],
+    "body": ["/**", "* @description $1", "*/"],
     "description": "Default short description for Apex methods"
   },
   "Apex method description - full": {
     "prefix": "description",
-    "body": [
-      "/**",
-      "* @description $1",
-      "* @param ",
-      "* @return ",
-      "*/"
-    ],
+    "body": ["/**", "* @description $1", "* @param ", "* @return ", "*/"],
     "description": "Default short description for Apex methods"
-  }, 
+  },
   "AccessLevel.SYSTEM_MODE": {
-    "body": [
-      "AccessLevel.SYSTEM_MODE"
-    ],
+    "body": ["AccessLevel.SYSTEM_MODE"],
     "description": "AccessLevel.SYSTEM_MODE",
-    "prefix": [
-      "AccessLevelSystemMode"
-    ],
+    "prefix": ["AccessLevelSystemMode"],
     "scope": "apex,apex-anon"
   },
   "AccessLevel.USER_MODE": {
-    "body": [
-      "AccessLevel.USER_MODE"
-    ],
+    "body": ["AccessLevel.USER_MODE"],
     "description": "AccessLevel.USER_MODE",
-    "prefix": [
-      "AccessLevelUserMode"
-    ],
+    "prefix": ["AccessLevelUserMode"],
     "scope": "apex,apex-anon"
   },
   "AccessType.CREATABLE": {
-    "body": [
-      "AccessType.CREATABLE"
-    ],
+    "body": ["AccessType.CREATABLE"],
     "description": "AccessType.CREATABLE",
-    "prefix": [
-      "AccessTypeCreatable"
-    ],
+    "prefix": ["AccessTypeCreatable"],
     "scope": "apex,apex-anon"
   },
   "AccessType.READABLE": {
-    "body": [
-      "AccessType.READABLE"
-    ],
+    "body": ["AccessType.READABLE"],
     "description": "AccessType.READABLE",
-    "prefix": [
-      "AccessTypeReadable"
-    ],
+    "prefix": ["AccessTypeReadable"],
     "scope": "apex,apex-anon"
   },
   "AccessType.UPDATABLE": {
-    "body": [
-      "AccessType.UPDATABLE"
-    ],
+    "body": ["AccessType.UPDATABLE"],
     "description": "AccessType.UPDATABLE",
-    "prefix": [
-      "AccessTypeUpdatable"
-    ],
+    "prefix": ["AccessTypeUpdatable"],
     "scope": "apex,apex-anon"
   },
   "AccessType.UPSERTABLE": {
-    "body": [
-      "AccessType.UPSERTABLE"
-    ],
+    "body": ["AccessType.UPSERTABLE"],
     "description": "AccessType.UPSERTABLE",
-    "prefix": [
-      "AccessTypeUpsertable"
-    ],
+    "prefix": ["AccessTypeUpsertable"],
     "scope": "apex,apex-anon"
   },
   "Assert Are Equals": {
@@ -135,11 +100,7 @@
       "$0"
     ],
     "description": "Assert equals condition in a test",
-    "prefix": [
-      "assertAreEqual",
-      "Assert.areEqual",
-      "aae"
-    ],
+    "prefix": ["assertAreEqual", "Assert.areEqual", "aae"],
     "scope": "apex,apex-anon"
   },
   "Assert Are Not Equals": {
@@ -148,37 +109,19 @@
       "$0"
     ],
     "description": "Assert not equals condition in a test",
-    "prefix": [
-      "assertAreNotEqual",
-      "Assert.areNotEqual",
-      "aane"
-    ],
+    "prefix": ["assertAreNotEqual", "Assert.areNotEqual", "aane"],
     "scope": "apex,apex-anon"
   },
   "Assert Fail": {
-    "body": [
-      "Assert.fail(${1:message});",
-      "$0"
-    ],
+    "body": ["Assert.fail(${1:message});", "$0"],
     "description": "Immediately return an error",
-    "prefix": [
-      "assertFail",
-      "Assert.fail",
-      "af"
-    ],
+    "prefix": ["assertFail", "Assert.fail", "af"],
     "scope": "apex,apex-anon"
   },
   "Assert Is False": {
-    "body": [
-      "Assert.isFalse(${1:condition}, ${2:message});",
-      "$0"
-    ],
+    "body": ["Assert.isFalse(${1:condition}, ${2:message});", "$0"],
     "description": "Asserts that the specified condition is false",
-    "prefix": [
-      "assertIsFalse",
-      "Assert.isFalse",
-      "aif"
-    ],
+    "prefix": ["assertIsFalse", "Assert.isFalse", "aif"],
     "scope": "apex,apex-anon"
   },
   "Assert Is Instance of type": {
@@ -187,11 +130,7 @@
       "$0"
     ],
     "description": "Asserts that the instance is of the specified type",
-    "prefix": [
-      "assertIsInstanceOfType",
-      "Assert.isInstanceOfType",
-      "aii"
-    ],
+    "prefix": ["assertIsInstanceOfType", "Assert.isInstanceOfType", "aii"],
     "scope": "apex,apex-anon"
   },
   "Assert Is Not Instance of type": {
@@ -208,42 +147,21 @@
     "scope": "apex,apex-anon"
   },
   "Assert Is Not Null": {
-    "body": [
-      "Assert.isNotNull(${1:variable}, ${2:message});",
-      "$0"
-    ],
+    "body": ["Assert.isNotNull(${1:variable}, ${2:message});", "$0"],
     "description": "Asserts that the value isn’t null.",
-    "prefix": [
-      "assertIsNotNull",
-      "Assert.isNotNull",
-      "ainn"
-    ],
+    "prefix": ["assertIsNotNull", "Assert.isNotNull", "ainn"],
     "scope": "apex,apex-anon"
   },
   "Assert Is Null": {
-    "body": [
-      "Assert.isNull(${1:variable}, ${2:message});",
-      "$0"
-    ],
+    "body": ["Assert.isNull(${1:variable}, ${2:message});", "$0"],
     "description": "Asserts that the value is null.",
-    "prefix": [
-      "assertIsNull",
-      "Assert.isNull",
-      "ain"
-    ],
+    "prefix": ["assertIsNull", "Assert.isNull", "ain"],
     "scope": "apex,apex-anon"
   },
   "Assert Is True": {
-    "body": [
-      "Assert.isTrue(${1:condition}, ${2:message});",
-      "$0"
-    ],
+    "body": ["Assert.isTrue(${1:condition}, ${2:message});", "$0"],
     "description": "Asserts that the specified condition is true",
-    "prefix": [
-      "assertIsTrue",
-      "Assert.isTrue",
-      "ait"
-    ],
+    "prefix": ["assertIsTrue", "Assert.isTrue", "ait"],
     "scope": "apex,apex-anon"
   },
   "Database Count Query": {
@@ -251,9 +169,7 @@
       "Integer ${1:recordsAmount} = Database.countQuery(${2:queryString})$0"
     ],
     "description": "eturns the number of records that a dynamic SOQL query.",
-    "prefix": [
-      "Database.countQuery"
-    ],
+    "prefix": ["Database.countQuery"],
     "scope": "apex,apex-anon"
   },
   "Database Delete": {
@@ -261,9 +177,7 @@
       "List<Database.DeleteResult> ${1:deleteResults} = Database.delete(${2:recordsToDelete}, ${3:allOrNone});$0"
     ],
     "description": "Deletes a list of existing sObject records.",
-    "prefix": [
-      "Database.delete"
-    ],
+    "prefix": ["Database.delete"],
     "scope": "apex,apex-anon"
   },
   "Database Execute Batch": {
@@ -271,10 +185,7 @@
       "Id ${1:jobIdVariable} = Database.executeBatch(${2:batchInstance}, ${3:batchSize});$0"
     ],
     "description": "Execute a batch",
-    "prefix": [
-      "Database.executeBatch",
-      "deb"
-    ],
+    "prefix": ["Database.executeBatch", "deb"],
     "scope": "apex,apex-anon"
   },
   "Database Insert": {
@@ -282,9 +193,7 @@
       "List<Database.SaveResult> ${1:saveResults} = Database.insert(${2:recordsToInsert}, ${3:allOrNone});$0"
     ],
     "description": "Adds one or more sObjects.",
-    "prefix": [
-      "Database.insert"
-    ],
+    "prefix": ["Database.insert"],
     "scope": "apex,apex-anon"
   },
   "Database Update": {
@@ -292,137 +201,94 @@
       "List<Database.SaveResult> ${1:updateResults} = Database.update(${2:recordsToUpdate}, ${3:allOrNone});$0"
     ],
     "description": "Modifies one or more existing sObject records.",
-    "prefix": [
-      "Database.update"
-    ],
+    "prefix": ["Database.update"],
     "scope": "apex,apex-anon"
   },
   "For loop for elements of an array": {
     "body": [
       "for (Integer ${1:loopVariable} = 0; ${1:loopVariable} < ${2:selectedArray}.size(); ${1:loopVariable}++) {",
-	"\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
-	"\t$0",
-	"}"
+      "\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
+      "\t$0",
+      "}"
     ],
     "description": "Create for loop for elements of an array",
-    "prefix": [
-      "fori",
-      "itar"
-    ],
+    "prefix": ["fori", "itar"],
     "scope": "apex,apex-anon"
   },
   "For loop for elements of an array in reversed order": {
     "body": [
       "for (Integer ${1:loopVariable} = ${2:selectedArray}.size()-1; ${1:loopVariable} >= 0; ${1:loopVariable}--) {",
-	"\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
-	"\t$0",
-	"}"
+      "\t${3:ArrayElementType} ${4:elementName} = ${2:selectedArray}[${1:loopVariable}];",
+      "\t$0",
+      "}"
     ],
     "description": "Create for loop for elements of an array in reversed order",
-    "prefix": [
-      "forReversedOrder",
-      "ritar"
-    ],
+    "prefix": ["forReversedOrder", "ritar"],
     "scope": "apex,apex-anon"
   },
   "For loop for entries of a Map": {
     "body": [
       "for (${1:SelectedMapKeyType} ${2:keyVariableName} : ${3:selectedMap}.keySet()) {",
-	"\t${4:SelectedMapValueType} ${5:valueVariableName} = ${3:selectedMap}.get(${2:keyVariableName});",
-	"\t$0",
-	"}"
+      "\t${4:SelectedMapValueType} ${5:valueVariableName} = ${3:selectedMap}.get(${2:keyVariableName});",
+      "\t$0",
+      "}"
     ],
     "description": "Create for loop for entries of a Map",
-    "prefix": [
-      "forMap",
-      "itme"
-    ],
+    "prefix": ["forMap", "itme"],
     "scope": "apex,apex-anon"
   },
   "For Loop for queried SObjects": {
     "body": [
       "for (${1:Type} ${2:variable} : [SELECT ${3:fieldsList} FROM ${1:Type}) {",
-	"\t$0",
-	"}"
-      ],
-      "description": "Create for loop for results of SOQL query",
-      "prefix": [
-	"forSoql",
-	"foro"
-      ],
-      "scope": "apex,apex-anon"
+      "\t$0",
+      "}"
+    ],
+    "description": "Create for loop for results of SOQL query",
+    "prefix": ["forSoql", "foro"],
+    "scope": "apex,apex-anon"
   },
   "Future Method": {
-    "body": [
-      "@future",
-      "public static void ${1:methodName}() {",
-	"\t$0",
-	"}"
-    ],
+    "body": ["@future", "public static void ${1:methodName}() {", "\t$0", "}"],
     "description": "Future method.",
-    "prefix": [
-      "@future",
-      "future"
-    ],
+    "prefix": ["@future", "future"],
     "scope": "apex,apex-anon"
   },
   "If": {
-    "body": [
-      "if(${1:condition}) {",
-	"\t$0",
-	"}"
-    ],
+    "body": ["if(${1:condition}) {", "\t$0", "}"],
     "description": "If statement",
     "prefix": "if",
     "scope": "apex,apex-anon"
   },
   "If Else": {
-    "body": [
-      "if(${1:condition}) {",
-	"\t$0",
-	"} else {",
-	"\t",
-	"}"
-    ],
+    "body": ["if(${1:condition}) {", "\t$0", "} else {", "\t", "}"],
     "description": "If statement",
-    "prefix": [
-      "ifElse",
-      "ife"
-    ],
+    "prefix": ["ifElse", "ife"],
     "scope": "apex,apex-anon"
   },
   "Instance Of": {
     "body": [
       "if (${1:Variable} instanceof ${2:Type}) {",
-	"\t${2:Type} ${3:castVariable} = (${2:Type}) ${1:Variable};",
-	"\t$0",
-	"}"
+      "\t${2:Type} ${3:castVariable} = (${2:Type}) ${1:Variable};",
+      "\t$0",
+      "}"
     ],
     "description": "Check instance of and downcast",
-    "prefix": [
-      "instanceOf",
-      "inst"
-    ],
+    "prefix": ["instanceOf", "inst"],
     "scope": "apex,apex-anon"
   },
   "Invocable Method": {
     "body": [
       "@InvocableMethod(label='${1:Label}' description='${2:Description}' category='${3:Category}')",
       "public static List<${4:Type}> ${5:methodName}() {",
-	"\t$0",
-	"}"
+      "\t$0",
+      "}"
     ],
     "description": "Invocable method.",
-    "prefix": [
-      "@InvocableMethod",
-      "invocableMethod"
-    ],
+    "prefix": ["@InvocableMethod", "invocableMethod"],
     "scope": "apex,apex-anon"
   },
   "Is Assignable": {
-    "body": [
-      "isAssignableFrom(${2:SourceType});"
-    ],
+    "body": ["isAssignableFrom(${2:SourceType});"],
     "description": "Check if Child Type is assignable from Source Type",
     "prefix": "isAssignableFrom",
     "scope": "apex,apex-anon"
@@ -432,9 +298,7 @@
       "${1:ApexType} ${2:result} = (${1:ApexType}) JSON.deserialize(${3:jsonString}, ${1:ApexType}.class);$0"
     ],
     "description": "Deserializes the specified JSON string into an Apex object of the specified type.",
-    "prefix": [
-      "JSON.deserialize"
-    ],
+    "prefix": ["JSON.deserialize"],
     "scope": "apex,apex-anon"
   },
   "JSON Deserialize Strict": {
@@ -442,9 +306,7 @@
       "${1:ApexType} ${2:result} = (${1:ApexType}) JSON.deserializeStrict(${3:jsonString}, ${1:ApexType}.class);$0"
     ],
     "description": "Deserializes the specified JSON string into an Apex object of the specified type.",
-    "prefix": [
-      "JSON.deserializeStrict"
-    ],
+    "prefix": ["JSON.deserializeStrict"],
     "scope": "apex,apex-anon"
   },
   "JSON Serialize": {
@@ -452,9 +314,7 @@
       "String ${1:serializedResult} = JSON.serialize(${2:objectToSerialize});$0"
     ],
     "description": "Serializes Apex objects into JSON content.",
-    "prefix": [
-      "JSON.serialize"
-    ],
+    "prefix": ["JSON.serialize"],
     "scope": "apex,apex-anon"
   },
   "JSON Serialize Pretty": {
@@ -462,27 +322,20 @@
       "String ${1:serializedResult} = JSON.serializePretty(${2:objectToSerialize});$0"
     ],
     "description": "Serializes Apex objects into JSON content.",
-    "prefix": [
-      "JSON.serializePretty"
-    ],
+    "prefix": ["JSON.serializePretty"],
     "scope": "apex,apex-anon"
   },
   "Last element of list": {
-    "body": [
-      "${1:selectedList}[${1:selectedList}.size() - 1]$0"
-    ],
+    "body": ["${1:selectedList}[${1:selectedList}.size() - 1]$0"],
     "description": "Get last element of list",
-    "prefix": [
-      "lastListElement",
-      "lst"
-    ],
+    "prefix": ["lastListElement", "lst"],
     "scope": "apex,apex-anon"
   },
   "Lazy instantiation": {
     "body": [
       "if (${1:selectedVariable} == null) {",
-	"\t${1:selectedVariable} = new ${2:SelectedVariableType}($0);",
-	"}"
+      "\t${1:selectedVariable} = new ${2:SelectedVariableType}($0);",
+      "}"
     ],
     "description": "Lazy instantiation",
     "prefix": "lazy",
@@ -493,10 +346,7 @@
       "List<${1:ElementType}> ${2:newListName} = new List<${1:ElementType}>();$0"
     ],
     "description": "Construct a new list and assign to a local variable",
-    "prefix": [
-      "list",
-      "nl"
-    ],
+    "prefix": ["list", "nl"],
     "scope": "apex,apex-anon"
   },
   "New Map": {
@@ -504,10 +354,7 @@
       "Map<${1:KeyType}, ${2:ValueType}> ${3:newMapName} = new Map<${1:KeyType}, ${2:ValueType}>();$0"
     ],
     "description": "Construct a new map and assign to a local variable",
-    "prefix": [
-      "map",
-      "nm"
-    ],
+    "prefix": ["map", "nm"],
     "scope": "apex,apex-anon"
   },
   "New Map from list of records": {
@@ -515,10 +362,7 @@
       "Map<Id, ${1:SObject}> ${2:mapName} = new Map<Id, ${1}>(${3:recordList});"
     ],
     "description": "Create map from list of records",
-    "prefix": [
-      "mapFromList",
-      "nmfl"
-    ],
+    "prefix": ["mapFromList", "nmfl"],
     "scope": "apex,apex-anon"
   },
   "New Set": {
@@ -526,10 +370,7 @@
       "Set<${1:ElementType}> ${2:newSetName} = new Set<${1:ElementType}>();$0"
     ],
     "description": "Construct a new map and assign to a local variable",
-    "prefix": [
-      "set",
-      "ns"
-    ],
+    "prefix": ["set", "ns"],
     "scope": "apex,apex-anon"
   },
   "New Set of Ids from list of records": {
@@ -537,87 +378,49 @@
       "Set<Id> ${1:setName} = new Map<Id, ${2:SObjectType}>(${3:recordList}).keySet();"
     ],
     "description": "Create set of Ids from list of records",
-    "prefix": [
-      "setOfIds",
-      "nsfl"
-    ],
+    "prefix": ["setOfIds", "nsfl"],
     "scope": "apex,apex-anon"
   },
   "Property Read Only": {
-    "body": [
-      "{get; private set;}"
-    ],
+    "body": ["{get; private set;}"],
     "description": "Create read-only property getter and setter",
-    "prefix": [
-      "{get; private set;}",
-      "pro"
-    ],
+    "prefix": ["{get; private set;}", "pro"],
     "scope": "apex,apex-anon"
   },
   "Property Read Write": {
-    "body": [
-      "{get; set;}"
-    ],
+    "body": ["{get; set;}"],
     "description": "Create read/write property getter and setter",
-    "prefix": [
-      "{get; set;}",
-      "prw"
-    ],
+    "prefix": ["{get; set;}", "prw"],
     "scope": "apex,apex-anon"
   },
   "Public Static Final": {
-    "body": [
-      "public static final"
-    ],
+    "body": ["public static final"],
     "description": "Begin declaration of a public static final field",
-    "prefix": [
-      "final",
-      "psf"
-    ],
+    "prefix": ["final", "psf"],
     "scope": "apex,apex-anon"
   },
   "Public Static Final Integer": {
-    "body": [
-      "public static final Integer ${1:VARIABLE_NAME} = ${2:value};"
-    ],
+    "body": ["public static final Integer ${1:VARIABLE_NAME} = ${2:value};"],
     "description": "Begin declaration of a public static final Integer field",
-    "prefix": [
-      "finalInteger",
-      "psfi"
-    ],
+    "prefix": ["finalInteger", "psfi"],
     "scope": "apex,apex-anon"
   },
   "Public Static Final String": {
-    "body": [
-      "public static final String ${1:VARIABLE_NAME} = ${2:value};"
-    ],
+    "body": ["public static final String ${1:VARIABLE_NAME} = ${2:value};"],
     "description": "Begin declaration of a public static final String field",
-    "prefix": [
-      "finalString",
-      "psfs"
-    ],
+    "prefix": ["finalString", "psfs"],
     "scope": "apex,apex-anon"
   },
   "Select": {
-    "body": [
-      "SELECT ${2:FieldsList} FROM ${1:SObject}$0"
-    ],
+    "body": ["SELECT ${2:FieldsList} FROM ${1:SObject}$0"],
     "description": "Create a SOQL query",
-    "prefix": [
-      "select",
-      "SEL"
-    ],
+    "prefix": ["select", "SEL"],
     "scope": "apex,apex-anon"
   },
   "Select All Fields": {
-    "body": [
-      "SELECT FIELDS(ALL) FROM ${1:SObject}$0 LIMIT 200"
-    ],
+    "body": ["SELECT FIELDS(ALL) FROM ${1:SObject}$0 LIMIT 200"],
     "description": "Create a SOQL query with all fields",
-    "prefix": [
-      "selectAll",
-      "SELALL"
-    ],
+    "prefix": ["selectAll", "SELALL"],
     "scope": "apex,apex-anon"
   },
   "Select to list": {
@@ -625,10 +428,7 @@
       "List<${1:SObjectType}> ${2:variableName} = [SELECT ${3:fieldsList} FROM ${1:SObjectType}$0];"
     ],
     "description": "Create a SOQL query and assign result to list",
-    "prefix": [
-      "SelectToList",
-      "sql"
-    ],
+    "prefix": ["SelectToList", "sql"],
     "scope": "apex,apex-anon"
   },
   "Select to list single record": {
@@ -637,10 +437,7 @@
       "${1:SObjectType} ${5:singleVariableName} = ${2:variableName}.size() == 1 ? ${2:variableName}.get(0) : null;$0"
     ],
     "description": "Create a SOQL query and assign result safely to list",
-    "prefix": [
-      "SelectToObject",
-      "sql1"
-    ],
+    "prefix": ["SelectToObject", "sql1"],
     "scope": "apex,apex-anon"
   },
   "Select to map": {
@@ -648,20 +445,13 @@
       "Map<Id, ${1:SObjectType}> ${2:variableName} = new Map<Id, ${1:SObjectType}>([SELECT ${3:fieldsList} FROM ${1:SObjectType} $0]);"
     ],
     "description": "Create a SOQL query and assign result to map",
-    "prefix": [
-      "selectToMap",
-      "sqm"
-    ],
+    "prefix": ["selectToMap", "sqm"],
     "scope": "apex,apex-anon"
   },
   "String escapeSingleQuotes": {
-    "body": [
-      "String result = String.escapeSingleQuotes(${1:stringToEscape});"
-    ],
+    "body": ["String result = String.escapeSingleQuotes(${1:stringToEscape});"],
     "description": "String.escapeSingleQuotes",
-    "prefix": [
-      "String.escapeSingleQuotes"
-    ],
+    "prefix": ["String.escapeSingleQuotes"],
     "scope": "apex,apex-anon"
   },
   "String format": {
@@ -671,39 +461,25 @@
       "String formatted = String.format(${1:template}, ${2:parameters});"
     ],
     "description": "String.format",
-    "prefix": [
-      "String.format"
-    ],
+    "prefix": ["String.format"],
     "scope": "apex,apex-anon"
   },
   "String isBlank": {
-    "body": [
-      "String.isBlank(${1:inputString})"
-    ],
+    "body": ["String.isBlank(${1:inputString})"],
     "description": "String.isBlank",
-    "prefix": [
-      "String.isBlank"
-    ],
+    "prefix": ["String.isBlank"],
     "scope": "apex,apex-anon"
   },
   "String isNotBlank": {
-    "body": [
-      "String.isNotBlank(${1:inputString})"
-    ],
+    "body": ["String.isNotBlank(${1:inputString})"],
     "description": "String.isNotBlank",
-    "prefix": [
-      "String.isNotBlank"
-    ],
+    "prefix": ["String.isNotBlank"],
     "scope": "apex,apex-anon"
   },
   "String isNotEmpty": {
-    "body": [
-      "String.isNotEmpty(${1:inputString})"
-    ],
+    "body": ["String.isNotEmpty(${1:inputString})"],
     "description": "String.isNotEmpty",
-    "prefix": [
-      "String.isNotEmpty"
-    ],
+    "prefix": ["String.isNotEmpty"],
     "scope": "apex,apex-anon"
   },
   "String join": {
@@ -711,63 +487,37 @@
       "String result = String.join(${1:iterableObj}, '${2:separator}');"
     ],
     "description": "String.join",
-    "prefix": [
-      "String.join"
-    ],
+    "prefix": ["String.join"],
     "scope": "apex,apex-anon"
   },
   "String valueOf": {
-    "body": [
-      "String result = String.valueOf(${1:valueToConvert});"
-    ],
+    "body": ["String result = String.valueOf(${1:valueToConvert});"],
     "description": "String.valueOf",
-    "prefix": [
-      "String.valueOf"
-    ],
+    "prefix": ["String.valueOf"],
     "scope": "apex,apex-anon"
   },
   "System Assert": {
-    "body": [
-      "System.assert(${1:expected}, ${2:message});"
-    ],
+    "body": ["System.assert(${1:expected}, ${2:message});"],
     "description": "Assert a condition in a unit test",
-    "prefix": [
-      "systemAssert",
-      "sa"
-    ],
+    "prefix": ["systemAssert", "sa"],
     "scope": "apex,apex-anon"
   },
   "System Assert Equals": {
-    "body": [
-      "System.assertEquals(${1:expected}, ${2:actual}, ${3:message});"
-    ],
+    "body": ["System.assertEquals(${1:expected}, ${2:actual}, ${3:message});"],
     "description": "Assert that a value is an expected value in a unit test",
-    "prefix": [
-      "systemAssertEquals",
-      "sae"
-    ],
+    "prefix": ["systemAssertEquals", "sae"],
     "scope": "apex,apex-anon"
   },
   "System Assert Equals Null": {
-    "body": [
-      "System.assertEquals(null, $0, ${1:message});"
-    ],
+    "body": ["System.assertEquals(null, $0, ${1:message});"],
     "description": "Assert that a value is null in a unit test",
-    "prefix": [
-      "systemAssertEquals",
-      "san"
-    ],
+    "prefix": ["systemAssertEquals", "san"],
     "scope": "apex,apex-anon"
   },
   "System Assert Fail": {
-    "body": [
-      "System.assert(false, $0);"
-    ],
+    "body": ["System.assert(false, $0);"],
     "description": "Fail unit test when this assert is reached",
-    "prefix": [
-      "systemAssertFail",
-      "saf"
-    ],
+    "prefix": ["systemAssertFail", "saf"],
     "scope": "apex,apex-anon"
   },
   "System Assert Not Equals": {
@@ -775,21 +525,13 @@
       "System.assertNotEquals(${1:expected}, ${2:actual}, ${3:message});"
     ],
     "description": "Assert that a value is not an expected value in a unit test",
-    "prefix": [
-      "SystemAssertNotEquals",
-      "sane"
-    ],
+    "prefix": ["SystemAssertNotEquals", "sane"],
     "scope": "apex,apex-anon"
   },
   "System Assert Not Equals Null": {
-    "body": [
-      "System.assertNotEquals(null, $0, ${1:message});"
-    ],
+    "body": ["System.assertNotEquals(null, $0, ${1:message});"],
     "description": "Assert that a value is not null in a unit test ",
-    "prefix": [
-      "systemAssertNotEqualsMessage",
-      "sann"
-    ],
+    "prefix": ["systemAssertNotEqualsMessage", "sann"],
     "scope": "apex,apex-anon"
   },
   "System Debug": {
@@ -797,10 +539,7 @@
       "System.debug(LoggingLevel.${1|DEBUG,ERROR,WARN,INFO,FINE,FINER,FINEST,NONE|}, '$2: ' + $0);"
     ],
     "description": "Debug",
-    "prefix": [
-      "systemDebug",
-      "sd"
-    ],
+    "prefix": ["systemDebug", "sd"],
     "scope": "apex,apex-anon"
   },
   "System Debug Serialize Pretty": {
@@ -808,51 +547,33 @@
       "System.debug(LoggingLevel.${1|DEBUG,ERROR,WARN,INFO,FINE,FINER,FINEST,NONE|}, '$2: ' + JSON.SerializePretty($0));"
     ],
     "description": "Debug objects or collections",
-    "prefix": [
-      "systemDebugPretty",
-      "sdp"
-    ],
+    "prefix": ["systemDebugPretty", "sdp"],
     "scope": "apex,apex-anon"
   },
   "System Run As": {
-    "body": [
-      "System.runAs(${1:user}) {",
-	"\t$0",
-	"}"
-    ],
+    "body": ["System.runAs(${1:user}) {", "\t$0", "}"],
     "description": "System Run As User statement.",
-    "prefix": [
-      "systemRunAs",
-      "sra"
-    ],
+    "prefix": ["systemRunAs", "sra"],
     "scope": "apex,apex-anon"
   },
   "Test Method": {
     "body": [
       "@IsTest",
       "static void ${1:testMethodName}() {",
-	"\t$0",
-	"\tTest.startTest();",
-	"\t",
-	"\tTest.stopTest();",
-	"}"
+      "\t$0",
+      "\tTest.startTest();",
+      "\t",
+      "\tTest.stopTest();",
+      "}"
     ],
     "description": "Test setup for creating data before test methods run.",
-    "prefix": [
-      "@IsTest",
-      "isTest",
-      "tstm"
-    ],
+    "prefix": ["@IsTest", "isTest", "tstm"],
     "scope": "apex,apex-anon"
   },
   "Test.calculatePermissionSetGroup": {
-    "body": [
-      "Test.calculatePermissionSetGroup(${1:permissionSetGroupId});"
-    ],
+    "body": ["Test.calculatePermissionSetGroup(${1:permissionSetGroupId});"],
     "description": "Test.calculatePermissionSetGroup",
-    "prefix": [
-      "Test.calculatePermissionSetGroup"
-    ],
+    "prefix": ["Test.calculatePermissionSetGroup"],
     "scope": "apex,apex-anon"
   },
   "Test.calculatePermissionSetGroups": {
@@ -860,59 +581,37 @@
       "Test.calculatePermissionSetGroup(${1:listOfPermissionSetGroupsIds});"
     ],
     "description": "Test.calculatePermissionSetGroups",
-    "prefix": [
-      "Test.calculatePermissionSetGroups"
-    ],
+    "prefix": ["Test.calculatePermissionSetGroups"],
     "scope": "apex,apex-anon"
   },
   "Test.clearApexPageMessages": {
-    "body": [
-      "Test.clearApexPageMessages();"
-    ],
+    "body": ["Test.clearApexPageMessages();"],
     "description": "Test.clearApexPageMessages",
-    "prefix": [
-      "Test.clearApexPageMessages"
-    ],
+    "prefix": ["Test.clearApexPageMessages"],
     "scope": "apex,apex-anon"
   },
   "Test.enableChangeDataCapture": {
-    "body": [
-      "Test.enableChangeDataCapture();"
-    ],
+    "body": ["Test.enableChangeDataCapture();"],
     "description": "Test.enableChangeDataCapture",
-    "prefix": [
-      "Test.enableChangeDataCapture"
-    ],
+    "prefix": ["Test.enableChangeDataCapture"],
     "scope": "apex,apex-anon"
   },
   "Test.getEventBus": {
-    "body": [
-      "Test.getEventBus().deliver();"
-    ],
+    "body": ["Test.getEventBus().deliver();"],
     "description": "Test.getEventBus",
-    "prefix": [
-      "Test.getEventBus"
-    ],
+    "prefix": ["Test.getEventBus"],
     "scope": "apex,apex-anon"
   },
   "Test.getStandardPricebookId": {
-    "body": [
-      "Id pricebookId = Test.getStandardPricebookId();"
-    ],
+    "body": ["Id pricebookId = Test.getStandardPricebookId();"],
     "description": "Test.getStandardPricebookId",
-    "prefix": [
-      "Test.getStandardPricebookId"
-    ],
+    "prefix": ["Test.getStandardPricebookId"],
     "scope": "apex,apex-anon"
   },
   "Test.isRunningTest": {
-    "body": [
-      "Test.isRunningTest()"
-    ],
+    "body": ["Test.isRunningTest()"],
     "description": "Test.isRunningTest",
-    "prefix": [
-      "Test.isRunningTest"
-    ],
+    "prefix": ["Test.isRunningTest"],
     "scope": "apex,apex-anon"
   },
   "Test.loadData": {
@@ -920,19 +619,13 @@
       "List<SObject> records = Test.loadData(${1:ObjectApiName}.SObjectType, '${2:staticResourceName}');"
     ],
     "description": "Test.loadData",
-    "prefix": [
-      "Test.loadData"
-    ],
+    "prefix": ["Test.loadData"],
     "scope": "apex,apex-anon"
   },
   "Test.setCurrentPage": {
-    "body": [
-      "Test.setCurrentPage(${1:pageReference});"
-    ],
+    "body": ["Test.setCurrentPage(${1:pageReference});"],
     "description": "Test.setCurrentPage",
-    "prefix": [
-      "Test.setCurrentPage"
-    ],
+    "prefix": ["Test.setCurrentPage"],
     "scope": "apex,apex-anon"
   },
   "Test.setMock": {
@@ -940,190 +633,111 @@
       "Test.setMock(HttpCalloutMock.class, new ${1:YourHttpCalloutMockImplementation}());"
     ],
     "description": "Test.setMock",
-    "prefix": [
-      "Test.setMock"
-    ],
+    "prefix": ["Test.setMock"],
     "scope": "apex,apex-anon"
   },
   "Test.startTest": {
-    "body": [
-      "Test.startTest();"
-    ],
+    "body": ["Test.startTest();"],
     "description": "Test.startTest",
-    "prefix": [
-      "Test.startTest"
-    ],
+    "prefix": ["Test.startTest"],
     "scope": "apex,apex-anon"
   },
   "Test.stopTest": {
-    "body": [
-      "Test.stopTest();"
-    ],
+    "body": ["Test.stopTest();"],
     "description": "Test.stopTest",
-    "prefix": [
-      "Test.stopTest"
-    ],
+    "prefix": ["Test.stopTest"],
     "scope": "apex,apex-anon"
   },
   "TestSetup": {
-    "body": [
-      "@TestSetup",
-      "static void setup() {",
-	"\t$0",
-	"}"
-    ],
+    "body": ["@TestSetup", "static void setup() {", "\t$0", "}"],
     "description": "Test setup for creating data before test methods run.",
-    "prefix": [
-      "@TestSetup",
-      "testSetup",
-      "tsts"
-    ],
+    "prefix": ["@TestSetup", "testSetup", "tsts"],
     "scope": "apex,apex-anon"
   },
   "Throw exception": {
-    "body": [
-      "throw new ${1:exceptionType}($0);"
-    ],
+    "body": ["throw new ${1:exceptionType}($0);"],
     "description": "Throw an exception",
-    "prefix": [
-      "throw",
-      "thr"
-    ],
+    "prefix": ["throw", "thr"],
     "scope": "apex,apex-anon"
   },
   "Try Catch": {
-    "body": [
-      "try {",
-	"\t$0",
-	"} catch (${1:exceptionType}) {",
-	"\t",
-	"}"
-    ],
+    "body": ["try {", "\t$0", "} catch (${1:exceptionType}) {", "\t", "}"],
     "description": "Try Catch statement.",
-    "prefix": [
-      "tryCatch",
-      "tc"
-    ],
+    "prefix": ["tryCatch", "tc"],
     "scope": "apex,apex-anon"
   },
   "Try Catch Finally": {
     "body": [
       "try {",
-	"\t$0",
-	"} catch (${1:exceptionType}) {",
-	"\t",
-	"} finally {",
-	"\t",
-	"}"
+      "\t$0",
+      "} catch (${1:exceptionType}) {",
+      "\t",
+      "} finally {",
+      "\t",
+      "}"
     ],
     "description": "Try Catch statement.",
-    "prefix": [
-      "tryCatchFinally",
-      "tcf"
-    ],
+    "prefix": ["tryCatchFinally", "tcf"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getDefaultCurrency": {
-    "body": [
-      "UserInfo.getDefaultCurrency();"
-    ],
+    "body": ["UserInfo.getDefaultCurrency();"],
     "description": "Get User default currency.",
-    "prefix": [
-      "UserInfogetDefaultCurrency"
-    ],
+    "prefix": ["UserInfogetDefaultCurrency"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getFirstName": {
-    "body": [
-      "UserInfo.getFirstName();"
-    ],
+    "body": ["UserInfo.getFirstName();"],
     "description": "Get User first name.",
-    "prefix": [
-      "UserInfogetFirstName"
-    ],
+    "prefix": ["UserInfogetFirstName"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getLanguage": {
-    "body": [
-      "UserInfo.getLanguage();"
-    ],
+    "body": ["UserInfo.getLanguage();"],
     "description": "Get User language.",
-    "prefix": [
-      "UserInfogetLanguage"
-    ],
+    "prefix": ["UserInfogetLanguage"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getLastName": {
-    "body": [
-      "UserInfo.getLastName();"
-    ],
+    "body": ["UserInfo.getLastName();"],
     "description": "Get User last name.",
-    "prefix": [
-      "UserInfogetLastName"
-    ],
+    "prefix": ["UserInfogetLastName"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getName": {
-    "body": [
-      "UserInfo.getName();"
-    ],
+    "body": ["UserInfo.getName();"],
     "description": "Get User name.",
-    "prefix": [
-      "UserInfogetName"
-    ],
+    "prefix": ["UserInfogetName"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getProfileId": {
-    "body": [
-      "UserInfo.getProfileId();"
-    ],
+    "body": ["UserInfo.getProfileId();"],
     "description": "Get User profile id.",
-    "prefix": [
-      "UserInfogetProfileId"
-    ],
+    "prefix": ["UserInfogetProfileId"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getUserEmail": {
-    "body": [
-      "UserInfo.getUserEmail();"
-    ],
+    "body": ["UserInfo.getUserEmail();"],
     "description": "Get User user email.",
-    "prefix": [
-      "UserInfogetUserEmail"
-    ],
+    "prefix": ["UserInfogetUserEmail"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getUserId": {
-    "body": [
-      "UserInfo.getUserId();"
-    ],
+    "body": ["UserInfo.getUserId();"],
     "description": "Get User user id.",
-    "prefix": [
-      "UserInfogetUserId"
-    ],
+    "prefix": ["UserInfogetUserId"],
     "scope": "apex,apex-anon"
   },
   "UserInfo.getUserType": {
-    "body": [
-      "UserInfo.getUserType();"
-    ],
+    "body": ["UserInfo.getUserType();"],
     "description": "Get User user type.",
-    "prefix": [
-      "UserInfogetUserType"
-    ],
+    "prefix": ["UserInfogetUserType"],
     "scope": "apex,apex-anon"
   },
   "While": {
-    "body": [
-      "while (${1:condition}) {",
-	"\t$0",
-	"}"
-    ],
+    "body": ["while (${1:condition}) {", "\t$0", "}"],
     "description": "While statement.",
-    "prefix": [
-      "while",
-      "wh"
-    ],
+    "prefix": ["while", "wh"],
     "scope": "apex,apex-anon"
   }
 }

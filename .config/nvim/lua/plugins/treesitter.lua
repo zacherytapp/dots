@@ -55,11 +55,6 @@ return {
 						["l="] = { query = "@assignment.lhs", desc = "ts: left assignment" },
 						["r="] = { query = "@assignment.rhs", desc = "ts: right assignment" },
 
-						-- ["a:"] = { query = "@property.outer", desc = "Select outer part of an object property" },
-						-- ["i:"] = { query = "@property.inner", desc = "Select inner part of an object property" },
-						-- ["l:"] = { query = "@property.lhs", desc = "Select left part of an object property" },
-						-- ["r:"] = { query = "@property.rhs", desc = "Select right part of an object property" },
-
 						["aa"] = { query = "@parameter.outer", desc = "ts: outer parameter" },
 						["ia"] = { query = "@parameter.inner", desc = "ts: inner parameter" },
 
@@ -85,7 +80,6 @@ return {
 					swap_next = {
 						["<leader>na"] = "@parameter.inner", -- swap parameters/argument with next
 						["<leader>nm"] = "@function.outer", -- swap function with next
-						-- ["<leader>n:"] = "@property.outer",    -- swap object property with next
 					},
 					swap_previous = {
 						["<leader>pa"] = "@parameter.inner", -- swap parameters/argument with prev
@@ -104,8 +98,6 @@ return {
 						["]i"] = { query = "@conditional.outer", desc = "ts: next conditional start" },
 						["]l"] = { query = "@loop.outer", desc = "next loop start" },
 
-						-- You can pass a query group to use query from `queries/<lang>/<query_group>.scm file in your runtime path.
-						-- Below example nvim-treesitter's `locals.scm` and `folds.scm`. They also provide highlights.scm and indent.scm.
 						["]s"] = { query = "@scope", query_group = "locals", desc = "Next scope" },
 						["]z"] = { query = "@fold", query_group = "folds", desc = "Next fold" },
 					},
