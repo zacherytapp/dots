@@ -1,6 +1,6 @@
 {
   "Default header for Apex classes": {
-    "prefix": "header Apex",
+    "prefix": "header reg",
     "body": [
       "/**",
       "* @description: $1",
@@ -49,12 +49,17 @@
     "description": "Inserts the MIT License header comment."
   },
   "Apex method description - short": {
-    "prefix": "description",
+    "prefix": "description - short",
     "body": ["/**", "* @description $1", "*/"],
     "description": "Default short description for Apex methods"
   },
+  "Apex method description - return": {
+    "prefix": "description - return",
+    "body": ["/**", "* @description $1", "* @return ", "*/"],
+    "description": "Default short description for Apex methods"
+  },
   "Apex method description - full": {
-    "prefix": "description",
+    "prefix": "description - full",
     "body": ["/**", "* @description $1", "* @param ", "* @return ", "*/"],
     "description": "Default short description for Apex methods"
   },
