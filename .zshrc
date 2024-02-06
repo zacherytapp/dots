@@ -127,5 +127,6 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 
 export PATH="/home/zakk/.local/bin:$PATH"
 export PATH="/opt/pmd/bin:$PATH"
+export PATH="/home/zakk/.cargo/bin:$PATH"
 
 eval "$(starship init zsh)"
