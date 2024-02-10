@@ -3,12 +3,12 @@
     "prefix": "header reg",
     "body": [
       "/**",
-      "* @description: $1",
-      "* @author: Zakk Tapp, Craftsman Technology Group",
-      "* @created: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-      "* @modified: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
-      "* @group: $2",
-      "* @see: $3",
+      "* @description $1",
+      "* @author Zakk Tapp, Craftsman Technology Group",
+      "* @created ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "* @modified ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "* @group $2",
+      "* @see $3",
       "*/"
     ],
     "description": "Default header for Apex classes"
