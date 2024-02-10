@@ -539,18 +539,13 @@
     "prefix": ["systemAssertNotEqualsMessage", "sann"],
     "scope": "apex,apex-anon"
   },
-  "System Debug": {
-    "body": [
-      "System.debug(LoggingLevel.${1|DEBUG,ERROR,WARN,INFO,FINE,FINER,FINEST,NONE|}, '$2: ' + $0);"
-    ],
-    "description": "Debug",
-    "prefix": ["systemDebug", "sd"],
-    "scope": "apex,apex-anon"
+  "System.debug": {
+    "prefix": "debug",
+    "body": ["System.debug('*** $0: ' + $0);"],
+    "description": "Log output to console"
   },
   "System Debug Serialize Pretty": {
-    "body": [
-      "System.debug(LoggingLevel.${1|DEBUG,ERROR,WARN,INFO,FINE,FINER,FINEST,NONE|}, '$2: ' + JSON.SerializePretty($0));"
-    ],
+    "body": ["System.debug('*** $0' + JSON.SerializePretty($0));"],
     "description": "Debug objects or collections",
     "prefix": ["systemDebugPretty", "sdp"],
     "scope": "apex,apex-anon"
