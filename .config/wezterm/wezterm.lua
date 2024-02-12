@@ -9,7 +9,7 @@ config.cursor_blink_ease_in = "Constant"
 config.cursor_blink_ease_out = "Constant"
 
 config.color_scheme_dirs = { "/home/zakk/wezterm" }
-config.color_scheme = "Dracula (Official)"
+config.color_scheme = "Gruvbox Material (Gogh)"
 config.window_background_opacity = 0.95
 
 -- Fonts

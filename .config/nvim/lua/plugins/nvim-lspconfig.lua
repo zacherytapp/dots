@@ -51,10 +51,11 @@ return {
 			eslint = {},
 			tsserver = {},
 			tailwindcss = {},
-			jedi_language_server = {},
+			-- jedi_language_server = {},
 			rust_analyzer = {},
 			jdtls = {},
 			html = {},
+			gopls = {},
 			dockerls = {},
 			lua_ls = {
 				Lua = {

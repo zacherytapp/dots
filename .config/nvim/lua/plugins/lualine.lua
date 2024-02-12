@@ -3,7 +3,7 @@ return {
 	opts = {
 		options = {
 			icons_enabled = false,
-			theme = "dracula",
+			theme = "gruvbox",
 			component_separators = "|",
 			section_separators = "",
 			transparent = false,
