@@ -51,10 +51,20 @@ return {
 			eslint = {},
 			tsserver = {},
 			tailwindcss = {},
-			-- jedi_language_server = {},
 			rust_analyzer = {},
 			jdtls = {},
-			html = {},
+			html = {
+				filetypes = {
+					"html",
+					"javascript",
+					"javascriptreact",
+					"javascript.jsx",
+					"typescript",
+					"typescriptreact",
+					"typescript.tsx",
+				},
+			},
+			htmx = {},
 			gopls = {},
 			dockerls = {},
 			lua_ls = {

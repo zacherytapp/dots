@@ -18,6 +18,9 @@ return {
 				"black",
 				"pylint",
 				"eslint_d",
+				"djlint",
+				"python-lsp-server",
+				"pyright",
 			},
 		})
 
@@ -36,13 +39,20 @@ return {
 						"lua",
 						"javascript",
 						"typescript",
+						"pylint",
 						"java",
+						"djlint",
+						"python-lsp-server",
 					},
 				}), -- js/ts formatter
 				formatting.stylua, -- lua formatter
 				formatting.isort,
 				formatting.black,
-				diagnostics.pylint,
+				formatting.djlint,
+				diagnostics.pylint.with({
+					diagnostic_config = { underline = false, virtual_text = false, signs = false },
+					method = null_ls.methods.DIAGNOSTICS_ON_SAVE,
+				}),
 				diagnostics.pmd.with({
 					extra_filetypes = { "apex" },
 					filetypes = { "apex" },
