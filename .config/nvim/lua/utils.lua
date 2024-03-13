@@ -1,3 +1,4 @@
+-- Modifies the timestamp in the file to the current date and time when the file is saved.
 local function update_modified_timestamp()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)

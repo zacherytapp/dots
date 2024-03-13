@@ -4,6 +4,7 @@ return {
 	branch = "0.1.x",
 	dependencies = {
 		"nvim-lua/plenary.nvim",
+		"debugloop/telescope-undo.nvim",
 		{
 			"nvim-telescope/telescope-fzf-native.nvim",
 			build = "make",
@@ -14,7 +15,6 @@ return {
 	},
 
 	config = function()
-		-- Mostly copied from NVChad
 		require("telescope").setup({
 			defaults = {
 				prompt_prefix = "   ",
@@ -38,7 +38,16 @@ return {
 					preview_cutoff = 120,
 				},
 				file_sorter = require("telescope.sorters").get_fuzzy_file,
-				file_ignore_patterns = { "node_modules" },
+				file_ignore_patterns = {
+					"node_modules",
+					".git",
+					".cache",
+					"./node_modules/*",
+					"node_modules",
+					"^node_modules/*",
+					"node_modules/*",
+					".venv",
+				},
 				generic_sorter = require("telescope.sorters").get_generic_fuzzy_sorter,
 				path_display = { "truncate" },
 				winblend = 0,
@@ -57,7 +66,7 @@ return {
 					n = { ["q"] = require("telescope.actions").close },
 				},
 			},
-			extensions_list = { "themes", "terms" },
+			extensions_list = { "themes", "terms", "undo" },
 			mappings = {
 				i = {
 					["<C-u>"] = false,
@@ -72,12 +81,12 @@ return {
 				"--line-number",
 				"--column",
 				"--smart-case",
-				"--hidden",
 			},
 		})
 
 		-- Enable telescope fzf native, if installed
 		pcall(require("telescope").load_extension, "fzf")
+		require("telescope").load_extension("undo")
 
 		-- See `:help telescope.builtin`
 		vim.keymap.set(
@@ -112,5 +121,6 @@ return {
 		vim.keymap.set("n", "<leader>fg", require("telescope.builtin").live_grep, { desc = "[S]earch by [G]rep" })
 		vim.keymap.set("n", "<leader>fd", require("telescope.builtin").diagnostics, { desc = "[S]earch [D]iagnostics" })
 		vim.keymap.set("n", "<leader>fr", require("telescope.builtin").resume, { desc = "[S]earch [R]esume" })
+		vim.keymap.set("n", "<leader>fu", require("telescope").extensions.undo.undo, { desc = "[S]earch [U]ndo" })
 	end,
 }

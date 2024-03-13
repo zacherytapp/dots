@@ -1,3 +1,4 @@
+vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
@@ -83,13 +84,17 @@ vim.keymap.set(
 
 vim.keymap.set("n", "<leader>li", "tabnew | read !sfdx force:apex:log:list")
 
+vim.keymap.set("i", "<M-l>", 'copilot#Accept("\\<CR>")', {
+	expr = true,
+	replace_keycodes = false,
+})
+vim.g.copilot_no_tab_map = true
+
 -- Harpoon
 local mark = require("harpoon.mark")
 local ui = require("harpoon.ui")
-
 vim.keymap.set("n", "<leader>a", mark.add_file)
 vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu)
-
 vim.keymap.set("n", "<C-y>", function()
 	ui.nav_file(1)
 end)
