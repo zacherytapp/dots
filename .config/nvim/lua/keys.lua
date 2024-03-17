@@ -5,6 +5,12 @@ vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = tr
 vim.keymap.set("v", "<S-Tab>", "<gv")
 vim.keymap.set("n", "<A-t>", ":tabnew<CR>")
 
+-- Primeagen
+vim.keymap.set("x", "<leader>p", [["_dP]])
+vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
+vim.keymap.set("n", "<leader>Y", [["+Y]])
+
+-- Salesforce Stuff
 vim.keymap.set(
 	"n",
 	"<C-s>",
