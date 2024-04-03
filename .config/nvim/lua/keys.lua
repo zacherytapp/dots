@@ -9,6 +9,7 @@ vim.keymap.set("n", "<A-t>", ":tabnew<CR>")
 vim.keymap.set("x", "<leader>p", [["_dP]])
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
 vim.keymap.set("n", "<leader>Y", [["+Y]])
+vim.keymap.set("n", "<leader><F5>", vim.cmd.UndotreeToggle, { desc = "Toggle Undotree" })
 
 -- Salesforce Stuff
 vim.keymap.set(

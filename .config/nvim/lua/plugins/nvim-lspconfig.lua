@@ -113,5 +113,34 @@ return {
 			on_attach = on_attach,
 			capabilities = capabilities,
 		})
+
+		lspconfig.gopls.setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+			cmd = { "gopls" },
+			filetypes = { "go", "gomod", "gowork", "gotmpl" },
+			settings = {
+				gopls = {
+					analyses = {
+						nilness = true,
+						unusedparams = true,
+						unusedwrite = true,
+						useany = true,
+					},
+					experimentalPostfixCompletions = true,
+					gofumpt = true,
+					usePlaceholders = true,
+					hints = {
+						assignVariableTypes = true,
+						compositeLiteralFields = true,
+						compositeLiteralTypes = true,
+						constantValues = true,
+						functionTypeParameters = true,
+						parameterNames = true,
+						rangeVariableTypes = true,
+					},
+				},
+			},
+		})
 	end,
 }

@@ -62,11 +62,6 @@ return {
 						"/home/zakk/.config/rules/apex_ruleset.xml",
 					},
 				}),
-				diagnostics.eslint_d.with({
-					condition = function(utils)
-						return utils.root_has_file({ ".eslintrc.js", ".eslintrc.cjs" })
-					end,
-				}),
 			},
 			-- configure format on save
 			on_attach = function(current_client, bufnr)

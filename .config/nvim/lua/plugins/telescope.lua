@@ -40,14 +40,14 @@ return {
 				file_sorter = require("telescope.sorters").get_fuzzy_file,
 				file_ignore_patterns = {
 					"node_modules",
-					".git",
+					".git/.*",
 					".cache",
-					"./node_modules/*",
-					"node_modules",
+					"./node_modules/.**",
 					"^node_modules/*",
 					"node_modules/*",
 					".venv",
 				},
+				hidden = true,
 				generic_sorter = require("telescope.sorters").get_generic_fuzzy_sorter,
 				path_display = { "truncate" },
 				winblend = 0,
@@ -82,6 +82,17 @@ return {
 				"--column",
 				"--smart-case",
 			},
+			pickers = {
+				live_grep = {
+					additional_args = { "--hidden" },
+				},
+				grep_string = {
+					additional_args = { "--hidden" },
+				},
+				find_files = {
+					find_command = { "rg", "--files", "--iglob", "!.git", "--hidden" },
+				},
+			},
 		})
 
 		-- Enable telescope fzf native, if installed
@@ -111,6 +122,12 @@ return {
 
 		vim.keymap.set("n", "<leader>gf", require("telescope.builtin").git_files, { desc = "Search [G]it [F]iles" })
 		vim.keymap.set("n", "<leader>ff", require("telescope.builtin").find_files, { desc = "[S]earch [F]iles" })
+		-- vim.keymap.set(
+		-- 	"n",
+		-- 	"<leader>ff",
+		-- 	[[<cmd>lua require('telescope.builtin').find_files({ hidden = true })<CR>]],
+		-- 	{ desc = "[S]earch [F]iles" }
+		-- )
 		vim.keymap.set("n", "<leader>fh", require("telescope.builtin").help_tags, { desc = "[S]earch [H]elp" })
 		vim.keymap.set(
 			"n",
