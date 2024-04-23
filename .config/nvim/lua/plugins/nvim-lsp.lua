@@ -64,7 +64,6 @@ return {
 					"typescript.tsx",
 				},
 			},
-			htmx = {},
 			gopls = {},
 			dockerls = {},
 			lua_ls = {
@@ -102,6 +101,8 @@ return {
 
 		local lspconfig = require("lspconfig")
 		local apex_jar_path = vim.fn.stdpath("config") .. "/lspserver/" .. "apex-jorje-lsp.jar"
+
+		lspconfig.htmx.setup({})
 
 		lspconfig.apex_ls.setup({
 			apex_jar_path = apex_jar_path,
