@@ -17,6 +17,23 @@ return {
 
 				vim.keymap.set("n", keys, func, { buffer = bufnr, desc = desc })
 			end
+			local signs = {
+				ERROR = "",
+				WARN = "",
+				HINT = "󰌵",
+				INFO = "",
+			}
+			vim.diagnostic.config({
+				virtual_text = {
+					errors = { "italic" },
+					hints = { "italic" },
+					warnings = { "italic" },
+					information = { "italic" },
+					prefix = function(diagnostic)
+						return signs[vim.diagnostic.severity[diagnostic.severity]]
+					end,
+				},
+			})
 
 			nmap("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame")
 			nmap("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
@@ -73,6 +90,8 @@ return {
 					diagnostics = { disable = { "missing-fields" } },
 				},
 			},
+			templ = {},
+			htmx = {}, -- Make sure rust and c++ are installed
 		}
 
 		-- Setup neovim lua configuration
@@ -101,18 +120,41 @@ return {
 
 		local lspconfig = require("lspconfig")
 		local apex_jar_path = vim.fn.stdpath("config") .. "/lspserver/" .. "apex-jorje-lsp.jar"
-
-		lspconfig.htmx.setup({})
+		vim.filetype.add({ extension = { templ = "templ" } })
 
 		lspconfig.apex_ls.setup({
 			apex_jar_path = apex_jar_path,
-			apex_enable_semantic_errors = false,
+			apex_enable_semantic_errors = true,
 			apex_enable_completion_statistics = false,
 			filetypes = { "apex", "apexcode" },
 			root_dir = lspconfig.util.root_pattern("sfdx-project.json"),
 
 			on_attach = on_attach,
 			capabilities = capabilities,
+		})
+
+		lspconfig.templ.setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+		})
+
+		lspconfig.htmx.setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+			filetypes = { "html, templ" },
+		})
+
+		lspconfig.html.setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+			filetypes = { "html", "templ" },
+		})
+
+		lspconfig.tailwindcss.setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+			filetypes = { "templ", "astro", "javascript", "typescript", "react" },
+			init_options = { userLanguages = { templ = "html" } },
 		})
 
 		lspconfig.gopls.setup({

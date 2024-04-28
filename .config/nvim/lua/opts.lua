@@ -111,6 +111,7 @@ update_hl("TSString", { italic = true })
 update_hl("TSRepeat", { italic = true })
 update_hl("TSVariable", { italic = true })
 update_hl("TSVariableBuiltin", { italic = true })
+
 vim.opt.spelllang = "en_us"
 vim.opt.spell = true
 vim.cmd.highlight("DiagnosticUnderlineError guisp=#ff0000 gui=undercurl")

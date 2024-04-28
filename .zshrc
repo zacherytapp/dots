@@ -112,14 +112,10 @@ export NVM_DIR="$HOME/.nvm"
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# alias config='/usr/bin/git --git-dir=$HOME/.cfg/.git/ --work-tree=$HOME'
 alias config='/usr/bin/git --git-dir=/home/zakk/.cfg/ --work-tree=/home/zakk'
 alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
 alias python="python3"
-# alias air="/home/zakk/go/bin/air"
-# alias templ="/home/zakk/go/bin/templ"
-alias rust="rustc"
 
 export PATH="/home/zakk/.local/bin:$PATH"
 export PATH="/opt/pmd/bin:$PATH"
@@ -134,3 +130,4 @@ export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 export VIRTUALENVWRAPPER_VIRTUALENV_ARGS=' -p /usr/bin/python3 '
 export PROJECT_HOME=$HOME/Devel
 source /usr/local/bin/virtualenvwrapper.sh
+source /home/zakk/.cargo/env
