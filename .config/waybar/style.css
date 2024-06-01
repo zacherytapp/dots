@@ -1,142 +1,153 @@
-@define-color bg1   #282828;
-@define-color ws_foc #e5e9f0;
-@define-color ws-clr #2e3440;
-@define-color font #ffc94a;
-@define-color mpd #fbf1c7;
-@define-color pipe #7d818a;
+@define-color light #ebdbb2;
+@define-color dark #1d2021;
+
+@define-color yellow #fabd2f;
+@define-color red #cc241d;
+@define-color grey #928374;
+@define-color blue #458588;
+@define-color blue-dull #83a598;
+@define-color purple #d3869b;
+@define-color purple-dark #b16286;
+@define-color green #8ec07c;
+@define-color green2 #98971a;
+@define-color green3 #b8bb26;
+@define-color green4 #689d6a;
+
+* {
+  font-family: "FiraCode Nerd Font";
+  font-weight: bold;
+  font-size: 12px;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
 
 window#waybar {
-  background-color: rgba(0x11, 0x11, 0x12, 0.6);
-  /* background-color: #4c566a; */
-  /* background-color: #0b0c0d; */
-}
-* {
-  min-height: 0px;
-  font-size: 11px;
-  font-family: Sans;
-  min-height: 0px;
-  font-weight: 600;
-  padding-bottom: 1px;
-  padding-top: 1px;
-}
-#window {
-  border-radius: 20px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-/* center module */
-#clock {
-  margin: 2px 0px 2px 0px;
-  color: #a2bab1;
-  padding-left: 8px;
-  padding-right: 8px;
-  background-color: @bg1;
-  border-radius: 8px;
+  color: @light;
+  background: rgba(29, 32, 33, 0.5);
+  border-radius: 0;
 }
 
-/* right module */
+tooltip {
+  font-size: 12px;
+}
+
+#keyboard-state,
 #pulseaudio,
-#bluetooth,
 #network,
-#disk,
 #memory,
 #cpu,
-#backlight,
-#battery {
-  color: @font;
-  margin: 2px 0px 2px 0px;
-  padding: 0px 8px 0px 8px;
-  background-color: @bg1;
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-#tray,
-#custom-power {
-  color: @font;
-  margin: 2px 0px 2px 0px;
-  padding: 0px 2px 0px 2px;
-  background-color: @bg1;
-  color: #bf616a;
-  padding-top: 2px;
-  padding-bottom: 2px;
+#clock,
+#disk,
+#temperature,
+#tray {
+  padding: 1px 6px 0 6px;
+  font-size: 12px;
 }
 
-#workspaces {
-  margin: 2px 2px 2px 2px;
-  padding: 0px 2px 0px 6px;
-  border-radius: 6px;
-  background-color: @bg1;
+#cpu,
+#memory,
+#temperature {
+  padding: 1px 8px 0 8px;
 }
 
 #workspaces button {
-  background: @bg1;
-  color: @font;
-  margin: 2px 3px 2px 3px;
   padding: 0px;
+  font-size: 14px;
+  color: @light;
+  border-radius: 0;
 }
 
 #workspaces button.focused {
-  /* color: @ws-clr; */
-  /* background: @ws_foc; */
-  border-width: 2px;
-  border-color: #cc241d;
-  color: #ffd77a;
-  background-color: #504945;
-  border-radius: 3px;
-  border-style: none none outset none;
+  color: @purple-dark;
 }
 
-#workspaces button.urgent {
+#workspaces button.persistent {
+  color: @grey;
 }
 
-#custom-left_pad {
-  border-radius: 8px 0px 0px 8px;
-  padding: 0px 2px 0px 2px;
-  margin: 2px 0px 2px 2px;
-  background-color: @bg1;
+#memory.critical,
+#cpu.critical,
+#temperature.critical {
+  color: @red;
+  text-shadow: 1px 1px 1px @dark;
 }
 
-#custom-right_pad {
-  border-radius: 0px 8px 8px 0px;
-  padding: 0px 2px 0px 2px;
-  margin: 2px 2px 2px 0px;
-  background-color: @bg1;
-}
-#custom-pipe {
-  margin-top: 2px;
-  margin-bottom: 2px;
-  font-size: 16px;
-  background-color: @bg1;
-  color: @pipe;
+#memory.warning,
+#cpu.warning,
+#temperature.warning {
+  color: @yellow;
+  text-shadow: 1px 1px 1px @dark;
 }
 
-#mpd {
-  color: @mpd;
+#temperature {
+  background: @green3;
+  color: @dark;
 }
-#pulseaudio {
-  color: #fb4934;
-}
-#bluetooth {
-  color: #fe8019;
-}
-#network {
-  color: #fabd2f;
-}
-#disk {
-  color: #ebdbb2;
-}
-#memory {
-  color: #b8bb26;
-}
+
 #cpu {
-  color: #8ec07c;
+  background: @green4;
+  color: @dark;
 }
-#backlight {
-  color: #83a598;
+
+#memory {
+  background: @blue-dull;
+  color: @dark;
 }
-#battery {
-  color: #d3869b;
+
+#pulseaudio {
+  background: @grey;
+  color: @dark;
 }
-#custom-power {
-  color: #fb4934;
+
+#network {
+  background: @purple;
+  color: @dark;
+}
+
+#custom-menu,
+#custom-arrow0,
+#custom-arrow1,
+#custom-arrow2,
+#custom-arrow3,
+#custom-arrow4,
+#custom-arrow5 {
+  font-size: 14px;
+}
+
+#custom-menu {
+  background: @green;
+  color: @dark;
+  padding-left: 16px;
+  padding-right: 16px;
+  border: none;
+}
+
+#custom-arrow0 {
+  color: @green;
+}
+
+#custom-arrow1 {
+  color: @purple;
+}
+
+#custom-arrow2 {
+  color: @blue-dull;
+  background: @purple;
+}
+
+#custom-arrow3 {
+  color: @green4;
+  background: @blue-dull;
+}
+
+#custom-arrow4 {
+  color: @green3;
+  background: @green4;
+}
+
+#custom-arrow5 {
+  color: @grey;
+  background: @green3;
 }

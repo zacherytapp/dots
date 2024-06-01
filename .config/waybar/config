@@ -1,148 +1,128 @@
-// vim:syntax=jsonc
 {
-    "ipc" : true,
-    "modules-left": ["sway/workspaces", "mpd"],
-    "modules-center": ["clock"],
-    "modules-right": [ "pulseaudio", "custom/pipe", "bluetooth", "custom/pipe", "network", "custom/pipe", "disk", "custom/pipe", "memory", "custom/pipe", "cpu", "custom/pipe", "backlight", "custom/pipe", "battery", "tray","custom/power"],
-    "sway/workspaces": {
-      "disable-scroll": false,
-      "all-outputs": true,
-      "format": "{icon}",
-      "persistent_workspaces": {},
-      "disable-markup": true,
-      "format-icons": {
-        "1": "1",
-        "2": "2",
-        "3": "3",
-        "4": "4",
-        "5": "5",
-        "6": "6",
-        "7": "7",
-        "8": "8",
-        "9": "9",
-        "0": "0",
-        "focused": "",
-        "urgent": "",
-        "default": ""
-      }
-    },
-    "clock": {
-        "format": "{:%I:%M %p}",
-        "format-alt": "{:%A, %B %d}",
-        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
-    },
-    "cpu": {
-        "format": "{usage}% ",
-        "on-click": "kitty -e btm",
-        "tooltip": false
-    },
-    "memory": {
-        "format": "{}% ",
-        "on-click": "kitty -e htop"
-    },
-    "temperature": {
-        "thermal-zone": 2,
-        "hwmon-path": "/sys/class/hwmon/hwmon0/temp1_input",
-        "critical-threshold": 70,
-        "format-critical": "{temperatureC}°C {icon}",
-        "format": "{temperatureC}°C {icon}",
-        "interval": 60,
-        "format-icons": ["", "", ""]
-    },
-    "backlight": {
-        "interval": 5,
-        "device": "intel_backlight",
-        "format-alt": "{icon}",
-        "format": "{percent}% {icon}",
-        "format-alt-click": "click-right",
-        "format-icons": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-        "on-scroll-down": "light -A 2",
-        "on-scroll-up": "light -U 2"
-    },
-    "battery": {
-        "states": {
-          "good": 95,
-          "warning": 30,
-          "critical": 15
-        },
-        "format": "{capacity}% {icon}",
-        "format-charging": "{capacity}% ",
-        "format-discharging": "{capacity}% {icon}",
-        "tooltip": "{time}",
-        "format-plugged": "{capacity}% ",
-        "format-alt": "{time} {icon}",
-        "format-alt-click": "click-right",
-        "format-good": "{icon}", 
-        "format-full": "{icon}",
-        "format-icons": ["", "", "", "", ""]
-    },
-    "battery#bat2": {
-        "bat": "BAT2"
-    },
-    "network": {
-        "format": "{ifname}",
-        "format-wifi": "{essid} ",
-        "format-ethernet": "{ifname} ",
-        "format-disconnected": "⚠",
-        "tooltip-format": "{ifname}",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
-        "tooltip-format-ethernet": "{ifname} ",
-        "tooltip-format-disconnected": "Disconnected",
-        "max-length": 20
-    },
-    "pulseaudio": {
-        "scroll-step": 1, // %, can be a float
-        "format": "{volume}% {icon}{format_source}",
-        "format-bluetooth": "{volume}% {icon} {format_source}",
-        "format-bluetooth-muted": " {icon} {format_source}",
-        "format-muted": " {format_source}",
-        "format-source": "",
-        "format-alt-source": "{volume}% ",
-        "format-alt-click": "click-right",
-        "format-source-muted": "",
-        "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": "",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
-        },
-        "on-click": "pavucontrol",
-        "on-scroll-up": "pamixer -ud 2 && pamixer --get-volume > $SWAYSOCK.wob",
-        "on-scroll-down": "pamixer -ui 2 && pamixer --get-volume > $SWAYSOCK.wob",
-    },
-    "disk": {
-        "interval": 30,
-        "format": "{percentage_used}% ",
-        "format-alt": "{percentage_free}% ",
-        "format-alt-click": "click-right",
-        "path": "/",
-    },
-    "custom/power": {
-      	"format": "",
-      	"on-click": "nwgbar -o 0.4",
-    	  "tooltip": false 
-    },
-    "mpd": {
-        "format": "{stateIcon} {title} - {elapsedTime:%M:%S}/{totalTime:%M:%S}",
-        "format-paused": "{title}  懶",
-        "interval": 1,
-        "state-icons": {
-            "paused": "",
-            "playing": ""
-        },
-        "on-click": "mpc toggle",
-        "on-click-right": "~/.config/waybar/scripts/mp_toggle.sh",
-    },
-    "bluetooth": {
-        "format-disabled": "",
-        "format-on": "",
-        "format-off": "",
-        "format-connected": "",
-        "tooltip-format" : "{status} {device_alias}",
-        "on-click" : "~/.config/waybar/scripts/bluetooth.sh -t",
-        "on-click-right" : "~/.config/waybar/scripts/bluetooth.sh -c"
+  "layer": "top",
+  "modules-left": [
+    "custom/menu",
+    "custom/arrow0",
+    "sway/workspaces"
+  ],
+  "modules-center": [
+    "clock"
+  ],
+  "modules-right": [
+    "keyboard-state",
+    "tray",
+    "custom/arrow1",
+    "network",
+    "custom/arrow2",
+    "memory",
+    "custom/arrow3",
+    "cpu",
+    "custom/arrow4",
+    "temperature",
+    "custom/arrow5",
+    "pulseaudio"
+  ],
+  "sway/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
     }
+  },
+  "keyboard-state": {
+    "capslock": true,
+    "format": "{icon}",
+    "format-icons": {
+      "locked": "caps",
+      "unlocked": ""
+    }
+  },
+  "network": {
+    "interval": 8,
+    "format-wifi": "  {essid} ({signalStrength}%)",
+    "format-ethernet": "󰌘 {ifname}",
+    "format-disconnected": "",
+    "tooltip-format": "{ipaddr}",
+    "tooltip-format-disconnected": "disconnected"
+  },
+  "pulseaudio": {
+    "tooltip": false,
+    "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+    "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
+    "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
+    "format": "󰖀   {volume}%",
+    "format-icons": {
+      "default": [
+        "",
+        "󰖀"
+      ]
+    },
+    "format-muted": "󰖁   {volume}%"
+  },
+  "cpu": {
+    "interval": 8,
+    "tooltip": false,
+    "format": "  {usage}%",
+    "states": {
+      "warning": 70,
+      "critical": 90
+    }
+  },
+  "memory": {
+    "interval": 8,
+    "format": "󰍛  {}%",
+    "states": {
+      "warning": 70,
+      "critical": 90
+    }
+  },
+  "temperature": {
+    "critical-threshold": 70,
+    "interval": 8,
+    "format": "  {temperatureC}°C",
+    "tooltip": false
+  },
+  "clock": {
+    "format": "{:%Y-%m-%d  |  %H:%M}"
+  },
+  "tray": {
+    "icon-size": 16,
+    "spacing": 6
+  },
+  "custom/menu": {
+    "format": " ",
+    "tooltip": false,
+    "on-click": "swaynag -t warning -m $USER -b 'menu' '$MENU' -b 'reboot' 'reboot' -b 'shutdown' 'shutdown -P now' --background=#282828 --text=#ebdbb2 --border-bottom-size=0 --button-border-size=0 --button-background=#ebdbb2 --button-text=#282828"
+  },
+  "custom/arrow0": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow1": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow2": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow3": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow4": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow5": {
+    "format": "",
+    "tooltip": false
+  }
 }
