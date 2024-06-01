@@ -9,6 +9,10 @@ vim.filetype.add({
 		trigger = "apex",
 		soql = "soql",
 		sosl = "sosl",
+		page = "html",
+		cmp = "html",
+		auradoc = "html",
+		templ = "templ",
 	},
 })
 
@@ -80,6 +84,8 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	group = highlight_group,
 	pattern = "*",
 })
+
+vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callback = vim.lsp.buf.format })
 
 -- helper function
 local function update_hl(group, tbl)

@@ -43,7 +43,7 @@ return {
 						"java",
 						"djlint",
 						"python-lsp-server",
-						".templ",
+						"templ",
 					},
 				}), -- js/ts formatter
 				formatting.stylua, -- lua formatter

@@ -26,7 +26,7 @@ set $menu $rofi_cmd -show combi -combi-modes drun#run -modes combi
 ### Output configuration
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
-output * bg /home/zakk/.config/walls/romb.png fill
+output * bg /home/zakk/.config/walls/gruvbox-coffee.jpg fill
 output eDP-1 mode 2560x1600 scale 1.25
 #
 # Example configuration:
@@ -205,21 +205,28 @@ bindsym $mod+r mode "resize"
 #
 # Read `man 5 sway-bar` for more information about this section.
 bar {
+    swaybar_command waybar
     position top
 
-    # When the status_command prints a new line to stdout, swaybar updates.
-    # The default just shows the current date and time.
-    status_command while date +'%Y-%m-%d %I:%M:%S %p'; do sleep 1; done
-
-    colors {
-        statusline #ffffff
-        background #323232
-        inactive_workspace #32323200 #32323200 #5c5c5c
-    }
+    # # When the status_command prints a new line to stdout, swaybar updates.
+    # # The default just shows the current date and time.
+    # status_command while date +'%Y-%m-%d %I:%M:%S %p'; do sleep 1; done
+    #
+    # colors {
+    #     statusline #ffffff
+    #     background #323232
+    #     inactive_workspace #32323200 #32323200 #5c5c5c
+    # }
 }
 
-default_border pixel 2
-gaps inner 10
+gaps    outer       2px
+gaps    inner       6px
+# # class                   border      bground     text        indicator   child_border
+client.focused             #F3722C      #EBDBB2     #3C3836     #D65D0E     #FE8019
+client.unfocused           #3C3836      #3C3836     #EBDBB2     #CC241D     #504945
+client.focused_inactive    #3C3836      #EBDBB2     #3C3836     #000000     #000000
+
+default_border pixel 1
 
 exec_always {
     gsettings set $gnome-scheme color-scheme 'prefer-dark'
