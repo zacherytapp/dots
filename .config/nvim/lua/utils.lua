@@ -77,3 +77,76 @@ function M.get_current_class_name()
 	end
 	return vim.treesitter.get_node_text(child, 0)
 end
+
+-- Get Current Full Method Name with delimiter or default '.'
+function M.get_current_full_method_name(delimiter)
+	delimiter = delimiter or "."
+	local full_class_name = M.get_current_class_name()
+	local method_name = M.get_current_method_name()
+	return full_class_name .. delimiter .. method_name
+end
+
+function M.setup_tmux()
+	local file = "sfdx-project.json"
+	local f = io.open(file, "r")
+	if f ~= nil then
+		-- Check if tmux is running
+		local tmux_running = os.execute("pgrep tmux > /dev/null")
+		io.close(f)
+
+		if tmux_running == 0 then
+			os.execute("~/.local/bin/sf-tmux-project")
+		else
+			print("tmux is not running.")
+		end
+	end
+end
+
+function M.get_tmux_window_id(window_name)
+	-- Execute tmux command to get the window ID
+	local handle = io.popen('tmux list-windows -F "#{window_name}:#{window_id}"')
+	if not handle then
+		return nil
+	end
+	local result = handle:read("*a")
+	handle:close()
+
+	-- Iterate over the result to find the matching window name
+	for line in result:gmatch("[^\r\n]+") do
+		local name, id = line:match("^([^:]+):(.+)$")
+		if name == window_name then
+			return id
+		end
+	end
+
+	return nil
+end
+
+local function get_tmux_pane_id(pane_title)
+	local handle = io.popen('tmux list-panes -a -F "#{pane_title}:#{pane_id}"')
+	if not handle then
+		return nil
+	end
+	local result = handle:read("*a")
+	handle:close()
+
+	for line in result:gmatch("[^\r\n]+") do
+		local title, id = line:match("^([^:]+):(.+)$")
+		if title == pane_title then
+			return id
+		end
+	end
+	return nil
+end
+
+function M.run_command_in_pane(pane_title, command)
+	local pane_id = get_tmux_pane_id(pane_title)
+	if pane_id then
+		os.execute("tmux send-keys -t " .. pane_id .. ' "' .. command .. '" Enter')
+		print("Command sent to pane with title: " .. pane_title)
+	else
+		print("No pane found with title: " .. pane_title)
+	end
+end
+
+return M

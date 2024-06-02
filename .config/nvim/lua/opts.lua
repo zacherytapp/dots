@@ -16,6 +16,13 @@ vim.filetype.add({
 	},
 })
 
+vim.api.nvim_create_autocmd("VimEnter", {
+	callback = function()
+		local utils = require("utils")
+		utils.setup_tmux()
+	end,
+})
+
 vim.g.netrw_browse_split = 0
 vim.g.netrw_banner = 0
 vim.g.netrw_winsize = 25

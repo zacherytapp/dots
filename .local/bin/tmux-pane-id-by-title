@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Function to select a pane with a given title
+select_pane_with_title() {
+    local pane_title=$1
+
+    # Get the pane ID with the specific title
+    pane_id=$(tmux list-panes -a -F "#{pane_title}:#{pane_id}" | grep "^${pane_title}:" | cut -d':' -f2)
+
+    # Check if pane_id is found
+    if [ -n "$pane_id" ]; then
+        tmux select-pane -t "$pane_id"
+        echo "Selected pane with title: $pane_id"
+    else
+        echo "No pane found with title: $pane_id"
+    fi
+}
+
+# Example usage: pass the pane title as an argument to the script
+# e.g., ./select_pane.sh "test"
+select_pane_with_title "$1"

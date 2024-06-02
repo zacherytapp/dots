@@ -222,11 +222,11 @@ bar {
 gaps    outer       2px
 gaps    inner       6px
 # # class                   border      bground     text        indicator   child_border
-client.focused             #F3722C      #EBDBB2     #3C3836     #D65D0E     #FE8019
+client.focused             #577590      #EBDBB2     #3C3836     #577590     #577590
 client.unfocused           #3C3836      #3C3836     #EBDBB2     #CC241D     #504945
 client.focused_inactive    #3C3836      #EBDBB2     #3C3836     #000000     #000000
 
-default_border pixel 1
+default_border pixel 2
 
 exec_always {
     gsettings set $gnome-scheme color-scheme 'prefer-dark'

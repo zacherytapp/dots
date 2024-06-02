@@ -1,3 +1,5 @@
+local utils = require("utils")
+
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
@@ -18,6 +20,7 @@ vim.keymap.set("n", "<C-p>", "<Cmd>TroubleToggle<CR>")
 vim.api.nvim_set_keymap("t", "<ESC>", [[<C-\><C-n>:q<CR>]], { noremap = true })
 vim.api.nvim_set_keymap("t", "<C-d>", [[<C-\><C-d>]], { noremap = true })
 
+-- Neovim Terminal - Togglterm
 vim.keymap.set(
 	"n",
 	"<leader>to",
@@ -32,94 +35,114 @@ vim.keymap.set(
 	{ desc = "Open Terminal in Git Directory" }
 )
 
+-- Formatting
+local function format_json()
+	vim.cmd(":set filetype=json")
+	vim.cmd(":%!jq '.'")
+end
+
+local function format_file()
+	vim.lsp.buf.format()
+end
+
+-- format json
+vim.keymap.set("n", "<leader>fj", format_json, { desc = "Format JSON" })
+
+-- format current file
+vim.keymap.set("n", "<leader>F", format_file, { desc = "Format File" })
+
 -- Salesforce Stuff
-vim.keymap.set(
-	"n",
-	"<C-s>",
-	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
-	{ desc = "SFDC - Deplay Source (Insert Mode)" }
-)
+local function tmux_execute_in_next_window(command)
+	os.execute(string.format('tmux next-window && tmux send-keys "%s" C-m', command))
+end
 
-vim.keymap.set(
-	"i",
-	"<C-s>",
-	':w | :TermExec cmd="sf project deploy start --source-dir % -l NoTestRun -w 5"<CR>',
-	{ desc = "SFDC - Deplay Source (Insert Mode)" }
-)
-
-vim.keymap.set(
-	"n",
-	"<leader>cc",
-	":TermExec open=0 cmd='sf apex generate class --output-dir force-app/main/default/classes --name '<left>",
-	{ desc = "SFDC - Create Page" }
-)
-
-vim.keymap.set(
-	"n",
-	"<leader>ct",
-	":TermExec open=0 cmd='sf apex generate trigger --output-dir force-app/main/default/triggers --name '<left>",
-	{ desc = "SFDC - Create Trigger" }
-)
-
-vim.keymap.set(
-	"n",
-	"<leader>al",
-	":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:term sfdx force:apex:log:tail --color <bar> tee /tmp/apexlogs.log<CR>",
-	{ desc = "SFDC - Long Tail Logs" }
-)
+local function tmux_execute_in_split_pane(command)
+	os.execute(string.format('tmux split-window -hf && tmux send-keys "%s" C-m', command))
+end
 
 -- Salesforce Testing
-vim.keymap.set(
-	"n",
-	"<leader>tt",
-	'?@isTest<CR>j0f(hyiw<C-w>s<C-w>j12<C-w>-:term sf apex run test --synchronous --detailed-coverage --code-coverage --result-format human --wait 5 --tests "%:t:r".<C-r>"<CR>',
-	{ desc = "SFDC - Run Test on Current Method (Human)" }
-)
+vim.keymap.set("n", "<leader>tm", function()
+	local method_name = utils.get_current_full_method_name(".")
+	local test_method_command = string.format(
+		"sf apex run test --synchronous --detailed-coverage --code-coverage --result-format human --wait 5 --tests %s",
+		method_name
+	)
+	utils.run_command_in_pane("test", test_method_command)
+end, { desc = "Run Test on Current Method" })
 
-vim.keymap.set(
-	"n",
-	"<leader>td",
-	'?@isTest<CR>j0f(hyiw<C-w>s<C-w>j12<C-w>-:term sf apex run test --synchronous --detailed-coverage --code-coverage --result-format human --wait 5 --tests  "%:t:r".<C-r>"<CR>',
-	{ desc = "SFDC - Run Test on Current Method (Human)" }
-)
+vim.keymap.set("n", "<leader>tt", function()
+	local class_name = utils.get_current_class_name()
+	local test_class_command = string.format(
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
+		class_name
+	)
+	utils.run_command_in_pane("test", test_class_command)
+end, { desc = "Run Test on Current Class" })
 
-vim.keymap.set(
-	"n",
-	"<leader>tc",
-	'<C-w>s<C-w>j12<C-w>-:term sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names "%:t:r"<CR>',
-	{ desc = "SFDC - Run Test on Current Class (Human)" }
-)
+vim.keymap.set("n", "<leader>tl", function()
+	local command =
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
+	utils.run_command_in_pane("test", command)
+end, { desc = "Run All Local Tests" })
 
-vim.keymap.set(
-	"n",
-	"<leader>tl",
-	"<C-w>s<C-w>j12<C-w>-:term sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15<CR>",
-	{ desc = "SFDC - Run All Local Tests (Human)" }
-)
+-- Salesforce Saving/Deployment stuff
+vim.keymap.set("n", "<leader>ss", function()
+	local path = vim.fn.expand("%:p")
+	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "Deploy source to org" })
+
+vim.keymap.set("n", "<C-s>", function()
+	local path = vim.fn.expand("%:p")
+	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "Deploy source to org" })
+
+vim.keymap.set("i", "<C-s>", function()
+	local path = vim.fn.expand("%:p")
+	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "Deploy source to org (Insert Mode)" })
+
+vim.keymap.set("n", "<leader>cc", function()
+	local user_input = vim.fn.input("Class Name: ")
+	local path = "force-app/main/default/classes"
+	local command = string.format("sf apex generate class --output-dir %s --name %s", path, user_input)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "Create Apex Class" })
+
+vim.keymap.set("n", "<leader>ct", function()
+	local user_input = vim.fn.input("Trigger Name: ")
+	local path = "force-app/main/default/triggers"
+	local command = string.format("sf apex generate trigger --output-dir %s --name %s", path, user_input)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "Create Apex Trigger" })
 
 -- Salesforce Logs
-vim.keymap.set(
-	"n",
-	"<leader>l",
-	":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:term sfdx force:apex:log:tail --color -u <bar> tee /tmp/apexlogs.log<C-left><C-left><C-left>",
-	{ desc = "SFDC - Long Tail Logs" }
-)
+vim.keymap.set("n", "<leader>lg", function()
+	local user_input = vim.fn.input("How many logs?: ")
+	local number = tonumber(user_input)
+	local command = string.format("sf apex get log --number %d", number)
+	utils.run_command_in_pane("deploy", command)
+end, { desc = "SFDC - Get Last 3 Logs" })
 
-vim.keymap.set(
-	"n",
-	"<leader>ll",
-	":tabnew /tmp/apexlogs.log<CR><C-w>s<C-w>j:term sfdx force:apex:log:tail --color <bar> tee /tmp/apexlogs.log<CR>",
-	{ desc = "SFDC - Long Tail Logs" }
-)
+vim.keymap.set("n", "<leader>ld", function()
+	local user_input = vim.fn.input("Which window name?: ", "logs")
+	local command = "sf apex log tail --color | grep  USER_DEBUG"
+	local window_id = utils.get_tmux_window_id(user_input)
+	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+	os.execute(tmux_command)
+end, { desc = "SFDC - Long Tail Logs" })
+
+vim.keymap.set("n", "<leader>ll", function()
+	local user_input = vim.fn.input("Which window name?: ", "logs")
+	local command = "sf apex log tail --color | grep  USER_DEBUG"
+	local window_id = utils.get_tmux_window_id(user_input)
+	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+	os.execute(tmux_command)
+end, { desc = "SFDC - Long Tail Logs" })
 
 vim.keymap.set("n", "<leader>li", "tabnew | read !sfdx force:apex:log:list", { desc = "SFDC - List Logs" })
-
-vim.keymap.set("i", "<M-l>", 'copilot#Accept("\\<CR>")', {
-	expr = true,
-	replace_keycodes = false,
-	desc = "Accept Copilot Suggestion",
-})
-vim.g.copilot_no_tab_map = true
 
 -- Harpoon
 local mark = require("harpoon.mark")

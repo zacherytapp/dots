@@ -121,6 +121,7 @@ export PATH="/home/zakk/.local/bin:$PATH"
 export PATH="/opt/pmd/bin:$PATH"
 export PATH="/home/zakk/.cargo/bin:$PATH"
 export PATH="/home/zakk/go/bin:$PATH"
+export SFDX_APEX_LOG_COLOR_MAP="/home/zakk/.config/nvim/lspserver/apex-colors.json"
 
 eval "$(starship init zsh)"
 
