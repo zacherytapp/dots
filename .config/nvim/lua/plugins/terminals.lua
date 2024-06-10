@@ -1,7 +1,7 @@
 return {
-	{
-		"skywind3000/asyncrun.vim",
-	},
+	-- {
+	-- 	"skywind3000/asyncrun.vim",
+	-- },
 	{
 		"akinsho/toggleterm.nvim",
 		cmd = { "TermExec", "ToggleTerm" },

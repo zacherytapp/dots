@@ -1,5 +1,4 @@
 return {
-	-- Autocompletion
 	"hrsh7th/nvim-cmp",
 	dependencies = {
 		"L3MON4D3/LuaSnip",
@@ -9,11 +8,7 @@ return {
 		"hrsh7th/cmp-buffer",
 		"hrsh7th/cmp-emoji",
 		"onsails/lspkind.nvim",
-
-		-- Adds LSP completion capabilities
 		"hrsh7th/cmp-nvim-lsp",
-
-		-- Adds a number of user-friendly snippets
 		"rafamadriz/friendly-snippets",
 	},
 	config = function()
@@ -25,11 +20,9 @@ return {
 		end
 		local cmp = require("cmp")
 		local luasnip = require("luasnip")
-
 		require("luasnip.loaders.from_vscode").lazy_load()
 		require("luasnip.loaders.from_vscode").lazy_load({ paths = "/home/zakk/.config/nvim/snippets/" })
 		luasnip.config.setup({})
-
 		cmp.setup({
 			snippet = {
 				expand = function(args)
@@ -72,7 +65,6 @@ return {
 				{ name = "path" },
 				{ name = "emoji" },
 			},
-			-- configure lspkind for vs-code like pictograms in completion menu
 			formatting = {
 				format = lspkind.cmp_format({
 					maxwidth = 50,

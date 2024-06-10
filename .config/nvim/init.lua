@@ -19,6 +19,16 @@ require("lazy").setup({
 	{ import = "plugins" },
 }, {})
 
+require("legendary").setup({
+	extensions = {
+		lazy_nvim = true,
+		which_key = {
+			auto_register = true,
+			use_groups = false,
+		},
+	},
+})
+
 require("opts")
-require("keys")
+require("keymaps")
 require("utils")

@@ -48,7 +48,6 @@ return {
 					lookahead = true,
 
 					keymaps = {
-						-- You can use the capture groups defined in textobjects.scm
 						["a="] = { query = "@assignment.outer", desc = "ts: outer assignment" },
 						["i="] = { query = "@assignment.inner", desc = "ts: inner ssignment" },
 						["l="] = { query = "@assignment.lhs", desc = "ts: left assignment" },
@@ -71,19 +70,6 @@ return {
 
 						["ac"] = { query = "@class.outer", desc = "ts: outer class" },
 						["ic"] = { query = "@class.inner", desc = "ts: inner class" },
-					},
-				},
-
-				swap = {
-					enable = true,
-					swap_next = {
-						["<leader>na"] = "@parameter.inner", -- swap parameters/argument with next
-						["<leader>nm"] = "@function.outer", -- swap function with next
-					},
-					swap_previous = {
-						["<leader>pa"] = "@parameter.inner", -- swap parameters/argument with prev
-						["<leader>pm"] = "@function.outer", -- swap function with previous
-						["<leader>p:"] = "@property.outer", -- swap object property with prev
 					},
 				},
 
@@ -122,6 +108,19 @@ return {
 						["[L"] = { query = "@loop.outer", desc = "ts: prev loop end" },
 					},
 				},
+
+				swap = {
+					enable = true,
+					swap_next = {
+						["<leader>na"] = "@parameter.inner",
+						["<leader>nm"] = "@function.outer",
+					},
+					swap_previous = {
+						["<leader>pa"] = "@parameter.inner",
+						["<leader>pm"] = "@function.outer",
+						["<leader>p:"] = "@property.outer",
+					},
+				},
 			},
 		})
 
@@ -130,12 +129,5 @@ return {
 		-- vim way: ; goes to the direction you were moving.
 		vim.keymap.set({ "n", "x", "o" }, ";", ts_repeat_move.repeat_last_move)
 		vim.keymap.set({ "n", "x", "o" }, ",", ts_repeat_move.repeat_last_move_opposite)
-
-		-- Optionally, make builtin f, F, t, T also repeatable with ; and ,
-		vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f)
-		vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F)
-		vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t)
-
-		vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T)
 	end,
 }

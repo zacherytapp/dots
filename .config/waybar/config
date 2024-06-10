@@ -57,14 +57,14 @@
     "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
     "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
     "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
-    "format": "󰖀   {volume}%",
+    "format": "󰖀 {volume}%",
     "format-icons": {
       "default": [
         "",
         "󰖀"
       ]
     },
-    "format-muted": "󰖁   {volume}%"
+    "format-muted": "󰖁 {volume}%"
   },
   "cpu": {
     "interval": 8,
@@ -90,7 +90,7 @@
     "tooltip": false
   },
   "clock": {
-    "format": "{:%Y-%m-%d  |  %H:%M}"
+    "format": "{:%m-%d-%Y  |  %I:%M %p}"
   },
   "tray": {
     "icon-size": 16,

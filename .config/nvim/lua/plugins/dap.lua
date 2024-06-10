@@ -4,11 +4,9 @@ return {
 		local dap = require("dap")
 		local dap_utils = require("dap.utils")
 		local languages = { "typescript", "javascript", "typescriptreact" }
-
 		for _, language in ipairs(languages) do
 			-- based on vscode launch configurations: https://code.visualstudio.com/docs/editor/debugging#_launch-configurations
 			dap.configurations[language] = {
-				-- debug single node.js files
 				{
 					type = "pwa-node",
 					request = "launch",
