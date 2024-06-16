@@ -20,7 +20,9 @@
     "custom/arrow4",
     "temperature",
     "custom/arrow5",
-    "pulseaudio"
+    "pulseaudio",
+    "custom/arrow6",
+    "battery"
   ],
   "sway/workspaces": {
     "format": "{icon}",
@@ -83,6 +85,12 @@
       "critical": 90
     }
   },
+  "battery": {
+    "format": " {icon} {capacity}% ",
+    "format-icons": ["󰂂", "󰂀", "󰁿", "󰁾", "󰁽", "󰁼", "󰁻", "󰁼", "󰁻", "󰁺"],
+    "format-charging": "<span>󰂄</span> {capacity}%",
+    "tooltip": false,
+  },
   "temperature": {
     "critical-threshold": 70,
     "interval": 8,
@@ -122,6 +130,10 @@
     "tooltip": false
   },
   "custom/arrow5": {
+    "format": "",
+    "tooltip": false
+  },
+  "custom/arrow6": {
     "format": "",
     "tooltip": false
   }

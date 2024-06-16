@@ -18,6 +18,17 @@ local mappings = {
 	["-"] = { "<CMD>Oil<CR>", "[Oil] Open parent directory (Utilities)" },
 	["<ESC>"] = { [[<C-\><C-n>:q<CR>]], "Exit Terminal Mode (Terminal)", mode = { "t" } },
 	["<C-d>"] = { [[<C-\><C-d>]], "Exit Terminal Mode (Terminal)", mode = { "t" } },
+	["<C-k>"] = { "Signiature Documentation (LSP)", mode = { "n" } },
+	["K"] = { "Hover Documentation (LSP)", mode = { "n" } },
+	["<leader>D"] = { "Type [D]efinition (LSP)", mode = { "n" } },
+	["<leader>ds"] = { "[D]ocument [S]ymbols (LSP)", mode = { "n" } },
+	["<leader>ca"] = { "[C]ode [A]ction (LSP)", mode = { "n" } },
+	["<leader>ws"] = { "[W]orkspace [S]ymbols (LSP)", mode = { "n" } },
+	["gD"] = { "[G]oto [D]eclaration (LSP)", mode = { "n" } },
+	["<leader>wa"] = { "[W]orkspace [A]dd Folder (LSP)", mode = { "n" } },
+	["<leader>wr"] = { "[W]orkspace [R]emove Folder (LSP)", mode = { "n" } },
+	["<leader>wl"] = { "[W]orkspace [L]ist Folders (LSP)", mode = { "n" } },
+	["<leader>rn"] = { "[R]e[n]ame (LSP)", mode = { "n" } },
 	["<leader>"] = {
 		x = { name = "+Trouble" },
 		f = {

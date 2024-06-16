@@ -106,13 +106,18 @@ tooltip {
   color: @dark;
 }
 
+#battery {
+  background: @blue-dull;
+  color: @dark;
+}
+
 #custom-menu,
 #custom-arrow0,
 #custom-arrow1,
 #custom-arrow2,
 #custom-arrow3,
 #custom-arrow4,
-#custom-arrow5 {
+#custom-arrow5 #custom-arrow6 {
   font-size: 14px;
 }
 
@@ -150,4 +155,8 @@ tooltip {
 #custom-arrow5 {
   color: @grey;
   background: @green3;
+}
+#custom-arrow6 {
+  color: @blue-dull;
+  background: @grey;
 }
