@@ -37,10 +37,14 @@ tooltip {
 #pulseaudio,
 #network,
 #memory,
+#bluetooth,
+#custom-weather,
+#custom-media,
 #cpu,
 #clock,
 #disk,
 #temperature,
+#idle_inhibitor,
 #tray {
   padding: 1px 6px 0 6px;
   font-size: 12px;
@@ -81,6 +85,10 @@ tooltip {
   text-shadow: 1px 1px 1px @dark;
 }
 
+#idle_inhibitor.activated {
+  color: @purple;
+}
+
 #temperature {
   background: @green3;
   color: @dark;
@@ -89,6 +97,20 @@ tooltip {
 #cpu {
   background: @green4;
   color: @dark;
+}
+
+#bluetooth {
+  background: @green4;
+  color: @dark;
+}
+
+#custom-weather {
+  background: @green4;
+  color: @dark;
+}
+
+#custom-media {
+  color: @light;
 }
 
 #memory {
@@ -117,7 +139,9 @@ tooltip {
 #custom-arrow2,
 #custom-arrow3,
 #custom-arrow4,
-#custom-arrow5 #custom-arrow6 {
+#custom-arrow5,
+#custom-arrow6,
+#custom-arrow7 {
   font-size: 14px;
 }
 

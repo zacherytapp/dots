@@ -3,7 +3,8 @@
   "modules-left": [
     "custom/menu",
     "custom/arrow0",
-    "sway/workspaces"
+    "sway/workspaces",
+    "custom/media",
   ],
   "modules-center": [
     "clock"
@@ -11,12 +12,13 @@
   "modules-right": [
     "keyboard-state",
     "tray",
+    "idle_inhibitor",
     "custom/arrow1",
     "network",
     "custom/arrow2",
     "memory",
     "custom/arrow3",
-    "cpu",
+    "custom/weather",
     "custom/arrow4",
     "temperature",
     "custom/arrow5",
@@ -46,27 +48,41 @@
       "unlocked": ""
     }
   },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": " ",
+      "deactivated": " "
+    }
+  },
   "network": {
     "interval": 8,
     "format-wifi": "  {essid} ({signalStrength}%)",
     "format-ethernet": "󰌘 {ifname}",
     "format-disconnected": "",
-    "tooltip-format": "{ipaddr}",
-    "tooltip-format-disconnected": "disconnected"
+    "format-alt": "{ifname}: {ipaddr}/{cidr}",
+    "tooltip-format": "{essid} {signalStrength}%"
   },
   "pulseaudio": {
-    "tooltip": false,
-    "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
-    "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
-    "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
-    "format": "󰖀 {volume}%",
+    "format": "{icon} {volume}% {format_source}",
+    "format-bluetooth": "{icon} {volume}% {format_source}",
+    "format-bluetooth-muted": "   {volume}% {format_source}",
+    "format-muted": "  {format_source}",
+    "format-source": " ",
+    "format-source-muted": " ",
     "format-icons": {
-      "default": [
-        "",
-        "󰖀"
-      ]
+      "headphone": " ",
+      "hands-free": " ",
+      "headset": " ",
+      "phone": " ",
+      "portable": " ",
+      "car": " ",
+      "default": [" ", " ", " "]
     },
-    "format-muted": "󰖁 {volume}%"
+    "tooltip-format": "{desc}, {volume}%",
+    "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+    "on-click-right": "pactl set-source-mute @DEFAULT_SOURCE@ toggle",
+    "on-click-middle": "pavucontrol"
   },
   "cpu": {
     "interval": 8,
@@ -85,11 +101,25 @@
       "critical": 90
     }
   },
+  "bluetooth": {
+    "format": "<span></span> {status}",
+    "format-disabled": "", // an empty format will hide the module
+    "format-connected": "<span></span> {num_connections}",
+    "tooltip-format": "{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}   {device_address}",
+    "on-click": "blueman-manager"
+  },
   "battery": {
-    "format": " {icon} {capacity}% ",
-    "format-icons": ["󰂂", "󰂀", "󰁿", "󰁾", "󰁽", "󰁼", "󰁻", "󰁼", "󰁻", "󰁺"],
-    "format-charging": "<span>󰂄</span> {capacity}%",
-    "tooltip": false,
+    "states": {
+      "warning": 30,
+      "critical": 15
+    },
+    "format": "{icon} {capacity}% ",
+    "tooltip-format": "{timeTo}, {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-plugged": " ",
+    "format-alt": "{time} {icon}",
+    "format-icons": ["󰁻", "󰁽", "󰁿", "󰂁", "󱟢"]
   },
   "temperature": {
     "critical-threshold": 70,
@@ -97,8 +127,49 @@
     "format": "  {temperatureC}°C",
     "tooltip": false
   },
+  "custom/weather": {
+    "icon-size": 42,
+    "format": "{icon} {}",
+    "tooltip": true,
+    "interval": 3600,
+    "exec": "python3 /home/zakk/.config/waybar/scripts/weather.py",
+    "return-type": "json",
+    "format-icons": {
+      "Unknown": "✨",
+      "Cloudy": "",
+      "Fog": "🌫",
+      "HeavyRain": "🌧",
+      "HeavyShowers": "🌧",
+      "HeavySnow": "❄️",
+      "HeavySnowShowers": "❄️",
+      "LightRain": "🌦",
+      "LightShowers": "🌦",
+      "LightSleet": "🌧",
+      "LightSleetShowers": "🌧",
+      "LightSnow": "🌨",
+      "LightSnowShowers": "🌨",
+      "PartlyCloudy": "⛅️",
+      "Sunny": "☀️",
+      "ThunderyHeavyRain": "🌩",
+      "ThunderyShowers": "⛈",
+      "ThunderySnowShowers": "⛈",
+      "VeryCloudy": ""
+    }
+  },
+  "custom/media": {
+    "format": "{icon} {}",
+    "return-type": "json",
+    "max-length": 40,
+    "format-icons": {
+      "spotify": " ",
+      "default": " "
+    },
+    "escape": true,
+    "exec": "python3 /home/zakk/.config/waybar/scripts/mediaplayer.py 2> /dev/null",
+    "on-click": "playerctl play-pause"
+  },
   "clock": {
-    "format": "{:%m-%d-%Y  |  %I:%M %p}"
+    "format": "{:%m-%d-%Y | %I:%M %p}"
   },
   "tray": {
     "icon-size": 16,
