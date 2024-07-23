@@ -44,20 +44,25 @@ return {
 				formatting.isort,
 				formatting.black,
 				formatting.djlint,
-				diagnostics.pylint.with({
-					diagnostic_config = { underline = false, virtual_text = false, signs = false },
-					method = null_ls.methods.DIAGNOSTICS_ON_SAVE,
-				}),
 				diagnostics.pmd.with({
-					extra_filetypes = { "apex" },
 					filetypes = { "apex" },
-					args = { "check", "--dir", "$ROOT", "--format", "json" },
-					extra_args = {
-						"--rulesets",
-						"/home/zakk/.config/rules/apex_ruleset.xml",
-					},
+					args = function(params)
+						return {
+							"check",
+							"--format",
+							"json",
+							"--rulesets",
+							"/home/zakk/.config/rules/apex_ruleset.xml",
+							"--dir",
+							params.bufname,
+							"--cache",
+							vim.fn.stdpath("cache") .. "/pmd-cache",
+							"--no-progress",
+						}
+					end,
 				}),
 			},
+			-- configure format on save
 			on_attach = function(current_client, bufnr)
 				if current_client.supports_method("textDocument/formatting") then
 					vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
@@ -67,9 +72,11 @@ return {
 						callback = function()
 							vim.lsp.buf.format({
 								filter = function(client)
+									--  only use null-ls for formatting instead of lsp server
 									return client.name == "null-ls"
 								end,
 								bufnr = bufnr,
+								timeout_ms = 3000, -- add because apex prettier formatting is slow
 							})
 						end,
 					})
