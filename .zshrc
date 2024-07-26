@@ -117,12 +117,13 @@ alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
 alias python="python3"
 
-export PATH="/home/zakk/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 export PATH="/opt/pmd/bin:$PATH"
 export PATH="$HOME/.config/bin/pmd.sh:$PATH"
-export PATH="/home/zakk/.cargo/bin:$PATH"
-export PATH="/home/zakk/go/bin:$PATH"
-export SFDX_APEX_LOG_COLOR_MAP="/home/zakk/.config/nvim/lspserver/apex-colors.json"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/julia-1.10.4/bin:$PATH"
+export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 
 eval "$(starship init zsh)"
 

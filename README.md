@@ -77,3 +77,10 @@ You can replace `config` with anything - ensure it's aliased in any bash/config 
 4. `alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'`
 5. `config config --local status.showUntrackedFiles no`
 6. `config checkout`
+
+## TODO:
+
+- [ ] Instructions for installing python
+- [ ] Instructions for installing ruby
+- [ ] Instructions for installing lua
+- [ ] Instructions for configuring various needed npm packages

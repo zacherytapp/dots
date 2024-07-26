@@ -13,11 +13,7 @@ return {
 			ensure_installed = {
 				"prettier",
 				"stylua",
-				"black",
-				"pylint",
 				"eslint_d",
-				"djlint",
-				"python-lsp-server",
 				"pyright",
 			},
 		})
@@ -33,17 +29,11 @@ return {
 						"lua",
 						"javascript",
 						"typescript",
-						"pylint",
 						"java",
-						"djlint",
-						"python-lsp-server",
 						"templ",
 					},
 				}),
 				formatting.stylua,
-				formatting.isort,
-				formatting.black,
-				formatting.djlint,
 				diagnostics.pmd.with({
 					filetypes = { "apex" },
 					args = function(params)
