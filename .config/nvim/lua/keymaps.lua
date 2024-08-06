@@ -57,28 +57,28 @@ local mappings = {
 				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
 				class_name
 			)
-			utils.run_command_in_pane("test", test_class_command)
+			utils.run_command_in_pane("deploy", test_class_command)
 		end,
 		desc = "Run [T]est on Current Class (Salesforce - SFDX)",
 	},
 	{
 		"<leader>tm",
 		function()
-			local class_name = utils.get_current_class_name()
-			local test_class_command = string.format(
-				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
-				class_name
+			local method_name = utils.get_current_full_method_name()
+			local test_method_command = string.format(
+				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --tests %s",
+				method_name
 			)
-			utils.run_command_in_pane("test", test_class_command)
+			utils.run_command_in_pane("deploy", test_method_command)
 		end,
-		desc = "Run [T]est on Current Class (Salesforce - SFDX)",
+		desc = "Run [T]est on Current Method (Salesforce - SFDX)",
 	},
 	{
 		"<leader>tl",
 		function()
 			local command =
 				"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
-			utils.run_command_in_pane("test", command)
+			utils.run_command_in_pane("deploy", command)
 		end,
 		desc = "Run All [L]ocal Tests (Salesforce - SFDX)",
 	},
@@ -132,7 +132,7 @@ local mappings = {
 	},
 	{ "<leader>c", group = "+Salesforce Code Creation" },
 	{
-		"leader>cc",
+		"<leader>cc",
 		function()
 			local user_input = vim.fn.input("Class Name: ")
 			local path = "force-app/main/default/classes"

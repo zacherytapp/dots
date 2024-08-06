@@ -118,16 +118,17 @@ alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --
 alias python="python3"
 
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="/opt/pmd/bin:$PATH"
 export PATH="$HOME/.config/bin/pmd.sh:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/julia-1.10.4/bin:$PATH"
+export PATH="$HOME/bin:$PATH"
+export PATH=$PATH:/usr/local/go/bin
+export PATH="/opt/pmd/bin:$PATH"
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 
 eval "$(starship init zsh)"
 
-export PATH=$PATH:/usr/local/go/bin
 export WORKON_HOME=$HOME/.virtualenvs
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 export VIRTUALENVWRAPPER_VIRTUALENV_ARGS=' -p /usr/bin/python3 '
@@ -135,10 +136,9 @@ export PROJECT_HOME=$HOME/Devel
 source /usr/local/bin/virtualenvwrapper.sh
 source /home/zakk/.cargo/env
 
-# pnpm
-export PNPM_HOME="/home/zakk/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
+# Perl configuration
+PATH="/home/zakk/perl5/bin${PATH:+:${PATH}}"; export PATH;
+PERL5LIB="/home/zakk/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+PERL_LOCAL_LIB_ROOT="/home/zakk/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
+PERL_MB_OPT="--install_base \"/home/zakk/perl5\""; export PERL_MB_OPT;
+PERL_MM_OPT="INSTALL_BASE=/home/zakk/perl5"; export PERL_MM_OPT;
