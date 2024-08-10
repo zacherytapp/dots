@@ -195,5 +195,5 @@ end, { desc = "Legendary" })
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
-vim.keymap.set("v", "<S-Tab>", "<gv", { desc = "Select previous text object" })
+-- vim.keymap.set("v", "<S-Tab>", "<gv", { desc = "Select previous text object" })
 vim.keymap.set("n", "<A-t>", ":tabnew<CR>", { desc = "New Tab" })

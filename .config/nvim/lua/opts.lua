@@ -1,7 +1,3 @@
-local ft = require("Comment.ft")
-
-ft.set("apex", { "//%s", "/*%s*/" })
-
 vim.filetype.add({
 	extension = {
 		cls = "apex",
@@ -94,6 +90,13 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callback = vim.lsp.buf.format })
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+	pattern = { "*.cls", "*.trigger", "*.apex" },
+	callback = function()
+		vim.api.nvim_command("set commentstring=// %s")
+	end,
+})
 
 -- helper function
 local function update_hl(group, tbl)
