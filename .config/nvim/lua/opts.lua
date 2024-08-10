@@ -19,7 +19,8 @@ vim.filetype.add({
 vim.api.nvim_create_autocmd("VimEnter", {
 	callback = function()
 		local utils = require("utils")
-		utils.setup_tmux()
+		utils.setup_tmux("sfdx-project.json", "~/.local/bin/sf-tmux-project")
+		utils.setup_tmux("go.mod", "~/.local/bin/go-tmux-project")
 	end,
 })
 

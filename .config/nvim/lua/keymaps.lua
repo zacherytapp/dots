@@ -57,7 +57,9 @@ local mappings = {
 				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
 				class_name
 			)
-			utils.run_command_in_pane("deploy", test_class_command)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_class_command)
+			os.execute(tmux_command)
 		end,
 		desc = "Run [T]est on Current Class (Salesforce - SFDX)",
 	},
@@ -69,7 +71,9 @@ local mappings = {
 				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --tests %s",
 				method_name
 			)
-			utils.run_command_in_pane("deploy", test_method_command)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_method_command)
+			os.execute(tmux_command)
 		end,
 		desc = "Run [T]est on Current Method (Salesforce - SFDX)",
 	},
@@ -78,19 +82,11 @@ local mappings = {
 		function()
 			local command =
 				"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
-			utils.run_command_in_pane("deploy", command)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+			os.execute(tmux_command)
 		end,
 		desc = "Run All [L]ocal Tests (Salesforce - SFDX)",
-	},
-	{ "<leader>s", group = "+Salesforce Saving/Deployment" },
-	{
-		"<leader>ss",
-		function()
-			local path = vim.fn.expand("%:p")
-			local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
-			utils.run_command_in_pane("deploy", command)
-		end,
-		desc = "Deploy [S]ource to org (Salesforce - SFDX)",
 	},
 	{ "<leader>l", group = "+Salesforce Logs" },
 	{
@@ -99,7 +95,9 @@ local mappings = {
 			local user_input = vim.fn.input("How many logs?: ")
 			local number = tonumber(user_input)
 			local command = string.format("sf apex get log --number %d", number)
-			utils.run_command_in_pane("deploy", command)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+			os.execute(tmux_command)
 		end,
 		desc = "[G]et Last N Logs (Salesforce - SFDX)",
 	},
@@ -151,16 +149,30 @@ local mappings = {
 		end,
 		desc = "Create Apex [T]rigger (Salesforce)",
 	},
+	{ "<leader>s", group = "+Salesforce Saving/Deployment" },
 	{
-		"<C-s>",
+		"<leader>ss",
 		function()
+			vim.api.nvim_command("w")
 			local path = vim.fn.expand("%:p")
 			local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
-			utils.run_command_in_pane("deploy", command)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+			os.execute(tmux_command)
 		end,
-		desc = "Deploy [S]ource to org (Salesforce)",
-		mode = { "n", "i" },
+		desc = "Deploy [S]ource to org (Salesforce - SFDX)",
 	},
+	-- {
+	-- 	"<C-s>",
+	-- 	function()
+	--    vim.api.nvim_command("w")
+	-- 		local path = vim.fn.expand("%:p")
+	-- 		local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
+	-- 		utils.run_command_in_pane("deploy", command)
+	-- 	end,
+	-- 	desc = "Deploy [S]ource to org (Salesforce)",
+	-- 	mode = { "n", "i" },
+	-- },
 	{ "<leader>pp", desc = "Open [P]rojects (Legendary)" },
 }
 

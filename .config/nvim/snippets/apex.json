@@ -389,13 +389,13 @@
   "Property Read Only": {
     "body": ["{get; private set;}"],
     "description": "Create read-only property getter and setter",
-    "prefix": ["{get; private set;}", "pro"],
+    "prefix": ["property - read-only", "get; private set;", "pro"],
     "scope": "apex,apex-anon"
   },
   "Property Read Write": {
     "body": ["{get; set;}"],
     "description": "Create read/write property getter and setter",
-    "prefix": ["{get; set;}", "prw"],
+    "prefix": ["get; set;", "prw"],
     "scope": "apex,apex-anon"
   },
   "Public Static Final": {
@@ -540,14 +540,29 @@
     "scope": "apex,apex-anon"
   },
   "System.debug": {
-    "prefix": "debug",
-    "body": ["System.debug('*** $0: ' + $0);"],
+    "prefix": "debug - finest",
+    "body": ["System.debug(LoggingLevel.FINEST, '*** $0: ' + $0);"],
+    "description": "Log output to console"
+  },
+  "System.debug": {
+    "prefix": "debug - info",
+    "body": ["System.debug(LoggingLevel.INFO, '*** $0: ' + $0);"],
+    "description": "Log output to console"
+  },
+  "System.debug": {
+    "prefix": "debug - error",
+    "body": ["System.debug(LoggingLevel.ERROR, '*** $0: ' + $0);"],
+    "description": "Log output to console"
+  },
+  "System.debug": {
+    "prefix": "debug - debug",
+    "body": ["System.debug(LoggingLevel.DEBUG, '*** $0: ' + $0);"],
     "description": "Log output to console"
   },
   "System Debug Serialize Pretty": {
     "body": ["System.debug('*** $0' + JSON.SerializePretty($0));"],
     "description": "Debug objects or collections",
-    "prefix": ["systemDebugPretty", "sdp"],
+    "prefix": ["debug - systemDebugPretty", "sdp"],
     "scope": "apex,apex-anon"
   },
   "System Run As": {

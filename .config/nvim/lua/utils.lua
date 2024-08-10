@@ -86,18 +86,16 @@ function M.get_current_full_method_name(delimiter)
 	return full_class_name .. delimiter .. method_name
 end
 
-function M.setup_tmux()
-	local file = "sfdx-project.json"
-	local f = io.open(file, "r")
-	if f ~= nil then
-		-- Check if tmux is running
-		local tmux_running = os.execute("pgrep tmux > /dev/null")
-		io.close(f)
-
-		if tmux_running == 0 then
-			os.execute("~/.local/bin/sf-tmux-project")
-		else
-			print("tmux is not running.")
+function M.setup_tmux(file_to_search, script_to_run)
+	-- Check if tmux is running
+	-- local tmux_running = os.execute("pgrep tmux > /dev/null")
+	local tmux_running = os.execute("tmux ls | grep attached")
+	if tmux_running ~= nil then
+		-- os.execute("~/.local/bin/sf-tmux-project")
+		local f = io.open(file_to_search, "r")
+		if f ~= nil then
+			io.close(f)
+			os.execute(script_to_run)
 		end
 	end
 end

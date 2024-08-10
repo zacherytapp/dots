@@ -1,26 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Get the current pane Ids from given pane names
-pane_names=("deploy")
-for pane_name in "${pane_names[@]}";
-do
-  pane_ids=$(tmux list-panes -a -F "#{pane_title}:#{pane_id}" | grep "^${pane_name}:" | cut -d':' -f2)
-  echo "pane_ids: $pane_ids"
-  for pane_id in $pane_ids;
-  do
-    tmux kill-pane -t "$pane_id"
-    echo "Closed pane with name: $pane_name"
-  done
+# Get the current tmux session name
+session_name=$(tmux display-message -p '#S')
+
+window_names=("logs" "deploy")
+
+# Loop through each provided window name
+for window_name in "${window_names[@]}" ; do
+    # Get a list of all windows in the current session that match the given name
+    windows=$(tmux list-windows -t "$session_name" -F '#W:#I' | grep "^$window_name:" | cut -d':' -f2)
+
+    # Check if there are no matching windows
+    if [ -z "$windows" ]; then
+        continue
+    fi
+
+    # Loop through each matching window and close it
+    for window in $windows; do
+        tmux kill-window -t "$session_name:$window"
+    done
+
 done
-
-
-# Get the current window Id from the window name
-window_name="logs"
-window_id=$(tmux list-windows -t "$current_session" -F "#{window_name}:#{window_id}" | grep "^${window_name}:" | cut -d':' -f2)
-if [ -n "$window_id" ]; then
-  tmux kill-window -t "$window_id"
-  echo "Closed window with name: $window_name"
-fi
 
 # Check if the current directory contains a Salesforce project
 if [ -f "sfdx-project.json" ] && pgrep tmux > /dev/null; then
@@ -30,13 +30,9 @@ if [ -f "sfdx-project.json" ] && pgrep tmux > /dev/null; then
 
   tmux rename-window "editor"
 
-  tmux select-pane -T 'code'
-
-  # Split the first pane vertically and rename the new pane 'tests'
-  tmux splitw -fl '30%'\; select-pane -T 'deploy'\; last-pane
-
   # Create a new window named 'logs'
   tmux neww -n 'logs'\; select-pane -T 'logs'\; last-window
-else
-  echo "sfdx-project.json not found in the current directory."
+
+  # Create a new window named 'deploy'
+  tmux neww -n 'deploy'\; select-pane -T 'deploy'\; last-window
 fi
