@@ -8,7 +8,6 @@ return {
 			update_on_change = false,
 		})
 		worktree.on_tree_change(function(op, metadata)
-			vim.notify("Worktree updated")
 			if op == worktree.Operations.Switch then
 				vim.api.nvim_command("SessionRestore")
 				vim.fn.system("tmux-windowizer " .. metadata.path)

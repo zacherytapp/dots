@@ -10,13 +10,6 @@ return {
 	},
 	config = function()
 		local on_attach = function(_, bufnr)
-			local nmap = function(keys, func, desc)
-				if desc then
-					desc = "LSP: " .. desc
-				end
-
-				vim.keymap.set("n", keys, func, { buffer = bufnr, desc = desc })
-			end
 			local signs = {
 				ERROR = "",
 				WARN = "",
@@ -35,27 +28,25 @@ return {
 				},
 			})
 
-			nmap("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame (LSP)")
-			nmap("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction (LSP)")
-			nmap("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition (LSP)")
-			nmap("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences (LSP)")
-			nmap("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation (LSP)")
-			nmap("<leader>D", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition (LSP)")
-			nmap("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols (LSP)")
-			nmap(
-				"<leader>ws",
-				require("telescope.builtin").lsp_dynamic_workspace_symbols,
-				"[W]orkspace [S]ymbols (LSP)"
-			)
-			nmap("K", vim.lsp.buf.hover, "Hover Documentation (LSP)")
-			nmap("<C-k>", vim.lsp.buf.signature_help, "Signature Documentation (LSP)")
-
-			nmap("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration (LSP)")
-			nmap("<leader>wa", vim.lsp.buf.add_workspace_folder, "[W]orkspace [A]dd Folder (LSP)")
-			nmap("<leader>wr", vim.lsp.buf.remove_workspace_folder, "[W]orkspace [R]emove Folder (LSP)")
-			nmap("<leader>wl", function()
+			local ts = require("telescope.builtin")
+			local key = vim.keymap
+			key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
+			key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
+			key.set("n", "gd", ts.lsp_definitions, { desc = "[G]oto [D]efinition (LSP)" })
+			key.set("n", "gr", ts.lsp_references, { desc = "[G]oto [R]eferences (LSP)" })
+			key.set("n", "gi", ts.lsp_implementations, { desc = "[G]oto [I]mplementation (LSP)" })
+			key.set("n", "<leader>D", ts.lsp_type_definitions, { desc = "Type [D]efinition (LSP)" })
+			key.set("n", "<leader>ds", ts.lsp_document_symbols, { desc = "[D]ocument [S]ymbols (LSP)" })
+			key.set("n", "<leader>ws", ts.lsp_dynamic_workspace_symbols, { desc = "[W]orkspace [S]ymbols (LSP)" })
+			key.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Documentation (LSP)" })
+			key.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature Documentation (LSP)" })
+			key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
+			key.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "[W]orkspace [A]dd Folder (LSP)" })
+			key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
+			key.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "[R]emove Folder (LSP)" })
+			key.set("n", "<leader>wl", function()
 				print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-			end, "[W]orkspace [L]ist Folders (LSP)")
+			end, { desc = "[W]orkspace [L]ist Folders (LSP)" })
 
 			vim.api.nvim_buf_create_user_command(bufnr, "Format", function(_)
 				vim.lsp.buf.format()

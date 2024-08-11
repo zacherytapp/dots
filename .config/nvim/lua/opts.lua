@@ -94,7 +94,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callba
 vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
 	pattern = { "*.cls", "*.trigger", "*.apex" },
 	callback = function()
-		vim.api.nvim_command("set commentstring=// %s")
+		vim.bo.filetype = "apex"
 	end,
 })
 

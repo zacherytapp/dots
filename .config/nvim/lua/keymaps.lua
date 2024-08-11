@@ -1,53 +1,65 @@
 local utils = require("utils")
 local wk = require("which-key")
+local mark = require("harpoon.mark")
+local ui = require("harpoon.ui")
 
 require("telescope").load_extension("fzf")
 require("telescope").load_extension("live_grep_args")
 
--- Formatting
-local function format_json()
-	vim.cmd(":set filetype=json")
-	vim.cmd(":%!jq '.'")
-end
-
-local function format_file()
-	vim.lsp.buf.format()
-end
-
 local mappings = {
 	{ "-", "<CMD>Oil<CR>", desc = "[Oil] Open parent directory (Utilities)" },
 	{ "<ESC>", [[<C-\><C-n>:q<CR>]], desc = "Exit Terminal Mode (Terminal)", mode = { "t" } },
-	{ "C-d", [[<C-\><C-d>]], desc = "Exit Terminal Mode (Terminal)", mode = { "t" } },
-	{ "<C-k", "Signiature Documentation (LSP)", mode = { "n" } },
+	{ "<C-d>", [[<C-\><C-d>]], desc = "Exit Terminal Mode (Terminal)", mode = { "t" } },
+	{ "<C-k>", "Signiature Documentation (LSP)", mode = { "n" } },
 	{ "K", "Hover Documentation (LSP)", mode = { "n" } },
-	{ "<leader>D", "Type [D]efinition (LSP)", mode = { "n" } },
-	{ "<leader>ds", "[D]ocument [S]ymbols (LSP)", mode = { "n" } },
-	{ "<leader>ca", "[C]ode [A]ction (LSP)", mode = { "n" } },
-	{ "<leader>ws", "[W]orkspace [S]ymbols (LSP)", mode = { "n" } },
-	{ "gD", "[G]oto [D]eclaration (LSP)", mode = { "n" } },
-	{ "<leader>wa", "[W]orkspace [A]dd Folder (LSP)", mode = { "n" } },
-	{ "<leader>wr", "[W]orkspace [R]emove Folder (LSP)", mode = { "n" } },
-	{ "<leader>wl", "[W]orkspace [L]ist Folders (LSP)", mode = { "n" } },
-	{ "<leader>rn", "[R]e[n]ame (LSP)", mode = { "n" } },
+	{ "<leader>D", desc = "Type [D]efinition (LSP)", mode = { "n" } },
+	{ "<leader>ds", desc = "[D]ocument [S]ymbols (LSP)", mode = { "n" } },
+	{ "<leader>ca", desc = "[C]ode [A]ction (LSP)", mode = { "n" } },
+	{ "<leader>ws", desc = "[W]orkspace [S]ymbols (LSP)", mode = { "n" } },
+	{ "gD", desc = "[G]oto [D]eclaration (LSP)", mode = { "n" } },
+	{ "<leader>wa", desc = "[W]orkspace [A]dd Folder (LSP)", mode = { "n" } },
+	{ "<leader>wr", desc = "[W]orkspace [R]emove Folder (LSP)", mode = { "n" } },
+	{ "<leader>wl", desc = "[W]orkspace [L]ist Folders (LSP)", mode = { "n" } },
+	{ "<leader>rn", desc = "[R]e[n]ame (LSP)", mode = { "n" } },
 	{ "<leader>x", group = "+Trouble" },
-	{ "<leader>f", group = "+Find and Format" },
-	{ "<leader>fj", format_json, desc = "Format [J]SON (Utilities)" },
-	{ "<leader>fF", format_file, desc = "Format [F]ile (Utilities)" },
+	{ "<leader>xx", "<CMD>Trouble diagnostics toggle<CR>", desc = "Diagnostics (Trouble)" },
+	{ "<leader>xX", "<CMD>Trouble diagnostics toggle filter.buf=0<CR>", desc = "Buffer Diagnostics (Trouble)" },
+	{ "<leader>cs", "<CMD>Trouble symbols toggle focus=false<CR>", desc = "Symbols (Trouble)" },
+	{ "<leader>cl", "<CMD>Trouble lsp toggle focus=false win.position=right<CR>", desc = "LSP (Trouble)" },
+	{ "<leader>xL", "<CMD>Trouble loclist toggle<CR>", desc = "Location List (Trouble)" },
+	{ "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", desc = "Quickfix List (Trouble)" },
 	{ "<leader>y", group = "+Yank Utilities" },
 	{ "<leader>yy", [["+y]], desc = "[y]ank to clipboard (Utilities)", mode = { "n", "v" } },
 	{ "<leader>Y", [["+Y]], desc = "[Y]ank to clipboard (Utilities)" },
 	{ "<leader>p", [["_dP]], desc = "[P]aste over visual selection (Utilities)" },
 	{ "<leader>u", "<CMD>UndotreeToggle<CR>", desc = "Toggle [U]ndotree (Undotree)" },
 	{ "<leader>t", group = "+Toggle & Salesforce Testing" },
+	{ "<leader>nl", require("telescope").extensions.notify.notify, desc = "Show [N]otifications (Telescope)" },
 	{
 		"<leader>to",
 		"<CMD>ToggleTerm dir=git_dir direction=horizontal name=git size=10<CR>",
-		desc = "[O]pen Terminal in Git Directory (Terminal)",
+		desc = "[O]pen (Terminal)",
 	},
 	{
 		"<leader>tf",
 		"<CMD>ToggleTerm dir=git_dir direction=float name=git size=20<CR>",
-		desc = "Open Terminal in Git Directory in [F]loat Mode (Terminal)",
+		desc = "Open Terminal - [F]loat Mode (Terminal)",
+	},
+	{ "<leader>f", group = "+Find and Format" },
+	{
+		"<leader>fj",
+		function()
+			vim.cmd(":set filetype=json")
+			vim.cmd(":%!jq '.'")
+		end,
+		desc = "Format [J]SON (Utilities)",
+	},
+	{
+		"<leader>fF",
+		function()
+			vim.lsp.buf.format()
+		end,
+		desc = "Format [F]ile (Utilities)",
 	},
 	{
 		"<leader>tt",
@@ -162,38 +174,28 @@ local mappings = {
 		end,
 		desc = "Deploy [S]ource to org (Salesforce - SFDX)",
 	},
-	-- {
-	-- 	"<C-s>",
-	-- 	function()
-	--    vim.api.nvim_command("w")
-	-- 		local path = vim.fn.expand("%:p")
-	-- 		local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
-	-- 		utils.run_command_in_pane("deploy", command)
-	-- 	end,
-	-- 	desc = "Deploy [S]ource to org (Salesforce)",
-	-- 	mode = { "n", "i" },
-	-- },
-	{ "<leader>pp", desc = "Open [P]rojects (Legendary)" },
+	{ "<leader>a", mark.add_file, desc = "Add file to Harpoon" },
+	{ "<C-e>", ui.toggle_quick_menu, desc = "Toggle Harpoon Menu" },
+	{
+		"<leader>pp",
+		function()
+			local legendary = require("legendary")
+			legendary.find({
+				filters = { require("legendary.filters").keymaps() },
+			})
+		end,
+		desc = "Open (Legendary)",
+	},
 }
 
--- Harpoon
-local mark = require("harpoon.mark")
-local ui = require("harpoon.ui")
-vim.keymap.set("n", "<leader>a", mark.add_file, { desc = "Add file to Harpoon" })
-vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu, { desc = "Toggle Harpoon Menu" })
+require("legendary").setup({
+	keymaps = mappings,
+	extensions = {
+		lazy_nvim = true,
+	},
+})
 wk.add(mappings)
-
-vim.keymap.set("n", "<leader>pp", function()
-	local legendary = require("legendary")
-	legendary.find({
-		filters = { require("legendary.filters").keymaps() },
-	})
-end, { desc = "Legendary" })
-
--- Keymaps
+-- Harpoon
 
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
-
--- vim.keymap.set("v", "<S-Tab>", "<gv", { desc = "Select previous text object" })
-vim.keymap.set("n", "<A-t>", ":tabnew<CR>", { desc = "New Tab" })

@@ -6,5 +6,6 @@ return {
 		"nvim-telescope/telescope.nvim",
 		"stevearc/dressing.nvim",
 		"kkharji/sqlite.lua",
+		"folke/which-key.nvim",
 	},
 }
