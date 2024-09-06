@@ -14,8 +14,12 @@
 @define-color green4 #689d6a;
 
 * {
-  /* `otf-font-awesome` is required to be installed for icons */
-  font-family: FontAwesome, Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    Fira Code Nerd Font,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
   font-size: 10px;
 }
 
@@ -133,6 +137,7 @@ button:hover {
 }
 
 #battery {
+  font-size: 12px;
   background-color: @purple;
   color: #000000;
 }
@@ -202,7 +207,8 @@ label:focus {
 }
 
 #network {
-  background-color: @blue;
+  background-color: @green2;
+  font-size: 12px;
 }
 
 #network.disconnected {
@@ -251,7 +257,7 @@ label:focus {
 }
 
 #tray {
-  background-color: @blue;
+  background-color: @green4;
 }
 
 #tray > .passive {
