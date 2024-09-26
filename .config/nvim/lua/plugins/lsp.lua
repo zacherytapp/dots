@@ -59,7 +59,7 @@ return {
 		local servers = {
 			apex_ls = {},
 			eslint = {},
-			tsserver = {},
+			ts_ls = {},
 			tailwindcss = {},
 			rust_analyzer = {},
 			jdtls = {},

@@ -6,45 +6,42 @@ local ui = require("harpoon.ui")
 require("telescope").load_extension("fzf")
 require("telescope").load_extension("live_grep_args")
 
+-- LSP Keymaps
+local ts = require("telescope.builtin")
+local key = vim.keymap
+key.set("n", "-", "<CMD>Oil<CR>", { desc = "[Oil] Open parent directory (Utilities)" })
+key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
+key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
+key.set("n", "gd", ts.lsp_definitions, { desc = "[G]oto [D]efinition (LSP)" })
+key.set("n", "gr", ts.lsp_references, { desc = "[G]oto [R]eferences (LSP)" })
+key.set("n", "gi", ts.lsp_implementations, { desc = "[G]oto [I]mplementation (LSP)" })
+key.set("n", "<leader>D", ts.lsp_type_definitions, { desc = "Type [D]efinition (LSP)" })
+key.set("n", "<leader>ds", ts.lsp_document_symbols, { desc = "[D]ocument [S]ymbols (LSP)" })
+key.set("n", "<leader>ws", ts.lsp_dynamic_workspace_symbols, { desc = "[W]orkspace [S]ymbols (LSP)" })
+key.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Documentation (LSP)" })
+key.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature Documentation (LSP)" })
+key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
+key.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "[W]orkspace [A]dd Folder (LSP)" })
+key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
+key.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "[R]emove Folder (LSP)" })
+
+key.set("n", "<leader>wl", function()
+	print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+end, { desc = "[W]orkspace [L]ist Folders (LSP)" })
+
+key.set("n", "<leader>xx", "<CMD>Trouble diagnostics toggle<CR>", { desc = "Diagnostics (Trouble)" })
+key.set("n", "<leader>xX", "<CMD>Trouble diagnostics toggle filter.buf=0<CR>", { desc = "Buf Diagnostics (Trouble)" })
+key.set("n", "<leader>cs", "<CMD>Trouble symbols toggle focus=false<CR>", { desc = "Symbols (Trouble)" })
+key.set("n", "<leader>cl", "<CMD>Trouble lsp toggle focus=false win.position=right<CR>", { desc = "LSP (Trouble)" })
+key.set("n", "<leader>xL", "<CMD>Trouble loclist toggle<CR>", { desc = "Location List (Trouble)" })
+key.set("n", "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", { desc = "Quickfix List (Trouble)" })
+key.set("n", "<leader>yy", [["+y]], { desc = "[y]ank to clipboard (Utilities)" })
+key.set("n", "<leader>Y", [["+Y]], { desc = "[Y]ank to clipboard (Utilities)" })
+key.set("n", "<leader>p", [["_dP]], { desc = "[P]aste over visual selection (Utilities)" })
+
 local mappings = {
-	{ "-", "<CMD>Oil<CR>", desc = "[Oil] Open parent directory (Utilities)" },
-	{ "<ESC>", [[<C-\><C-n>:q<CR>]], desc = "Exit Terminal Mode (Terminal)", mode = { "t" } },
-	{ "<C-d>", [[<C-\><C-d>]], desc = "Exit Terminal Mode (Terminal)", mode = { "t" } },
-	{ "<C-k>", "Signiature Documentation (LSP)", mode = { "n" } },
-	{ "K", "Hover Documentation (LSP)", mode = { "n" } },
-	{ "<leader>D", desc = "Type [D]efinition (LSP)", mode = { "n" } },
-	{ "<leader>ds", desc = "[D]ocument [S]ymbols (LSP)", mode = { "n" } },
-	{ "<leader>ca", desc = "[C]ode [A]ction (LSP)", mode = { "n" } },
-	{ "<leader>ws", desc = "[W]orkspace [S]ymbols (LSP)", mode = { "n" } },
-	{ "gD", desc = "[G]oto [D]eclaration (LSP)", mode = { "n" } },
-	{ "<leader>wa", desc = "[W]orkspace [A]dd Folder (LSP)", mode = { "n" } },
-	{ "<leader>wr", desc = "[W]orkspace [R]emove Folder (LSP)", mode = { "n" } },
-	{ "<leader>wl", desc = "[W]orkspace [L]ist Folders (LSP)", mode = { "n" } },
-	{ "<leader>rn", desc = "[R]e[n]ame (LSP)", mode = { "n" } },
-	{ "<leader>x", group = "+Trouble" },
-	{ "<leader>xx", "<CMD>Trouble diagnostics toggle<CR>", desc = "Diagnostics (Trouble)" },
-	{ "<leader>xX", "<CMD>Trouble diagnostics toggle filter.buf=0<CR>", desc = "Buffer Diagnostics (Trouble)" },
-	{ "<leader>cs", "<CMD>Trouble symbols toggle focus=false<CR>", desc = "Symbols (Trouble)" },
-	{ "<leader>cl", "<CMD>Trouble lsp toggle focus=false win.position=right<CR>", desc = "LSP (Trouble)" },
-	{ "<leader>xL", "<CMD>Trouble loclist toggle<CR>", desc = "Location List (Trouble)" },
-	{ "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", desc = "Quickfix List (Trouble)" },
-	{ "<leader>y", group = "+Yank Utilities" },
-	{ "<leader>yy", [["+y]], desc = "[y]ank to clipboard (Utilities)", mode = { "n", "v" } },
-	{ "<leader>Y", [["+Y]], desc = "[Y]ank to clipboard (Utilities)" },
-	{ "<leader>p", [["_dP]], desc = "[P]aste over visual selection (Utilities)" },
 	{ "<leader>u", "<CMD>UndotreeToggle<CR>", desc = "Toggle [U]ndotree (Undotree)" },
 	{ "<leader>t", group = "+Toggle & Salesforce Testing" },
-	{ "<leader>nl", require("telescope").extensions.notify.notify, desc = "Show [N]otifications (Telescope)" },
-	{
-		"<leader>to",
-		"<CMD>ToggleTerm dir=git_dir direction=horizontal name=git size=10<CR>",
-		desc = "[O]pen (Terminal)",
-	},
-	{
-		"<leader>tf",
-		"<CMD>ToggleTerm dir=git_dir direction=float name=git size=20<CR>",
-		desc = "Open Terminal - [F]loat Mode (Terminal)",
-	},
 	{ "<leader>f", group = "+Find and Format" },
 	{
 		"<leader>fj",
@@ -176,26 +173,6 @@ local mappings = {
 	},
 	{ "<leader>a", mark.add_file, desc = "Add file to Harpoon" },
 	{ "<C-e>", ui.toggle_quick_menu, desc = "Toggle Harpoon Menu" },
-	{
-		"<leader>pp",
-		function()
-			local legendary = require("legendary")
-			legendary.find({
-				filters = { require("legendary.filters").keymaps() },
-			})
-		end,
-		desc = "Open (Legendary)",
-	},
 }
 
-require("legendary").setup({
-	keymaps = mappings,
-	extensions = {
-		lazy_nvim = true,
-	},
-})
 wk.add(mappings)
--- Harpoon
-
-vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
-vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })

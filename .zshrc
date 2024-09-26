@@ -127,8 +127,6 @@ export PATH=$PATH:/usr/local/go/bin
 export PATH="/opt/pmd/bin:$PATH"
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 
-eval "$(starship init zsh)"
-
 export WORKON_HOME=$HOME/.virtualenvs
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 export VIRTUALENVWRAPPER_VIRTUALENV_ARGS=' -p /usr/bin/python3 '
@@ -142,3 +140,12 @@ PERL5LIB="/home/zakk/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
 PERL_LOCAL_LIB_ROOT="/home/zakk/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
 PERL_MB_OPT="--install_base \"/home/zakk/perl5\""; export PERL_MB_OPT;
 PERL_MM_OPT="INSTALL_BASE=/home/zakk/perl5"; export PERL_MM_OPT;
+
+# >>> juliaup initialize >>>
+
+# !! Contents within this block are managed by juliaup !!
+
+path=('/home/zakk/.juliaup/bin' $path)
+export PATH
+
+# <<< juliaup initialize <<<

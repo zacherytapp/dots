@@ -87,11 +87,8 @@ function M.get_current_full_method_name(delimiter)
 end
 
 function M.setup_tmux(file_to_search, script_to_run)
-	-- Check if tmux is running
-	-- local tmux_running = os.execute("pgrep tmux > /dev/null")
 	local tmux_running = os.execute("tmux ls | grep attached")
 	if tmux_running ~= nil then
-		-- os.execute("~/.local/bin/sf-tmux-project")
 		local f = io.open(file_to_search, "r")
 		if f ~= nil then
 			io.close(f)

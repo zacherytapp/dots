@@ -10,8 +10,25 @@ This Mostly used for Salesforce/Javascript development - but trying to use some 
 
 ##### Debian/Ubuntu Prerequisites
 
-- `sudo apt install zsh kitty tmux git fzf ripgrep vim ttf-ms-fonts python-dev python3-dev libssl-dev python3-pip gimp flatpak`
-- `sudo apt-get install ninja-build gettext cmake unzip curl`
+```
+sudo apt install zsh kitty tmux git fzf ripgrep vim python3-pip gimp \
+flatpak lua5.4 liblua5.4-dev ruby-full ninja-build gettext cmake unzip curl \
+perl curl neofetch xclip ca-certificates curl php-cli php-zip
+```
+
+##### Install Lua, LuaRocks
+
+- `sudo apt install lua5.4 liblua5.4-dev`
+- Follow these instructions:
+  - `wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz`
+  - `tar zxpf luarocks-3.11.1.tar.gz`
+  - `cd luarocks-3.11.1`
+  - `./configure && make && sudo make install`
+  - `sudo luarocks install luasocket`
+
+##### Install Ruby
+
+- `gem install neovim`
 
 ##### Fedora Prerequisites
 
@@ -48,10 +65,15 @@ See [Neovim Documentation](https://github.com/neovim/neovim/blob/master/INSTALL.
   - `git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting`
 
 - [ ] [NVM](https://github.com/nvm-sh/nvm)
-  - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash`
-  - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | zsh`
+
+  - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash`
   - `source ~/.zshrc`
   - `nvm install node -g`
+  - Install other node/neovim dependenices:
+    - `npm install -g neovim`
+    - `npm install -g sql-formatter`
+    - `npm install -g tree-sitter`
+
 - [ ] Install Zulu17 (Ubuntu)
   - [Zulu17 Download](https://www.azul.com/core-post-download/?endpoint=zulu&uuid=9f020a32-d669-4f80-b4be-7a2551d0e7df)
   - Alternatively, `wget https://www.azul.com/core-post-download/?endpoint=zulu&uuid=9f020a32-d669-4f80-b4be-7a2551d0e7df`
