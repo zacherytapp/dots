@@ -5,10 +5,10 @@ local ui = require("harpoon.ui")
 
 require("telescope").load_extension("fzf")
 require("telescope").load_extension("live_grep_args")
+local key = vim.keymap
 
 -- LSP Keymaps
 local ts = require("telescope.builtin")
-local key = vim.keymap
 key.set("n", "-", "<CMD>Oil<CR>", { desc = "[Oil] Open parent directory (Utilities)" })
 key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
 key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
@@ -38,66 +38,46 @@ key.set("n", "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", { desc = "Quickfix 
 key.set("n", "<leader>yy", [["+y]], { desc = "[y]ank to clipboard (Utilities)" })
 key.set("n", "<leader>Y", [["+Y]], { desc = "[Y]ank to clipboard (Utilities)" })
 key.set("n", "<leader>p", [["_dP]], { desc = "[P]aste over visual selection (Utilities)" })
+key.set("n", "<leader>u", "<CMD>UndotreeToggle<CR>", { desc = "[U]ndotree (Undotree)" })
+key.set("n", "<leader>fj", function()
+	vim.cmd(":set filetype=json")
+	vim.cmd(":%!jq '.'")
+end, { desc = "[J]SON Format (Utilities)" })
+key.set("n", "<leader>fF", function()
+	vim.lsp.buf.format()
+end, { desc = "Format [F]ile (Utilities)" })
+
+key.set("n", "<leader>tt", function()
+	local class_name = utils.get_current_class_name()
+	local test_class_command = string.format(
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
+		class_name
+	)
+	local window_id = utils.get_tmux_window_id("deploy")
+	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_class_command)
+	os.execute(tmux_command)
+end, { desc = "Run [T]est on Current Class (Salesforce - SFDX)" })
+
+key.set("n", "<leader>tm", function()
+	local method_name = utils.get_current_full_method_name()
+	local test_method_command = string.format(
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --tests %s",
+		method_name
+	)
+	local window_id = utils.get_tmux_window_id("deploy")
+	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_method_command)
+	os.execute(tmux_command)
+end, { desc = "Run [T]est on Current Method (Salesforce - SFDX)" })
+
+key.set("n", "<leader>tl", function()
+	local command =
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
+	local window_id = utils.get_tmux_window_id("deploy")
+	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+	os.execute(tmux_command)
+end, { desc = "Run All [L]ocal Tests (Salesforce - SFDX)" })
 
 local mappings = {
-	{ "<leader>u", "<CMD>UndotreeToggle<CR>", desc = "Toggle [U]ndotree (Undotree)" },
-	{ "<leader>t", group = "+Toggle & Salesforce Testing" },
-	{ "<leader>f", group = "+Find and Format" },
-	{
-		"<leader>fj",
-		function()
-			vim.cmd(":set filetype=json")
-			vim.cmd(":%!jq '.'")
-		end,
-		desc = "Format [J]SON (Utilities)",
-	},
-	{
-		"<leader>fF",
-		function()
-			vim.lsp.buf.format()
-		end,
-		desc = "Format [F]ile (Utilities)",
-	},
-	{
-		"<leader>tt",
-		function()
-			local class_name = utils.get_current_class_name()
-			local test_class_command = string.format(
-				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
-				class_name
-			)
-			local window_id = utils.get_tmux_window_id("deploy")
-			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_class_command)
-			os.execute(tmux_command)
-		end,
-		desc = "Run [T]est on Current Class (Salesforce - SFDX)",
-	},
-	{
-		"<leader>tm",
-		function()
-			local method_name = utils.get_current_full_method_name()
-			local test_method_command = string.format(
-				"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --tests %s",
-				method_name
-			)
-			local window_id = utils.get_tmux_window_id("deploy")
-			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_method_command)
-			os.execute(tmux_command)
-		end,
-		desc = "Run [T]est on Current Method (Salesforce - SFDX)",
-	},
-	{
-		"<leader>tl",
-		function()
-			local command =
-				"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
-			local window_id = utils.get_tmux_window_id("deploy")
-			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-			os.execute(tmux_command)
-		end,
-		desc = "Run All [L]ocal Tests (Salesforce - SFDX)",
-	},
-	{ "<leader>l", group = "+Salesforce Logs" },
 	{
 		"<leader>lg",
 		function()
