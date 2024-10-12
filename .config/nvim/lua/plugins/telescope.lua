@@ -53,41 +53,4 @@ return {
 			},
 		},
 	},
-	keys = {
-		{
-			"<leader>ff",
-			require("telescope.builtin").find_files,
-			desc = "[F]ind [F]iles (Telescope)",
-		},
-		{
-			"<leader>fg",
-			require("telescope.builtin").live_grep,
-			desc = "[F]ind [G]rep (Telescope)",
-		},
-		{
-			"<leader>fh",
-			require("telescope.builtin").help_tags,
-			desc = "[F]ind [H]elp (Telescope)",
-		},
-		{
-			"<leader>fw",
-			require("telescope.builtin").grep_string,
-			desc = "[F]ind [W]ord (Telescope)",
-		},
-		{
-			"<leader>fd",
-			require("telescope.builtin").lsp_document_diagnostics,
-			desc = "[F]ind [D]iagnostics (Telescope)",
-		},
-		{
-			"<leader>fr",
-			require("telescope.builtin").lsp_references,
-			desc = "[F]ind [R]eferences (Telescope)",
-		},
-		{
-			"<leader>fi",
-			require("telescope.builtin").git_files,
-			desc = "[F]ind G[i]t Files (Telescope)",
-		},
-	},
 }
