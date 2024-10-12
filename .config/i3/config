@@ -34,6 +34,8 @@ exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 # and nm-applet is a desktop environment-independent system tray GUI for it.
 exec --no-startup-id nm-applet
 
+exec_always --no-startup-id feh --bg-scale /home/zakk/.config/walls/gruvbox-coffee.jpg
+
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
@@ -43,6 +45,7 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
+
 
 # start a terminal
 bindsym $mod+Return exec kitty
@@ -210,3 +213,7 @@ bar {
   }
   status_command i3status
 }
+
+
+# Some custom stuff for layout
+exec_always gsettings set $gnome-scheme color-scheme 'prefer-dark'
