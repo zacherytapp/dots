@@ -117,7 +117,7 @@ return {
 
 		lspconfig.apex_ls.setup({
 			apex_jar_path = apex_jar_path,
-			apex_enable_semantic_errors = true,
+			apex_enable_semantic_errors = false,
 			apex_enable_completion_statistics = false,
 			filetypes = { "apex", "apexcode" },
 			root_dir = lspconfig.util.root_pattern("sfdx-project.json"),
