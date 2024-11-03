@@ -1,18 +1,16 @@
 return {
-	-- Gruvbox all the things
 	{
-		"ellisonleao/gruvbox.nvim",
+		"Mofiqul/dracula.nvim",
 		priority = 1000,
 		config = function()
 			local opts = {
-				contrast = "soft",
-				transparent_mode = true,
+				transparent_bg = true,
 				overrides = {
 					["@lsp.type.method"] = { fg = "#ff9900" },
 				},
 			}
-			require("gruvbox").setup(opts)
-			vim.cmd("colorscheme gruvbox")
+			require("dracula").setup(opts)
+			vim.cmd("colorscheme dracula")
 		end,
 	},
 }

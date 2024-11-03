@@ -1,17 +1,15 @@
-@define-color light #ebdbb2;
-@define-color dark #1d2021;
+@define-color light #F8F8F2;
+@define-color dark #44475A;
 
-@define-color yellow #fabd2f;
-@define-color red #cc241d;
-@define-color grey #928374;
-@define-color blue #458588;
-@define-color blue-dull #83a598;
-@define-color purple #d3869b;
-@define-color purple-dark #b16286;
-@define-color green #8ec07c;
-@define-color green2 #98971a;
-@define-color green3 #b8bb26;
-@define-color green4 #689d6a;
+@define-color yellow #F1FA8C;
+@define-color red #FF5555;
+@define-color grey #44475A;
+@define-color blue #8BE9FD;
+@define-color purple #BD93F9;
+@define-color orange #FFB86C;
+@define-color pink #FF79C6;
+@define-color cyan #8BE9FD;
+@define-color green #50FA7B;
 
 * {
   font-family:
@@ -26,7 +24,7 @@
 window#waybar {
   background-color: rgba(43, 48, 59, 0.5);
   border-bottom: 3px solid rgba(100, 114, 125, 0.5);
-  color: #ffffff;
+  color: @light;
   transition-property: background-color;
   transition-duration: 0.5s;
 }
@@ -35,39 +33,26 @@ window#waybar.hidden {
   opacity: 0.2;
 }
 
-/*
-window#waybar.empty {
-    background-color: transparent;
-}
-window#waybar.solo {
-    background-color: #FFFFFF;
-}
-*/
-
 window#waybar.termite {
   background-color: #3f3f3f;
 }
 
 window#waybar.chromium {
-  background-color: #000000;
+  background-color: @light;
   border: none;
 }
 
 button {
-  /* Use box-shadow instead of border so the text isn't offset */
   box-shadow: inset 0 -3px transparent;
-  /* Avoid rounded borders under each button name */
   border: none;
   border-radius: 0;
 }
 
-/* https://github.com/Alexays/Waybar/wiki/FAQ#the-workspace-buttons-have-a-strange-hover-effect */
 button:hover {
   background: inherit;
-  box-shadow: inset 0 -3px #ffffff;
+  box-shadow: inset 0 -3px @dark;
 }
 
-/* you can set a style on hover for any module like this */
 #pulseaudio:hover {
   background-color: #a37800;
 }
@@ -75,7 +60,7 @@ button:hover {
 #workspaces button {
   padding: 0 5px;
   background-color: transparent;
-  color: #ffffff;
+  color: @light;
 }
 
 #workspaces button:hover {
@@ -114,7 +99,7 @@ button:hover {
 #power-profiles-daemon,
 #mpd {
   padding: 0 10px;
-  color: #ffffff;
+  color: @dark;
 }
 
 #window,
@@ -122,43 +107,47 @@ button:hover {
   margin: 0 4px;
 }
 
-/* If workspaces is the leftmost module, omit left margin */
 .modules-left > widget:first-child > #workspaces {
   margin-left: 0;
 }
 
-/* If workspaces is the rightmost module, omit right margin */
 .modules-right > widget:last-child > #workspaces {
   margin-right: 0;
 }
 
 #clock {
-  background-color: #64727d;
+  background-color: @pink;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #battery {
-  font-size: 12px;
   background-color: @purple;
-  color: #000000;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #battery.charging,
 #battery.plugged {
-  color: #ffffff;
+  color: @dark;
   background-color: @green;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 @keyframes blink {
   to {
-    background-color: #ffffff;
-    color: #000000;
+    background-color: @dark;
+    color: @light;
   }
 }
 
 /* Using steps() instead of linear as a timing function to limit cpu usage */
 #battery.critical:not(.charging) {
   background-color: #f53c3c;
-  color: #ffffff;
+  color: @light;
   animation-name: blink;
   animation-duration: 0.5s;
   animation-timing-function: steps(12);
@@ -172,30 +161,42 @@ button:hover {
 
 #power-profiles-daemon.performance {
   background-color: @red;
-  color: #ffffff;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #power-profiles-daemon.balanced {
   background-color: @yellow;
-  color: #ffffff;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #power-profiles-daemon.power-saver {
-  background-color: @green4;
-  color: #000000;
+  background-color: @green;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 label:focus {
-  background-color: #000000;
+  background-color: @light;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #cpu {
-  background-color: @blue-dull;
-  color: #000000;
+  background-color: @yellow;
+  color: @dark;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #memory {
-  background-color: @purple-dark;
+  background-color: @purple;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #disk {
@@ -204,11 +205,16 @@ label:focus {
 
 #backlight {
   background-color: @blue;
+  color: #282a36;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #network {
-  background-color: @green2;
+  background-color: @pink;
+  color: @dark;
   font-size: 12px;
+  font-weight: bold;
 }
 
 #network.disconnected {
@@ -226,7 +232,7 @@ label:focus {
 }
 
 #wireplumber {
-  background-color: @blue-dull;
+  background-color: @blue;
   color: #000000;
 }
 
@@ -235,7 +241,7 @@ label:focus {
 }
 
 #custom-media {
-  background-color: @green2;
+  background-color: @green;
   color: #2a5c45;
   min-width: 100px;
 }
@@ -257,7 +263,8 @@ label:focus {
 }
 
 #tray {
-  background-color: @green4;
+  background-color: @green;
+  color: @dark;
 }
 
 #tray > .passive {
@@ -271,6 +278,9 @@ label:focus {
 
 #idle_inhibitor {
   background-color: @dark;
+  color: @light;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 #idle_inhibitor.activated {
