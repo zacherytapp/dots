@@ -13,44 +13,69 @@ return {
 			end,
 		},
 	},
-	opts = {
-		defaults = {
-			prompt_prefix = "   ",
-			layout_strategy = "horizontal",
-			layout_config = {
-				horizontal = {
-					prompt_position = "bottom",
-					preview_width = 0.55,
-					results_width = 0.8,
-				},
-				vertical = {
-					mirror = false,
-				},
-				width = 0.87,
-				height = 0.80,
-			},
-			border = {},
-			borderchars = {
-				prompt = { "─", " ", " ", " ", "─", "─", " ", " " },
-				results = { " " },
-				preview = { " " },
-			},
-			color_devicons = true,
-			file_ignore_patters = { "node_modules", "**/node_modules", ".git" },
-			mappings = {
-				i = {
-					["<C-u>"] = false,
-					["<C-d>"] = false,
+	config = function()
+		vim.api.nvim_set_hl(0, "TelescopePromptBorder", { fg = "#5a524c" })
+		vim.api.nvim_set_hl(0, "TelescopePreviewBorder", { fg = "#5a524c" })
+		vim.api.nvim_set_hl(0, "TelescopeResultsBorder", { fg = "#5a524c" })
+		vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#32302f" })
+		vim.api.nvim_set_hl(0, "TelescopePromptPrefix", { bg = "#32302f" })
+		local sorters = require("telescope.sorters")
+		local width = 0.70
+		local height = 0.70
+		require("telescope").setup({
+			pickers = {
+				buffers = {
+					show_all_buffers = true,
+					-- sort_lastused = true,
+					sort_mru = true,
+					previewer = true,
+					theme = "dropdown",
 				},
 			},
-			extensions = {
-				fzf = {
-					fuzzy = true,
-					override_generic_sorter = true,
-					override_file_sorter = true,
-					case_mode = "smart_case",
+			defaults = {
+				vimgrep_arguments = {
+					"rg",
+					"--vimgrep",
+					"--hidden",
+					"--smart-case",
+					"--trim",
+					"--no-heading",
+					"--with-filename",
+					"--line-number",
+					"--column",
 				},
+				prompt_prefix = " ",
+				selection_caret = " ",
+				entry_prefix = "  ",
+				set_env = { ["COLORTERM"] = "truecolor" },
+				initial_mode = "insert",
+				selection_strategy = "reset",
+				sorting_strategy = "ascending",
+				layout_strategy = "horizontal",
+				layout_config = {
+					prompt_position = "top",
+					horizontal = {
+						mirror = false,
+						width = width,
+						height = height,
+					},
+					vertical = {
+						mirror = false,
+						width = width,
+						height = height,
+					},
+				},
+				file_sorter = sorters.get_fuzzy_file,
+				file_ignore_patterns = { "gtk/**/*", "node_modules", ".git", "pdf_viewer" },
+				generic_sorter = sorters.get_generic_fuzzy_sorter,
+				winblend = 0,
+				border = {},
+				borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
+				color_devicons = true,
+				use_less = true,
+				path_display = {},
 			},
-		},
-	},
+		})
+	end,
 }
+
