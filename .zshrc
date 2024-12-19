@@ -127,6 +127,8 @@ export PATH=$PATH:/usr/local/go/bin
 export PATH="/opt/pmd/bin:$PATH"
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 export SF_USE_GENERIC_UNIX_KEYCHAIN=true
+export PNPM_HOME="/home/zakk/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
 
 export WORKON_HOME=$HOME/.virtualenvs
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3

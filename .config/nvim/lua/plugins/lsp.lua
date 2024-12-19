@@ -1,182 +1,186 @@
 return {
-	"neovim/nvim-lspconfig",
-	dependencies = {
-		"williamboman/mason.nvim",
-		"williamboman/mason-lspconfig.nvim",
+	{
+		"neovim/nvim-lspconfig",
+		dependencies = {
+			"hrsh7th/cmp-nvim-lsp",
+			"williamboman/mason.nvim",
+			"williamboman/mason-lspconfig.nvim",
+		},
+		config = function()
+			local lspconfig_defaults = require("lspconfig").util.default_config
+			lspconfig_defaults.capabilities = vim.tbl_deep_extend(
+				"force",
+				lspconfig_defaults.capabilities,
+				require("cmp_nvim_lsp").default_capabilities()
+			)
+			vim.api.nvim_create_autocmd("LspAttach", {
+				desc = "LSP actions",
+				callback = function(event)
+					local signs = {
+						ERROR = "",
+						WARN = "",
+						HINT = "󰌵",
+						INFO = "",
+					}
+					vim.diagnostic.config({
+						virtual_text = {
+							errors = { "italic" },
+							hints = { "italic" },
+							warnings = { "italic" },
+							information = { "italic" },
+							prefix = function(diagnostic)
+								return signs[vim.diagnostic.severity[diagnostic.severity]]
+							end,
+						},
+					})
+					local opts = { buffer = event.buf }
 
-		{ "j-hui/fidget.nvim", tag = "legacy", opts = {} },
+					vim.keymap.set("n", "K", "<cmd>lua vim.lsp.buf.hover()<cr>", opts)
+					vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<cr>", opts)
+					vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<cr>", opts)
+					vim.keymap.set("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<cr>", opts)
+					vim.keymap.set("n", "go", "<cmd>lua vim.lsp.buf.type_definition()<cr>", opts)
+					vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<cr>", opts)
+					vim.keymap.set("n", "gs", "<cmd>lua vim.lsp.buf.signature_help()<cr>", opts)
+					vim.keymap.set(
+						"n",
+						"<leader>vd",
+						"<cmd>lua vim.diagnostic.open_float()<cr>",
+						{ desc = "View Diagnostics" }
+					)
+					vim.keymap.set("n", "<leader>rn", "<cmd>lua vim.lsp.buf.rename()<cr>", opts)
+					vim.keymap.set({ "n", "x" }, "<F3>", "<cmd>lua vim.lsp.buf.format({async = true})<cr>", opts)
+					vim.keymap.set("n", "<leader>ca", "<cmd>lua vim.lsp.buf.code_action()<cr>", opts)
+				end,
+			})
 
-		"folke/neodev.nvim",
-	},
-	config = function()
-		local on_attach = function(_, bufnr)
-			local signs = {
-				ERROR = "",
-				WARN = "",
-				HINT = "󰌵",
-				INFO = "",
-			}
-			vim.diagnostic.config({
-				virtual_text = {
-					errors = { "italic" },
-					hints = { "italic" },
-					warnings = { "italic" },
-					information = { "italic" },
-					prefix = function(diagnostic)
-						return signs[vim.diagnostic.severity[diagnostic.severity]]
-					end,
+			require("mason").setup()
+			require("mason-lspconfig").setup({
+				ensure_installed = {
+					"apex_ls",
+					"eslint",
+					"cssls",
+					"cssmodules_ls",
+					"jdtls",
+					"html",
+					"astro",
+					"cssls",
+					"vtsls",
+					"cssmodules_ls",
+					"gopls",
+					"lua_ls",
+					"htmx",
 				},
 			})
 
-			local ts = require("telescope.builtin")
-			local key = vim.keymap
-			key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
-			key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
-			key.set("n", "gd", ts.lsp_definitions, { desc = "[G]oto [D]efinition (LSP)" })
-			key.set("n", "gr", ts.lsp_references, { desc = "[G]oto [R]eferences (LSP)" })
-			key.set("n", "gi", ts.lsp_implementations, { desc = "[G]oto [I]mplementation (LSP)" })
-			key.set("n", "<leader>D", ts.lsp_type_definitions, { desc = "Type [D]efinition (LSP)" })
-			key.set("n", "<leader>ds", ts.lsp_document_symbols, { desc = "[D]ocument [S]ymbols (LSP)" })
-			key.set("n", "<leader>ws", ts.lsp_dynamic_workspace_symbols, { desc = "[W]orkspace [S]ymbols (LSP)" })
-			key.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Documentation (LSP)" })
-			key.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature Documentation (LSP)" })
-			key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
-			key.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "[W]orkspace [A]dd Folder (LSP)" })
-			key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
-			key.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "[R]emove Folder (LSP)" })
-			key.set("n", "<leader>wl", function()
-				print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-			end, { desc = "[W]orkspace [L]ist Folders (LSP)" })
-
-			vim.api.nvim_buf_create_user_command(bufnr, "Format", function(_)
-				vim.lsp.buf.format()
-			end, { desc = "Format current buffer (LSP)" })
-		end
-
-		require("mason").setup()
-		require("mason-lspconfig").setup()
-
-		local servers = {
-			apex_ls = {},
-			eslint = {},
-			ts_ls = {},
-			tailwindcss = {},
-			rust_analyzer = {},
-			jdtls = {},
-			html = {
-				filetypes = {
-					"html",
-					"javascript",
-					"javascriptreact",
-					"javascript.jsx",
-					"typescript",
-					"typescriptreact",
-					"typescript.tsx",
+			require("mason-lspconfig").setup_handlers({
+				function(server_name) -- default handler (optional)
+					require("lspconfig")[server_name].setup({})
+				end,
+				["lua_ls"] = function()
+					require("lspconfig").lua_ls.setup({
+						settings = {
+							Lua = {
+								workspace = { checkThirdParty = false },
+								telemetry = { enable = false },
+								diagnostics = {
+									disable = { "missing-fields" },
+									globals = { "vim" },
+								},
+							},
+						},
+					})
+				end,
+				["apex_ls"] = function()
+					require("lspconfig").apex_ls.setup({
+						apex_jar_path = vim.fn.stdpath("config") .. "/lspserver/" .. "apex-jorje-lsp.jar",
+						apex_enable_semantic_errors = false,
+						apex_enable_completion_statistics = false,
+						filetypes = { "apex", "apexcode" },
+						root_dir = require("lspconfig").util.root_pattern(".git", "sfdx-project.json"),
+					})
+				end,
+				["gopls"] = function()
+					require("lspconfig").gopls.setup({
+						cmd = { "gopls" },
+						filetypes = { "go", "gomod", "gowork", "tmpl" },
+						settings = {
+							gopls = {
+								templateExtensions = { "tpl", "yaml", "tmpl", "tmpl.html" },
+								experimentalPostfixCompletions = true,
+								gofumpt = true,
+								usePlaceholders = true,
+								analyses = {
+									-- shadow = true,
+									nilness = true,
+									unusedresult = true,
+									unusedparams = true,
+									unusedwrite = true,
+									useany = true,
+									unreachable = true,
+								},
+								hints = {
+									assignVariableTypes = true,
+									compositeLiteralFields = true,
+									compositeLiteralTypes = true,
+									constantValues = true,
+									functionTypeParameters = true,
+									parameterNames = true,
+									rangeVariableTypes = true,
+								},
+								staticcheck = true,
+							},
+						},
+					})
+				end,
+				["tailwindcss"] = function()
+					require("lspconfig").tailwindcss.setup({
+						filetypes = { "tmpl", "html" },
+					})
+				end,
+				["html"] = function()
+					require("lspconfig").html.setup({
+						filetypes = { "tmpl,gotmpl", "html" },
+					})
+				end,
+			})
+		end,
+	},
+	{
+		"hrsh7th/nvim-cmp",
+		dependencies = {
+			"hrsh7th/cmp-nvim-lsp",
+			"L3MON4D3/LuaSnip",
+			"saadparwaiz1/cmp_luasnip",
+			"hrsh7th/cmp-path",
+		},
+		config = function()
+			local cmp = require("cmp")
+			local cmp_select = { behavior = cmp.SelectBehavior.Insert }
+			require("luasnip.loaders.from_vscode").lazy_load({ paths = "/home/zakk/.config/nvim/snippets/" })
+			require("luasnip").config.setup({})
+			cmp.setup({
+				sources = {
+					{ name = "nvim_lsp" },
+					{ name = "luasnip" },
+					{ name = "buffer" },
+					{ name = "path" },
 				},
-			},
-			gopls = {},
-			dockerls = {},
-			lua_ls = {
-				Lua = {
-					workspace = { checkThirdParty = false },
-					telemetry = { enable = false },
-					diagnostics = { disable = { "missing-fields" } },
+				snippet = {
+					expand = function(args)
+						require("luasnip").lsp_expand(args.body)
+					end,
 				},
-			},
-			templ = {},
-			htmx = {}, -- Make sure rust and c++ are installed
-		}
-
-		-- Setup neovim lua configuration
-		require("neodev").setup()
-
-		local capabilities = vim.lsp.protocol.make_client_capabilities()
-		capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
-
-		-- Ensure the servers above are installed
-		local mason_lspconfig = require("mason-lspconfig")
-
-		mason_lspconfig.setup({
-			ensure_installed = vim.tbl_keys(servers),
-		})
-
-		mason_lspconfig.setup_handlers({
-			function(server_name)
-				require("lspconfig")[server_name].setup({
-					capabilities = capabilities,
-					on_attach = on_attach,
-					settings = servers[server_name],
-					filetypes = (servers[server_name] or {}).filetypes,
-				})
-			end,
-		})
-
-		local lspconfig = require("lspconfig")
-		local apex_jar_path = vim.fn.stdpath("config") .. "/lspserver/" .. "apex-jorje-lsp.jar"
-		vim.filetype.add({ extension = { templ = "templ" } })
-
-		lspconfig.apex_ls.setup({
-			apex_jar_path = apex_jar_path,
-			apex_enable_semantic_errors = false,
-			apex_enable_completion_statistics = false,
-			filetypes = { "apex", "apexcode" },
-			root_dir = lspconfig.util.root_pattern("sfdx-project.json"),
-
-			on_attach = on_attach,
-			capabilities = capabilities,
-		})
-
-		lspconfig.templ.setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-		})
-
-		lspconfig.htmx.setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-			filetypes = { "html", "templ" },
-		})
-
-		lspconfig.html.setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-			filetypes = { "html", "templ" },
-		})
-
-		lspconfig.tailwindcss.setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-			filetypes = { "templ", "astro", "javascript", "typescript", "react" },
-			init_options = { userLanguages = { templ = "html" } },
-		})
-
-		lspconfig.gopls.setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-			cmd = { "gopls" },
-			filetypes = { "go", "gomod", "gowork", "gotmpl" },
-			settings = {
-				gopls = {
-					analyses = {
-						nilness = true,
-						unusedparams = true,
-						unusedwrite = true,
-						useany = true,
-					},
-					experimentalPostfixCompletions = true,
-					gofumpt = true,
-					usePlaceholders = true,
-					hints = {
-						assignVariableTypes = true,
-						compositeLiteralFields = true,
-						compositeLiteralTypes = true,
-						constantValues = true,
-						functionTypeParameters = true,
-						parameterNames = true,
-						rangeVariableTypes = true,
-					},
-				},
-			},
-		})
-	end,
+				mapping = cmp.mapping.preset.insert({
+					["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
+					["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
+					["<C-y>"] = cmp.mapping.confirm({ select = true }),
+					["<C-Space>"] = cmp.mapping.complete(),
+					["<Tab>"] = cmp.mapping.select_next_item({ behaviour = cmp.SelectBehavior.Insert }),
+					["<S-Tab>"] = cmp.mapping.select_prev_item({ behaviour = cmp.SelectBehavior.Insert }),
+					["<CR>"] = cmp.mapping.confirm({ select = true }),
+				}),
+			})
+		end,
+	},
 }

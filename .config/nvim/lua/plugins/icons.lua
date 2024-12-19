@@ -4,21 +4,31 @@ local apex = {
 	cterm_color = "65", -- seems to be the default value
 	name = "Apex",
 }
-
 local visualforce = {
 	icon = "",
 	color = "#4E9A06",
 	cterm_color = "71",
 	name = "Visualforce",
 }
-
 local aura = {
 	icon = "",
 	color = "#4E9A06",
 	cterm_color = "71",
 	name = "Aura",
 }
+local tmpl = {
+	icon = "󰲌",
+	color = "#4E9A06",
+	cterm_color = "71",
+	name = "GoTmpl",
+}
 
+local gotmpl = {
+	icon = "󰲌",
+	color = "#4E9A06",
+	cterm_color = "71",
+	name = "GoTmpl",
+}
 return {
 	"nvim-tree/nvim-web-devicons",
 	opts = {
@@ -29,6 +39,8 @@ return {
 			cmp = aura,
 			auradoc = aura,
 			design = aura,
+			tmpl = tmpl,
+			gotmpl = gotmpl,
 		},
 	},
 }

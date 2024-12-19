@@ -19,13 +19,11 @@ return {
 		local formatting = null_ls.builtins.formatting
 		local diagnostics = null_ls.builtins.diagnostics
 		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-
 		null_ls.setup({
 			sources = {
 				formatting.prettier.with({
 					extra_filetypes = {
 						"apex",
-						"templ",
 					},
 				}),
 				formatting.sql_formatter.with({ -- install with Mason or npm -g (see https://github.com/sql-formatter-org/sql-formatter#readme)

@@ -1,10 +1,27 @@
 return {
 	{
 		"mbbill/undotree",
-		"tpope/vim-surround",
 		"RRethy/vim-illuminate",
+	},
+	{
+		"norcalli/nvim-colorizer.lua",
+		config = function()
+			require("colorizer").setup({
+				"css",
+			})
+		end,
+	},
+	{
 		"stevearc/dressing.nvim",
-		"folke/which-key.nvim",
+		opts = {},
+	},
+	{
+		"echasnovski/mini.pairs",
+	},
+	{
+		"windwp/nvim-autopairs",
+		event = "InsertEnter",
+		opts = {},
 	},
 	{
 		"folke/trouble.nvim",
@@ -17,6 +34,7 @@ return {
 			require("Comment").setup()
 			local ft = require("Comment.ft")
 			ft.apex = { "//%s", "/**%s*/" }
+			ft({ "tmpl" }, ft.get("html"))
 		end,
 	},
 	{

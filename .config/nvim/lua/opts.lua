@@ -8,7 +8,7 @@ vim.filetype.add({
 		page = "html",
 		cmp = "html",
 		auradoc = "html",
-		templ = "templ",
+		tmpl = "tmpl",
 	},
 })
 
@@ -69,8 +69,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	group = highlight_group,
 	pattern = "*",
 })
-
-vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callback = vim.lsp.buf.format })
 
 vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
 	pattern = { "*.cls", "*.trigger", "*.apex" },

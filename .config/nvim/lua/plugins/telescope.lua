@@ -14,11 +14,6 @@ return {
 		},
 	},
 	config = function()
-		vim.api.nvim_set_hl(0, "TelescopePromptBorder", { fg = "#5a524c" })
-		vim.api.nvim_set_hl(0, "TelescopePreviewBorder", { fg = "#5a524c" })
-		vim.api.nvim_set_hl(0, "TelescopeResultsBorder", { fg = "#5a524c" })
-		vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#32302f" })
-		vim.api.nvim_set_hl(0, "TelescopePromptPrefix", { bg = "#32302f" })
 		local sorters = require("telescope.sorters")
 		local width = 0.70
 		local height = 0.70
@@ -78,4 +73,3 @@ return {
 		})
 	end,
 }
-
