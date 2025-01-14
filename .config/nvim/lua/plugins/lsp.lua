@@ -62,7 +62,6 @@ return {
 					"cssls",
 					"cssmodules_ls",
 					"jdtls",
-					"html",
 					"astro",
 					"cssls",
 					"vtsls",
@@ -70,12 +69,22 @@ return {
 					"gopls",
 					"lua_ls",
 					"htmx",
+					"pyright",
+					"jinja_lsp",
 				},
 			})
 
 			require("mason-lspconfig").setup_handlers({
 				function(server_name) -- default handler (optional)
-					require("lspconfig")[server_name].setup({})
+					require("lspconfig")[server_name].setup({
+						on_init = function(client)
+							client.server_capabilities.documentFormattingProvider = false
+							client.server_capabilities.documentFormattingRangeProvider = false
+						end,
+						opts = {
+							autoformat = false,
+						},
+					})
 				end,
 				["lua_ls"] = function()
 					require("lspconfig").lua_ls.setup({
@@ -107,7 +116,6 @@ return {
 						settings = {
 							gopls = {
 								templateExtensions = { "tpl", "yaml", "tmpl", "tmpl.html" },
-								experimentalPostfixCompletions = true,
 								gofumpt = true,
 								usePlaceholders = true,
 								analyses = {

@@ -20,6 +20,7 @@ return {
 						"json",
 						"typescript",
 						"tsx",
+						"python",
 						"go",
 						"yaml",
 						"gotmpl",

@@ -71,6 +71,7 @@ ZSH_THEME="robbyrussell"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
+  poetry
 	git
 	colorize
 	zsh-autosuggestions
@@ -108,6 +109,7 @@ source $ZSH/oh-my-zsh.sh
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+export PATH="$HOME/.poetry/bin:$PATH"
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -115,7 +117,7 @@ export NVM_DIR="$HOME/.nvm"
 alias config='/usr/bin/git --git-dir=/home/zakk/.cfg/ --work-tree=/home/zakk'
 alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
-alias python="python3"
+# alias python="python3"
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.config/bin/pmd.sh:$PATH"
@@ -152,3 +154,6 @@ path=('/home/zakk/.juliaup/bin' $path)
 export PATH
 
 # <<< juliaup initialize <<<
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
