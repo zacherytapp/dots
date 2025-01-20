@@ -7,10 +7,16 @@ return {
 			lua = { "stylua" },
 			javascript = { "prettierd" },
 			typescript = { "prettierd" },
-			apex = { "prettier" },
+			apex = { "prettierd", "prettier" },
 			json = { "prettierd" },
 			yaml = { "prettierd" },
-			python = { "black" },
+			python = function(bufnr)
+				if require("conform").get_formatter_info("ruff_format", bufnr).available then
+					return { "ruff_format" }
+				else
+					return { "isort", "black" }
+				end
+			end,
 			markdown = { "prettierd" },
 			tmpl = { "tmpl" },
 			go = { "goimports", "gofmt" },

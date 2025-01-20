@@ -17,6 +17,7 @@ vim.opt.rtp:prepend(lazypath)
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.g.python3_host_prog = "/home/zakk/.pyenv/versions/py3nvim/bin/python"
+vim.opt.termguicolors = true
 
 require("lazy").setup({
 

@@ -1,0 +1,24 @@
+# Fonts
+font-family = "Symbols Nerd Font Mono"
+font-family = "Fira Code"
+font-family-bold = "Fira Code"
+font-family-italic = "Maple Mono"
+font-family-bold-italic = "Maple Mono"
+font-size = 14
+adjust-underline-position = 4
+
+# Theme
+theme = "gruvbox-material"
+window-theme = ghostty
+
+# Window
+gtk-single-instance = true
+gtk-tabs-location = bottom
+gtk-wide-tabs = false
+window-padding-y = 15
+window-padding-x = 15
+window-decoration = false
+
+# Other
+copy-on-select = clipboard
+shell-integration-features = cursor,sudo,no-title

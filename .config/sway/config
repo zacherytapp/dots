@@ -14,7 +14,7 @@ set $down j
 set $up k
 set $right l
 # Your preferred terminal emulator
-set $term kitty
+set $term ghostty
 # Your preferred application launcher
 set $menu rofi -show drun
 
@@ -24,7 +24,7 @@ set $menu rofi -show drun
 # output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 
 # set output background
-output * bg /home/zakk/.config/walls/tokyo-night-bg.jpg fill
+output * bg /home/zakk/.config/walls/gruvbox-coffee.jpg fill
 output eDP-1 mode 2560x1600 scale 1
 #
 # Example configuration:

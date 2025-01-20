@@ -117,7 +117,7 @@ export PATH="$HOME/.poetry/bin:$PATH"
 alias config='/usr/bin/git --git-dir=/home/zakk/.cfg/ --work-tree=/home/zakk'
 alias sf_project="sfdx force:project:create --manifest --projectname $1"
 alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --setdefaultusername --setalias $1"
-# alias python="python3"
+alias python="python3"
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.config/bin/pmd.sh:$PATH"
@@ -145,6 +145,7 @@ PERL5LIB="/home/zakk/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
 PERL_LOCAL_LIB_ROOT="/home/zakk/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
 PERL_MB_OPT="--install_base \"/home/zakk/perl5\""; export PERL_MB_OPT;
 PERL_MM_OPT="INSTALL_BASE=/home/zakk/perl5"; export PERL_MM_OPT;
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=5'
 
 # >>> juliaup initialize >>>
 

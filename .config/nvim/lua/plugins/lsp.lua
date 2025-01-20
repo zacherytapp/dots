@@ -7,6 +7,15 @@ return {
 			"williamboman/mason-lspconfig.nvim",
 		},
 		config = function()
+			-- Python configuration
+			local venv_path = os.getenv("VIRTUAL_ENV")
+			local py_path = nil
+			if venv_path ~= nil then
+				py_path = venv_path .. "/bin/python3"
+			else
+				py_path = vim.g.python3_host_prog
+			end
+
 			local lspconfig_defaults = require("lspconfig").util.default_config
 			lspconfig_defaults.capabilities = vim.tbl_deep_extend(
 				"force",
@@ -86,6 +95,36 @@ return {
 						},
 					})
 				end,
+				["pylsp"] = function()
+					require("lspconfig").pylsp.setup({
+						settings = {
+							pylsp = {
+								plugins = {
+									-- formatter options
+									black = { enabled = true },
+									autopep8 = { enabled = false },
+									yapf = { enabled = false },
+									-- linter options
+									pylint = { enabled = true, executable = "pylint" },
+									ruff = { enabled = false },
+									pyflakes = { enabled = false },
+									pycodestyle = { enabled = false },
+									-- type checker
+									pylsp_mypy = {
+										enabled = true,
+										overrides = { "--python-executable", py_path, true },
+										report_progress = true,
+										live_mode = false,
+									},
+									-- auto-completion options
+									jedi_completion = { fuzzy = true },
+									-- import sorting
+									isort = { enabled = true },
+								},
+							},
+						},
+					})
+				end,
 				["lua_ls"] = function()
 					require("lspconfig").lua_ls.setup({
 						settings = {
@@ -119,7 +158,6 @@ return {
 								gofumpt = true,
 								usePlaceholders = true,
 								analyses = {
-									-- shadow = true,
 									nilness = true,
 									unusedresult = true,
 									unusedparams = true,
