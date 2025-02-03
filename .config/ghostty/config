@@ -1,11 +1,11 @@
 # Fonts
-font-family = "Symbols Nerd Font Mono"
+term = xterm-256color
 font-family = "Fira Code"
+font-family = "Symbols Nerd Font Mono"
 font-family-bold = "Fira Code"
 font-family-italic = "Maple Mono"
 font-family-bold-italic = "Maple Mono"
 font-size = 14
-adjust-underline-position = 4
 
 # Theme
 theme = "gruvbox-material"

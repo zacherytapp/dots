@@ -125,6 +125,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/julia-1.10.4/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
+export PATH="$HOME/linuxbrew/.linuxbrew/bin :$PATH"
 export PATH=$PATH:/usr/local/go/bin
 export PATH="/opt/pmd/bin:$PATH"
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
@@ -158,3 +159,5 @@ export PATH
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
+
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
