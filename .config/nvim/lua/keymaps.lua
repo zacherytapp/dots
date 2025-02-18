@@ -71,7 +71,7 @@ end, { desc = "Run [T]est on Current Method (Salesforce - SFDX)" })
 
 key.set("n", "<leader>tl", function()
 	local command =
-		"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --test-level RunLocalTests -w 15"
 	local window_id = utils.get_tmux_window_id("deploy")
 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
 	os.execute(tmux_command)

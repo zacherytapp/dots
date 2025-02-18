@@ -120,12 +120,14 @@ alias sf_connect_sb="sfdx force:auth:web:login -r https://test.salesforce.com --
 alias python="python3"
 
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local:$PATH"
 export PATH="$HOME/.config/bin/pmd.sh:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/julia-1.10.4/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
 export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
 export PATH="/opt/pmd/bin:$PATH"
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 export SF_USE_GENERIC_UNIX_KEYCHAIN=true
@@ -158,3 +160,11 @@ export PATH
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
+
+# pnpm
+export PNPM_HOME="/home/zakk/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
