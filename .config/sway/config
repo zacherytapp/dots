@@ -24,7 +24,7 @@ set $menu rofi -show drun
 # output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 
 # set output background
-output * bg /home/zakk/.config/walls/gruvbox-coffee.jpg fill
+output * bg /home/zakk/.config/walls/mohammad-alizade-4wzRuAb-KWs.jpg fill
 output eDP-1 mode 2560x1600 scale 1
 #
 # Example configuration:
@@ -269,6 +269,7 @@ include /etc/sway/config.d/*
 # Some custom stuff for layout
 exec_always {
     gsettings set $gnome-scheme color-scheme 'prefer-dark'
+    gsettings set org.gnome.desktop.interface icon-theme 'Pop'
     wl-paste -t text --watch-clipman store --no-persist
 }
 

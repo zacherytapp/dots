@@ -8,6 +8,9 @@ return {
 			javascript = { "prettierd" },
 			typescript = { "prettierd" },
 			apex = { "prettierd", "prettier" },
+			bash = { "shfmt" },
+			zsh = { "shfmt" },
+			sh = { "shfmt" },
 			json = { "prettierd" },
 			yaml = { "prettierd" },
 			python = function(bufnr)
@@ -21,6 +24,10 @@ return {
 			tmpl = { "tmpl" },
 			go = { "goimports", "gofmt" },
 			html = { "prettierd" },
+			templ = {
+				"templ",
+				"injected",
+			},
 		},
 		format_on_save = {
 			timeout_ms = 500,

@@ -47,6 +47,13 @@ key.set("n", "<leader>fF", function()
 	vim.lsp.buf.format()
 end, { desc = "Format [F]ile (Utilities)" })
 
+key.set("i", "<C-l>", 'copilot#Accept("\\<CR>")', {
+	expr = true,
+	replace_keycodes = false,
+})
+
+vim.g.copilot_no_tab_map = true
+
 key.set("n", "<leader>tt", function()
 	local class_name = utils.get_current_class_name()
 	local test_class_command = string.format(
@@ -71,7 +78,7 @@ end, { desc = "Run [T]est on Current Method (Salesforce - SFDX)" })
 
 key.set("n", "<leader>tl", function()
 	local command =
-		"sf apex run test --code-coverage --detailed-coverage --result-format human --testlevel RunLocalTests -w 15"
+		"sf apex run test --code-coverage --detailed-coverage --result-format human --test-level RunLocalTests -w 15"
 	local window_id = utils.get_tmux_window_id("deploy")
 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
 	os.execute(tmux_command)
