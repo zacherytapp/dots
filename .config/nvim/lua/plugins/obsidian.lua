@@ -1,10 +1,9 @@
 return {
 	"epwalsh/obsidian.nvim",
-	version = "*", -- recommended, use latest release instead of latest commit
-	lazy = true,
+	version = "*",
 	ft = "markdown",
 	dependencies = {
-		"nvim-lua/plenary.nvim", -- Required
+		"nvim-lua/plenary.nvim",
 		"hrsh7th/nvim-cmp",
 		"nvim-telescope/telescope.nvim",
 		"nvim-treesitter/nvim-treesitter",
@@ -14,7 +13,7 @@ return {
 			{
 				name = "personal",
 				path = "~/Documents/Obsidian",
-				notes_subdir = "tech",
+				-- notes_subdir = "tech",
 			},
 		},
 		ui = {
@@ -28,8 +27,6 @@ return {
 			min_chars = 2,
 		},
 
-		---@param title string|?
-		---@return string
 		note_id_func = function(title)
 			local suffix = ""
 			if title ~= nil then
@@ -42,17 +39,13 @@ return {
 			return tostring(os.time()) .. "-" .. suffix
 		end,
 
-		---@return string
 		image_name_func = function()
-			-- Prefix image names with timestamp.
 			return string.format("%s-", os.time())
 		end,
 
 		disable_frontmatter = false,
 
-		---@return table
 		note_frontmatter_func = function(note)
-			-- Add the title of the note as an alias.
 			if note.title then
 				note:add_alias(note.title)
 			end
@@ -79,10 +72,7 @@ return {
 		mappings = {},
 
 		attachments = {
-			img_folder = "assets/images", -- This is the default
-			---@param client obsidian.Client
-			---@param path obsidian.Path the absolute path to the image file
-			---@return string
+			img_folder = "Attachments",
 			img_text_func = function(client, path)
 				path = client:vault_relative_path(path) or path
 				return string.format("![%s](%s)", path.name, path)
