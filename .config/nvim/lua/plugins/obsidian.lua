@@ -20,7 +20,7 @@ return {
 			enable = false,
 		},
 		follow_url_func = function(url)
-			vim.fn.jobstart({ "open", url }) -- Mac OS
+			vim.fn.jobstart({ "open", url })
 		end,
 		completion = {
 			nvim_cmp = true,

@@ -1,3 +1,6 @@
+vim.opt.listchars =
+	{ eol = "↲", tab = "▸-", space = "·", nbsp = "␣", trail = "+", extends = "→", precedes = "←" }
+
 vim.filetype.add({
 	extension = {
 		cls = "apex",
@@ -9,6 +12,12 @@ vim.filetype.add({
 		cmp = "html",
 		auradoc = "html",
 		tmpl = "tmpl",
+	},
+	filename = {
+		[".zshrc"] = "sh",
+	},
+	pattern = {
+		["apex-.*%.log"] = "sflog",
 	},
 })
 

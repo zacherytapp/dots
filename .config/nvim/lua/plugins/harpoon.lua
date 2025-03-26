@@ -1,55 +1,72 @@
 return {
-	"ThePrimeagen/harpoon",
-	branch = "harpoon2",
-	dependencies = {
-		"nvim-lua/plenary.nvim",
-	},
-	keys = function()
-		local harpoon = require("harpoon")
-
-		return {
-			{
-				"<leader>a",
-				function()
-					harpoon:list():add()
-				end,
-				desc = "Add to harpoon",
+	{
+		"ThePrimeagen/harpoon",
+		branch = "harpoon2",
+		dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
+		lazy = true,
+		opts = {
+			settings = {
+				save_on_toggle = true,
+				sync_on_ui_close = true,
 			},
+		},
+		commander = {
 			{
-				"<C-e>",
-				function()
+				keys = { "n", "<leader>ho" },
+				cmd = function()
+					local harpoon = require("harpoon")
 					harpoon.ui:toggle_quick_menu(harpoon:list())
 				end,
-				desc = "Toggle harpoon menu",
+				desc = "Harpoon: Open",
 			},
 			{
-				"<leader>1",
-				function()
+				keys = { "n", "<leader>ha" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():add()
+				end,
+				desc = "Harpoon: Append",
+			},
+			{
+				keys = { "n", "<leader>1" },
+				cmd = function()
+					local harpoon = require("harpoon")
 					harpoon:list():select(1)
 				end,
-				desc = "Go to 1",
+				desc = "Harpoon: Go to 1",
 			},
 			{
-				"<leader>2",
-				function()
+				keys = { "n", "<leader>2" },
+				cmd = function()
+					local harpoon = require("harpoon")
 					harpoon:list():select(2)
 				end,
-				desc = "Go to 2",
+				desc = "Harpoon: Go to 2",
 			},
 			{
-				"<leader>3",
-				function()
+				keys = { "n", "<leader>3" },
+				cmd = function()
+					local harpoon = require("harpoon")
 					harpoon:list():select(3)
 				end,
-				desc = "Go to 3",
+				desc = "Harpoon: Go to 3",
 			},
 			{
-				"<leader>4",
-				function()
+				keys = { "n", "<leader>4" },
+				cmd = function()
+					local harpoon = require("harpoon")
 					harpoon:list():select(4)
 				end,
-				desc = "Go to 4",
+				desc = "Harpoon: Go to 4",
 			},
-		}
-	end,
+			{
+				keys = { "n", "<leader>5" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():select(5)
+				end,
+				desc = "Harpoon: Go to 5",
+			},
+		},
+	},
 }

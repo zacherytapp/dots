@@ -2,7 +2,7 @@ return {
 	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
+			"saghen/blink.cmp",
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 		},
@@ -20,16 +20,16 @@ return {
 			lspconfig_defaults.capabilities = vim.tbl_deep_extend(
 				"force",
 				lspconfig_defaults.capabilities,
-				require("cmp_nvim_lsp").default_capabilities()
+				require("blink.cmp").get_lsp_capabilities()
 			)
 			vim.api.nvim_create_autocmd("LspAttach", {
 				desc = "LSP actions",
 				callback = function(event)
 					local signs = {
-						ERROR = "",
-						WARN = "",
-						HINT = "󰌵",
-						INFO = "",
+						ERROR = "✘",
+						WARN = "▲",
+						HINT = "⚑",
+						INFO = "»",
 					}
 					vim.diagnostic.config({
 						virtual_text = {
@@ -189,43 +189,6 @@ return {
 						filetypes = { "tmpl,gotmpl", "html" },
 					})
 				end,
-			})
-		end,
-	},
-	{
-		"hrsh7th/nvim-cmp",
-		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
-			"L3MON4D3/LuaSnip",
-			"saadparwaiz1/cmp_luasnip",
-			"hrsh7th/cmp-path",
-		},
-		config = function()
-			local cmp = require("cmp")
-			local cmp_select = { behavior = cmp.SelectBehavior.Insert }
-			require("luasnip.loaders.from_vscode").lazy_load({ paths = "/home/zakk/.config/nvim/snippets/" })
-			require("luasnip").config.setup({})
-			cmp.setup({
-				sources = {
-					{ name = "nvim_lsp" },
-					{ name = "luasnip" },
-					{ name = "buffer" },
-					{ name = "path" },
-				},
-				snippet = {
-					expand = function(args)
-						require("luasnip").lsp_expand(args.body)
-					end,
-				},
-				mapping = cmp.mapping.preset.insert({
-					["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
-					["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
-					["<C-y>"] = cmp.mapping.confirm({ select = true }),
-					["<C-Space>"] = cmp.mapping.complete(),
-					["<Tab>"] = cmp.mapping.select_next_item({ behaviour = cmp.SelectBehavior.Insert }),
-					["<S-Tab>"] = cmp.mapping.select_prev_item({ behaviour = cmp.SelectBehavior.Insert }),
-					["<CR>"] = cmp.mapping.confirm({ select = true }),
-				}),
 			})
 		end,
 	},

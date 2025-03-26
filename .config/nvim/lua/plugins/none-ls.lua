@@ -1,5 +1,6 @@
 return {
 	"nvimtools/none-ls.nvim",
+	cmd = { "LspInfo", "LspInstall", "LspStart" },
 	dependencies = {
 		"mason.nvim",
 		"jay-babu/mason-null-ls.nvim",
@@ -7,6 +8,7 @@ return {
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
 		local null_ls = require("null-ls")
+		local default_apex_ruleset = vim.env.HOME .. "/.config/rules/apex.xml"
 		local mason_null_ls = require("mason-null-ls")
 		mason_null_ls.setup({
 			ensure_installed = {
@@ -20,6 +22,10 @@ return {
 		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
 		null_ls.setup({
 			sources = {
+				null_ls.builtins.code_actions.gitsigns,
+				null_ls.builtins.diagnostics.actionlint,
+				null_ls.builtins.diagnostics.gitlint,
+				null_ls.builtins.diagnostics.markdownlint,
 				formatting.prettier.with({
 					extra_filetypes = {
 						"apex",
@@ -33,21 +39,28 @@ return {
 				diagnostics.pmd.with({
 					filetypes = { "apex" },
 					args = function(params)
+						local project_apex_ruleset = params.cwd .. "/rules/apex.xml"
+						local ruleset
+						if vim.fn.filereadable(project_apex_ruleset) == 1 then
+							ruleset = project_apex_ruleset
+						else
+							ruleset = default_apex_ruleset
+						end
 						return {
-							"check",
 							"--format",
 							"json",
-							"--rulesets",
-							"/home/zakk/.config/rules/apex_ruleset.xml",
 							"--dir",
-							params.bufname,
-							"--cache",
-							vim.fn.stdpath("cache") .. "/pmd-cache",
+							vim.api.nvim_buf_get_name(params.bufnr),
+							"--rulesets",
+							ruleset,
+							"--no-cache",
 							"--no-progress",
 						}
 					end,
+					timeout = 10000,
 				}),
 			},
+			null_ls.builtins.diagnostics.trail_space,
 			-- configure format on save
 			on_attach = function(current_client, bufnr)
 				if current_client.supports_method("textDocument/formatting") then

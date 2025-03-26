@@ -4,37 +4,51 @@ require("telescope").load_extension("fzf")
 require("telescope").load_extension("live_grep_args")
 local key = vim.keymap
 
+-- Commander
+local commander = require("commander")
+commander.add({
+	-- Commander
+	{
+		desc = "Commander: Open",
+		cmd = commander.show,
+		keys = { "n", "<leader>k" },
+	},
+
+	-- Editing
+	{ keys = { "n", "<leader>w" }, cmd = ":w<cr>", desc = "Write file" },
+	{ keys = { "v", "<M-j>" }, cmd = ":m '>+1<cr>gv=gv", desc = "Move selection up" },
+	{ keys = { "v", "<M-k>" }, cmd = ":m '<-2<cr>gv=gv", desc = "Move selection down" },
+	{ keys = { "x", "<leader>p" }, cmd = '"_dP', desc = "Paste, but don't replace register" },
+	{ keys = { "n", "<leader>y" }, cmd = '"+y', desc = "Yank into clipboard" },
+	{ keys = { "v", "<leader>y" }, cmd = '"+y', desc = "Yank into clipboard" },
+	{ keys = { "n", "<leader>Y" }, cmd = '"+Y', desc = "Yank lines into clipboard" },
+	{ keys = { "n", "<leader>wr" }, cmd = vim.lsp.buf.remove_workspace_folder, desc = "Remove workspace folder" },
+	{ keys = { "n", "<leader>wa" }, cmd = vim.lsp.buf.add_workspace_folder, desc = "Add workspace folder" },
+	{ keys = { "n", "<leader>xx" }, cmd = "<cmd>Trouble diagnostics toggle<cr>", desc = "Trouble: Toggle errors" },
+	{
+		keys = { "n", "<leader>xX" },
+		cmd = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+		desc = "Trouble: Toggle errors in current buffer",
+	},
+	{
+		keys = { "n", "<leader>cs" },
+		cmd = "<cmd>Trouble symbols toggle focus=false<cr>",
+		desc = "Trouble: Toggle symbols",
+	},
+})
+
 -- LSP Keymaps
 local ts = require("telescope.builtin")
 key.set("n", "-", "<CMD>Oil<CR>", { desc = "[Oil] Open parent directory (Utilities)" })
 key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
 key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
-key.set("n", "gd", ts.lsp_definitions, { desc = "[G]oto [D]efinition (LSP)" })
-key.set("n", "gr", ts.lsp_references, { desc = "[G]oto [R]eferences (LSP)" })
-key.set("n", "gi", ts.lsp_implementations, { desc = "[G]oto [I]mplementation (LSP)" })
-key.set("n", "<leader>D", ts.lsp_type_definitions, { desc = "Type [D]efinition (LSP)" })
-key.set("n", "<leader>ds", ts.lsp_document_symbols, { desc = "[D]ocument [S]ymbols (LSP)" })
-key.set("n", "<leader>ws", ts.lsp_dynamic_workspace_symbols, { desc = "[W]orkspace [S]ymbols (LSP)" })
-key.set("n", "<leader>gf", ts.git_files, { desc = "Search [G]it [F]iles" })
-key.set("n", "<leader>ff", ts.find_files, { desc = "[S]earch [F]iles" })
-key.set("n", "<leader>fr", ts.lsp_references, { desc = "[G]oto [R]eferences (LSP)" })
-key.set("n", "<leader>fh", ts.help_tags, { desc = "[S]earch [H]elp" })
-key.set("n", "<leader>fw", ts.grep_string, { desc = "[S]earch current [W]ord" })
-key.set("n", "<leader>fg", ts.live_grep, { desc = "[S]earch by [G]rep" })
 key.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Documentation (LSP)" })
 key.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature Documentation (LSP)" })
 key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
 key.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "[W]orkspace [A]dd Folder (LSP)" })
-key.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "[R]emove Folder (LSP)" })
-key.set("n", "<leader>xx", "<CMD>Trouble diagnostics toggle<CR>", { desc = "Diagnostics (Trouble)" })
-key.set("n", "<leader>xX", "<CMD>Trouble diagnostics toggle filter.buf=0<CR>", { desc = "Buf Diagnostics (Trouble)" })
-key.set("n", "<leader>cs", "<CMD>Trouble symbols toggle focus=false<CR>", { desc = "Symbols (Trouble)" })
 key.set("n", "<leader>cl", "<CMD>Trouble lsp toggle focus=false win.position=right<CR>", { desc = "LSP (Trouble)" })
 key.set("n", "<leader>xL", "<CMD>Trouble loclist toggle<CR>", { desc = "Location List (Trouble)" })
 key.set("n", "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", { desc = "Quickfix List (Trouble)" })
-key.set("n", "<leader>yy", [["+y]], { desc = "[y]ank to clipboard (Utilities)" })
-key.set("n", "<leader>Y", [["+Y]], { desc = "[Y]ank to clipboard (Utilities)" })
-key.set("n", "<leader>p", [["_dP]], { desc = "[P]aste over visual selection (Utilities)" })
 key.set("n", "<leader>u", "<CMD>UndotreeToggle<CR>", { desc = "[U]ndotree (Undotree)" })
 key.set("n", "<leader>fj", function()
 	vim.cmd(":set filetype=json")
