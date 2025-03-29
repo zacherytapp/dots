@@ -38,7 +38,6 @@ commander.add({
 })
 
 -- LSP Keymaps
-local ts = require("telescope.builtin")
 key.set("n", "-", "<CMD>Oil<CR>", { desc = "[Oil] Open parent directory (Utilities)" })
 key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
 key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
@@ -68,87 +67,59 @@ key.set("i", "<C-l>", 'copilot#Accept("\\<CR>")', {
 
 vim.g.copilot_no_tab_map = true
 
-key.set("n", "<leader>tt", function()
-	local class_name = utils.get_current_class_name()
-	local test_class_command = string.format(
-		"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --class-names %s",
-		class_name
-	)
-	local window_id = utils.get_tmux_window_id("deploy")
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_class_command)
-	os.execute(tmux_command)
-end, { desc = "Run [T]est on Current Class (Salesforce - SFDX)" })
+local function run_local_tests() end
 
-key.set("n", "<leader>tm", function()
-	local method_name = utils.get_current_full_method_name()
-	local test_method_command = string.format(
-		"sf apex run test --code-coverage --detailed-coverage --result-format human --wait 5 --tests %s",
-		method_name
-	)
-	local window_id = utils.get_tmux_window_id("deploy")
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, test_method_command)
-	os.execute(tmux_command)
-end, { desc = "Run [T]est on Current Method (Salesforce - SFDX)" })
-
-key.set("n", "<leader>tl", function()
-	local command =
-		"sf apex run test --code-coverage --detailed-coverage --result-format human --test-level RunLocalTests -w 15"
-	local window_id = utils.get_tmux_window_id("deploy")
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-	os.execute(tmux_command)
-end, { desc = "Run All [L]ocal Tests (Salesforce - SFDX)" })
-
-key.set("n", "<leader>lg", function()
-	local user_input = vim.fn.input("How many logs?: ")
-	local number = tonumber(user_input)
-	local command = string.format("sf apex get log --number %d", number)
-	local window_id = utils.get_tmux_window_id("deploy")
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-	os.execute(tmux_command)
-end, { desc = "[G]et Last N Logs (Salesforce - SFDX)" })
-
-key.set("n", "<leader>ld", function()
-	local user_input = vim.fn.input("Which window name?: ", "logs")
-	local command = "sf apex log tail --color | grep  USER_DEBUG"
-	local window_id = utils.get_tmux_window_id(user_input)
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-	os.execute(tmux_command)
-end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
-
-key.set("n", "<leader>ll", function()
-	local user_input = vim.fn.input("Which window name?: ", "logs")
-	local command = "sf apex log tail --color | grep  USER_DEBUG"
-	local window_id = utils.get_tmux_window_id(user_input)
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-	os.execute(tmux_command)
-end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
-
-key.set(
-	"n",
-	"<leader>li",
-	"tabnew | read !sfdx force:apex:log:list",
-	{ desc = "[I]nteractive Log List (Salesforce - SFDX)" }
-)
-
-key.set("n", "<leader>cc", function()
-	local user_input = vim.fn.input("Class Name: ")
-	local path = "force-app/main/default/classes"
-	local command = string.format("sf apex generate class --output-dir %s --name %s", path, user_input)
-	utils.run_command_in_pane("deploy", command)
-end, { desc = "Create [C]lass (Salesforce)" })
-
-key.set("n", "<leader>ss", function()
-	vim.api.nvim_command("w")
-	local path = vim.fn.expand("%:p")
-	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
-	local window_id = utils.get_tmux_window_id("deploy")
-	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
-	os.execute(tmux_command)
-end, { desc = "Deploy [S]ource to org (Salesforce - SFDX)" })
-
-key.set("n", "<leader>ct", function()
-	local user_input = vim.fn.input("Trigger Name: ")
-	local path = "force-app/main/default/triggers"
-	local command = string.format("sf apex generate trigger --output-dir %s --name %s", path, user_input)
-	utils.run_command_in_pane("deploy", command)
-end, { desc = "Create [T]rigger (Salesforce)" })
+-- key.set("n", "<leader>lg", function()
+-- 	local user_input = vim.fn.input("How many logs?: ")
+-- 	local number = tonumber(user_input)
+-- 	local command = string.format("sf apex get log --number %d", number)
+-- 	local window_id = utils.get_tmux_window_id("deploy")
+-- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+-- 	os.execute(tmux_command)
+-- end, { desc = "[G]et Last N Logs (Salesforce - SFDX)" })
+--
+-- key.set("n", "<leader>ld", function()
+-- 	local user_input = vim.fn.input("Which window name?: ", "logs")
+-- 	local command = "sf apex log tail --color | grep  USER_DEBUG"
+-- 	local window_id = utils.get_tmux_window_id(user_input)
+-- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+-- 	os.execute(tmux_command)
+-- end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
+--
+-- key.set("n", "<leader>ll", function()
+-- 	local user_input = vim.fn.input("Which window name?: ", "logs")
+-- 	local command = "sf apex log tail --color | grep  USER_DEBUG"
+-- 	local window_id = utils.get_tmux_window_id(user_input)
+-- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+-- 	os.execute(tmux_command)
+-- end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
+--
+-- key.set(
+-- 	"n",
+-- 	"<leader>li",
+-- 	"tabnew | read !sfdx force:apex:log:list",
+-- 	{ desc = "[I]nteractive Log List (Salesforce - SFDX)" }
+-- )
+--
+-- key.set("n", "<leader>cc", function()
+-- 	local user_input = vim.fn.input("Class Name: ")
+-- 	local path = "force-app/main/default/classes"
+-- 	local command = string.format("sf apex generate class --output-dir %s --name %s", path, user_input)
+-- 	utils.run_command_in_pane("deploy", command)
+-- end, { desc = "Create [C]lass (Salesforce)" })
+--
+-- key.set("n", "<leader>ss", function()
+-- 	vim.api.nvim_command("w")
+-- 	local path = vim.fn.expand("%:p")
+-- 	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
+-- 	local window_id = utils.get_tmux_window_id("deploy")
+-- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+-- 	os.execute(tmux_command)
+-- end, { desc = "Deploy [S]ource to org (Salesforce - SFDX)" })
+--
+-- key.set("n", "<leader>ct", function()
+-- 	local user_input = vim.fn.input("Trigger Name: ")
+-- 	local path = "force-app/main/default/triggers"
+-- 	local command = string.format("sf apex generate trigger --output-dir %s --name %s", path, user_input)
+-- 	utils.run_command_in_pane("deploy", command)
+-- end, { desc = "Create [T]rigger (Salesforce)" })

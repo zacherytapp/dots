@@ -21,29 +21,6 @@ return {
 		local width = 0.70
 		local height = 0.70
 		require("telescope").setup({
-			pickers = {
-				buffers = {
-					show_all_buffers = true,
-					sort_lastused = true,
-					sort_mru = true,
-					previewer = true,
-					theme = "dropdown",
-				},
-
-				find_files = {
-					find_command = {
-						"rg",
-						"--files",
-						"--follow",
-						"--glob",
-						"!**/.git/*",
-						"--hidden",
-						"--ignore-file",
-						".rgignore",
-						"--no-ignore-vcs",
-					},
-				},
-			},
 			extensions = {
 				fzf = {},
 				["ui-select"] = {
@@ -54,11 +31,11 @@ return {
 			defaults = {
 				vimgrep_arguments = {
 					"rg",
+					"--color=never",
 					"--column",
 					"--follow",
 					"--glob",
 					"!**/.git/*",
-					"--hidden",
 					"--ignore-file",
 					".rgignore",
 					"--line-number",
@@ -104,12 +81,34 @@ return {
 				use_less = true,
 				path_display = {},
 			},
+			pickers = {
+				buffers = {
+					show_all_buffers = true,
+					sort_lastused = true,
+					sort_mru = true,
+					previewer = true,
+					theme = "dropdown",
+				},
+
+				find_files = {
+					find_command = {
+						"rg",
+						"--files",
+						"--follow",
+						"--glob",
+						"!**/.git/*",
+						"--ignore-file",
+						".rgignore",
+						"--no-ignore-vcs",
+					},
+				},
+			},
 		})
 		telescope.load_extension("ui-select")
 		telescope.load_extension("fzf")
+		telescope.load_extension("notify")
 	end,
 	commander = {
-		-- Find stuff
 		{
 			keys = { "n", "<leader>ff" },
 			cmd = [[<cmd>Telescope find_files<cr>]],
