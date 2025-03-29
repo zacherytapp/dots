@@ -1,3 +1,5 @@
+local utils = require("utils")
+
 local config = {
 	width = 0.8,
 	height = 0.7,
@@ -159,5 +161,40 @@ end, {})
 vim.api.nvim_create_user_command("FloatyToggle", function()
 	state = toggle_terminal()
 end, {})
+
+local commander = require("commander")
+
+commander.add({
+	{
+		keys = { "n", "<leader>tt" },
+		desc = "Salesforce - Toggle terminal",
+		cmd = function()
+			toggle_terminal()
+		end,
+	},
+	{
+		keys = { "n", "<leader>lg" },
+		desc = "Salesforce - Get last N logs",
+		cmd = function()
+			local user_input = vim.fn.input("How many logs?: ")
+			local number = tonumber(user_input)
+			local command = string.format("sf apex get log --number %d", number)
+			local window_id = utils.get_tmux_window_id("deploy")
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+			os.execute(tmux_command)
+		end,
+	},
+	{
+		keys = { "n", "<leader>ll" },
+		desc = "Salesforce - Tail logs",
+		cmd = function()
+			local user_input = vim.fn.input("Which window name?: ", "logs")
+			local command = "sf apex log tail --color | grep  USER_DEBUG"
+			local window_id = utils.get_tmux_window_id(user_input)
+			local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
+			os.execute(tmux_command)
+		end,
+	},
+})
 
 return {}

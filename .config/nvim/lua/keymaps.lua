@@ -1,18 +1,13 @@
-local utils = require("utils")
-
 require("telescope").load_extension("fzf")
 require("telescope").load_extension("live_grep_args")
+
 local key = vim.keymap
 
 -- Commander
 local commander = require("commander")
 commander.add({
 	-- Commander
-	{
-		desc = "Commander: Open",
-		cmd = commander.show,
-		keys = { "n", "<leader>k" },
-	},
+	{ desc = "Commander: Open", cmd = commander.show, keys = { "n", "<leader>k" } },
 
 	-- Editing
 	{ keys = { "n", "<leader>w" }, cmd = ":w<cr>", desc = "Write file" },
@@ -24,102 +19,62 @@ commander.add({
 	{ keys = { "n", "<leader>Y" }, cmd = '"+Y', desc = "Yank lines into clipboard" },
 	{ keys = { "n", "<leader>wr" }, cmd = vim.lsp.buf.remove_workspace_folder, desc = "Remove workspace folder" },
 	{ keys = { "n", "<leader>wa" }, cmd = vim.lsp.buf.add_workspace_folder, desc = "Add workspace folder" },
+	{ keys = { "n", "-" }, cmd = "<cmd>Oil<cr>", desc = "Oil: Open parent directory" },
+	{ keys = { "n", "<leader>rn" }, cmd = vim.lsp.buf.rename, desc = "LSP: Rename" },
+	{ keys = { "n", "<leader>ca" }, cmd = vim.lsp.buf.code_action, desc = "LSP: Code action" },
+	{ keys = { "n", "K" }, cmd = vim.lsp.buf.hover, desc = "LSP: Hover" },
+	{ keys = { "n", "<C-k>" }, cmd = vim.lsp.buf.signature_help, desc = "LSP: Signature help" },
+	{ keys = { "n", "<leader>ge" }, cmd = "vim.lsp.buf.declaration", desc = "LSP: Go to declaration" },
+	{ keys = { "n", "<leader>wa" }, cmd = vim.lsp.buf.add_workspace_folder, desc = "LSP: Add workspace folder" },
+	{ keys = { "n", "<leader>u" }, cmd = "<cmd>UndotreeToggle<cr>", desc = "Undotree: Toggle" },
+
+	-- Trouble
 	{ keys = { "n", "<leader>xx" }, cmd = "<cmd>Trouble diagnostics toggle<cr>", desc = "Trouble: Toggle errors" },
 	{
 		keys = { "n", "<leader>xX" },
 		cmd = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
-		desc = "Trouble: Toggle errors in current buffer",
+		desc = "Trouble: Toggle errors",
 	},
 	{
 		keys = { "n", "<leader>cs" },
 		cmd = "<cmd>Trouble symbols toggle focus=false<cr>",
 		desc = "Trouble: Toggle symbols",
 	},
-})
+	{
+		keys = { "n", "<leader>cl" },
+		cmd = "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+		desc = "Trouble: Toggle LSP",
+	},
+	{
+		keys = { "n", "<leader>xL" },
+		cmd = "<cmd>Trouble loclist toggle<cr>",
+		desc = "Trouble: Toggle location list",
+	},
+	{
+		keys = { "n", "<leader>xQ" },
+		cmd = "<cmd>Trouble qflist toggle<cr>",
+		desc = "Trouble: Toggle quickfix list",
+	},
 
--- LSP Keymaps
-key.set("n", "-", "<CMD>Oil<CR>", { desc = "[Oil] Open parent directory (Utilities)" })
-key.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame (LSP)" })
-key.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ction (LSP)" })
-key.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Documentation (LSP)" })
-key.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature Documentation (LSP)" })
-key.set("n", "gD", vim.lsp.buf.declaration, { desc = "[G]oto [D]eclaration (LSP)" })
-key.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "[W]orkspace [A]dd Folder (LSP)" })
-key.set("n", "<leader>cl", "<CMD>Trouble lsp toggle focus=false win.position=right<CR>", { desc = "LSP (Trouble)" })
-key.set("n", "<leader>xL", "<CMD>Trouble loclist toggle<CR>", { desc = "Location List (Trouble)" })
-key.set("n", "<leader>xQ", "<CMD>Trouble qflist toggle<CR>", { desc = "Quickfix List (Trouble)" })
-key.set("n", "<leader>u", "<CMD>UndotreeToggle<CR>", { desc = "[U]ndotree (Undotree)" })
-key.set("n", "<leader>fj", function()
-	vim.cmd(":set filetype=json")
-	vim.cmd(":%!jq '.'")
-end, { desc = "[J]SON Format (Utilities)" })
-key.set("n", "<leader>wl", function()
-	print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-end, { desc = "[W]orkspace [L]ist Folders (LSP)" })
-key.set("n", "<leader>fF", function()
-	vim.lsp.buf.format()
-end, { desc = "Format [F]ile (Utilities)" })
+	-- Utilities
+	{
+		keys = { "n", "<leader>fj" },
+		cmd = function()
+			vim.cmd(":set filetype=json")
+			vim.cmd(":%!jq '.'")
+		end,
+		desc = "JSON: Format",
+	},
+	{
+		keys = { "n", "<leader>fF" },
+		cmd = function()
+			vim.lsp.buf.format()
+		end,
+	},
+})
 
 key.set("i", "<C-l>", 'copilot#Accept("\\<CR>")', {
 	expr = true,
 	replace_keycodes = false,
 })
-
 vim.g.copilot_no_tab_map = true
-
-local function run_local_tests() end
-
--- key.set("n", "<leader>lg", function()
--- 	local user_input = vim.fn.input("How many logs?: ")
--- 	local number = tonumber(user_input)
--- 	local command = string.format("sf apex get log --number %d", number)
--- 	local window_id = utils.get_tmux_window_id("deploy")
--- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
--- 	os.execute(tmux_command)
--- end, { desc = "[G]et Last N Logs (Salesforce - SFDX)" })
---
--- key.set("n", "<leader>ld", function()
--- 	local user_input = vim.fn.input("Which window name?: ", "logs")
--- 	local command = "sf apex log tail --color | grep  USER_DEBUG"
--- 	local window_id = utils.get_tmux_window_id(user_input)
--- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
--- 	os.execute(tmux_command)
--- end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
---
--- key.set("n", "<leader>ll", function()
--- 	local user_input = vim.fn.input("Which window name?: ", "logs")
--- 	local command = "sf apex log tail --color | grep  USER_DEBUG"
--- 	local window_id = utils.get_tmux_window_id(user_input)
--- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
--- 	os.execute(tmux_command)
--- end, { desc = "Long Tail Logs (Salesforce - SFDX)" })
---
--- key.set(
--- 	"n",
--- 	"<leader>li",
--- 	"tabnew | read !sfdx force:apex:log:list",
--- 	{ desc = "[I]nteractive Log List (Salesforce - SFDX)" }
--- )
---
--- key.set("n", "<leader>cc", function()
--- 	local user_input = vim.fn.input("Class Name: ")
--- 	local path = "force-app/main/default/classes"
--- 	local command = string.format("sf apex generate class --output-dir %s --name %s", path, user_input)
--- 	utils.run_command_in_pane("deploy", command)
--- end, { desc = "Create [C]lass (Salesforce)" })
---
--- key.set("n", "<leader>ss", function()
--- 	vim.api.nvim_command("w")
--- 	local path = vim.fn.expand("%:p")
--- 	local command = string.format("sf project deploy start --source-dir %s -l NoTestRun -w 5", path)
--- 	local window_id = utils.get_tmux_window_id("deploy")
--- 	local tmux_command = string.format('tmux send-keys -t %s "%s" Enter', window_id, command)
--- 	os.execute(tmux_command)
--- end, { desc = "Deploy [S]ource to org (Salesforce - SFDX)" })
---
--- key.set("n", "<leader>ct", function()
--- 	local user_input = vim.fn.input("Trigger Name: ")
--- 	local path = "force-app/main/default/triggers"
--- 	local command = string.format("sf apex generate trigger --output-dir %s --name %s", path, user_input)
--- 	utils.run_command_in_pane("deploy", command)
--- end, { desc = "Create [T]rigger (Salesforce)" })

@@ -72,11 +72,6 @@ return {
 			desc = "Salesforce: Set Target Org",
 		},
 		{
-			keys = { "n", "<leader>tt" },
-			cmd = [[<cmd>lua require'sf'.toggle_term()<cr>]],
-			desc = "Salesforce: Toggle Terminal",
-		},
-		{
 			keys = { "n", "<leader>df" },
 			cmd = [[<cmd>lua require'sf'.diff_in_target_org()<cr>]],
 			desc = "Salesforce: Diff file against org",
