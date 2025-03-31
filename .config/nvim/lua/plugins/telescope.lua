@@ -26,7 +26,6 @@ return {
 				["ui-select"] = {
 					require("telescope.themes").get_dropdown({}),
 				},
-				notify = {},
 			},
 			defaults = {
 				vimgrep_arguments = {
@@ -106,7 +105,6 @@ return {
 		})
 		telescope.load_extension("ui-select")
 		telescope.load_extension("fzf")
-		telescope.load_extension("notify")
 	end,
 	commander = {
 		{
