@@ -6,16 +6,21 @@ return {
 	dev = false,
 	lazy = true,
 	event = "VeryLazy",
-	cond = function()
-		local ok, _ = pcall(require("sf.util").get_sf_root)
-		return ok
-	end,
+	-- cond = function()
+	-- 	local ok, _ = pcall(require("sf.util").get_sf_root)
+	-- 	return ok
+	-- end,
 	dependencies = {
 		"nvim-treesitter/nvim-treesitter",
 		{ "ibhagwan/fzf-lua", opts = {
 			fzf_colors = true,
 		} },
 	},
+	config = function()
+		require("sf").setup({
+			enable_hotkeys = false,
+		})
+	end,
 	opts = {
 		types_to_retrieve = {
 			"ApexClass",
@@ -65,6 +70,11 @@ return {
 			keys = { "n", "<leader>og" },
 			cmd = [[<cmd>lua require'sf'.fetch_org_list()<cr>]],
 			desc = "Salesforce: Get Orgs",
+		},
+		{
+			keys = { "n", "<leader>st" },
+			cmd = [[<cmd>lua require'sf'.toggle_term()<cr>]],
+			desc = "Salesforce: Toggle Terminal",
 		},
 		{
 			keys = { "n", "<leader>og" },
