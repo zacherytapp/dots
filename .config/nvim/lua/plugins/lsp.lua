@@ -66,7 +66,6 @@ return {
 			require("mason").setup()
 			require("mason-lspconfig").setup({
 				ensure_installed = {
-					"apex_ls",
 					"eslint",
 					"cssls",
 					"cssmodules_ls",
@@ -83,7 +82,7 @@ return {
 				},
 			})
 
-			require("mason-lspconfig").setup_handlers({
+			require("mason-lspconfig").setup({
 				function(server_name) -- default handler (optional)
 					require("lspconfig")[server_name].setup({
 						on_init = function(client)
@@ -139,7 +138,7 @@ return {
 						},
 					})
 				end,
-				["apex_ls"] = function()
+				["apex-language-server"] = function()
 					require("lspconfig").apex_ls.setup({
 						apex_jar_path = vim.fn.stdpath("config") .. "/lspserver/" .. "apex-jorje-lsp.jar",
 						apex_enable_semantic_errors = false,

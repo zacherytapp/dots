@@ -23,7 +23,6 @@ return {
 						"json",
 						"make",
 						"markdown",
-						"markdown_inline",
 						"typescript",
 						"tsx",
 						"python",
