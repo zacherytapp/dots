@@ -1,0 +1,63 @@
+window {
+  font-family: Fira Code Nerd Font, monospace;
+  font-size: 14pt;
+  color: #cdd6f4;
+  background-color: rgba(25, 23, 36, .9);
+}
+
+button {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 20%;
+  border: none;
+  color: #eb6f92;
+  text-shadow: none;
+  border-radius: 20px 20px 20px 20px;
+  background-color: rgba(235, 111, 146, 0);
+  margin: 0px;
+  transition: box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: rgba(196, 167, 231, 0.1);
+}
+
+#lock {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/lock.png"));
+}
+
+#lock:focus {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/lock-hover.png"));
+}
+
+#logout {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/logout.png"));
+}
+
+#logout:focus {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/logout-hover.png"));
+}
+
+#suspend {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/sleep.png"));
+}
+
+#suspend:focus {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/sleep-hover.png"));
+}
+
+#shutdown {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/power.png"));
+}
+
+#shutdown:focus {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/power-hover.png"));
+}
+
+#reboot {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/restart.png"));
+}
+
+#reboot:focus {
+  background-image: image(url("/home/zakk/.config/wlogout/icons/restart-hover.png"));
+}
