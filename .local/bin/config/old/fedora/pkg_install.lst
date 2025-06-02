@@ -1,0 +1,32 @@
+# --------------------------------------------------- // Dev Tools
+zsh
+vim
+tmux
+unzip
+fzf
+ripgrep
+git-delta
+jq
+gawk
+sqlite-devel
+
+# --------------------------------------------------- // CLI Stuff
+fastfetch
+btop
+tree
+fd-find
+
+# --------------------------------------------------- // Dev Enviornment Apps
+julia
+ruby
+ruby-devel
+python3-pip
+cpanminus
+perl-core
+
+# --------------------------------------------------- // Apps
+firefox
+gimp
+timeshift
+vlc
+thunderbird

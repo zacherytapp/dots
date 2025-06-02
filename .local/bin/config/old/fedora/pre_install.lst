@@ -1,0 +1,13 @@
+# --------------------------------------------------- // Setup Pre-Reqs
+vim
+unzip
+jq
+
+# --------------------------------------------------- // Neovim Pre-Reqs
+ninja-build
+gettext
+gcc
+make
+gettext
+curl
+glib-gconv-extra

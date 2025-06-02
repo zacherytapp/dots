@@ -1,0 +1,11 @@
+# --------------------------------------------------- // Early Reqs
+git
+
+# --------------------------------------------------- // Neovim Pre-reqs
+ninja-build
+cmake
+gcc
+make
+unzip
+gettext
+curl
