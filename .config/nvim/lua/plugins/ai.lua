@@ -1,23 +1,57 @@
 return {
 	{
-		"github/copilot.vim",
+		"zbirenbaum/copilot.lua",
+		cmd = "Copilot",
+		event = { "BufReadPre", "InsertEnter" },
+		config = function()
+			require("copilot").setup({
+				panel = {
+					enabled = true,
+					auto_refresh = false,
+					keymap = {
+						jump_prev = "[[",
+						jump_next = "]]",
+						accept = "<CR>",
+						refresh = "gr",
+						open = "<C-p>",
+					},
+					layout = {
+						position = "bottom",
+						ratio = 0.4,
+					},
+				},
+				suggestion = {
+					enabled = true,
+					auto_trigger = true,
+					debounce = 50,
+					keymap = {
+						accept = "<C-l>",
+						accept_word = false,
+						accept_line = false,
+						dismiss = "<C-u>",
+					},
+				},
+				filetypes = {
+					yaml = false,
+					markdown = true,
+					help = false,
+					gitcommit = false,
+					gitrebase = false,
+					hgcommit = false,
+					svn = false,
+					cvs = false,
+					["."] = false,
+				},
+				copilot_node_command = "node",
+				server_opts_overrides = {},
+			})
+		end,
 	},
 	{
 		"yetone/avante.nvim",
 		event = "VeryLazy",
 		lazy = false,
 		version = false,
-		opts = {
-			provider = "claude",
-			openai = {
-				endpoint = "https://api.anthropic.com",
-				model = "claude-3-7-sonnet-20250219",
-				timeout = 30000,
-				temperature = 0,
-				max_tokens = 4096,
-			},
-		},
-		build = "make",
 		dependencies = {
 			"nvim-treesitter/nvim-treesitter",
 			"stevearc/dressing.nvim",
@@ -46,10 +80,15 @@ return {
 			{
 				"MeanderingProgrammer/render-markdown.nvim",
 				opts = {
+					latex = { enabled = false },
 					file_types = { "markdown", "Avante" },
 				},
 				ft = { "markdown", "Avante" },
 			},
 		},
+		opts = {
+			provider = "copilot",
+		},
+		build = "make",
 	},
 }

@@ -1,12 +1,14 @@
 return {
 	{
-		"rose-pine/neovim",
+		"sainnhe/gruvbox-material",
 		lazy = false,
 		priority = 1000,
-		opts = {},
-		name = "rose-pine",
+		opts = {
+			gruvbox_material_transparent_background = true,
+		},
+		name = "gruvbox-material",
 		config = function()
-			vim.cmd([[colorscheme rose-pine]])
+			vim.cmd([[colorscheme gruvbox-material]])
 		end,
 	},
 }

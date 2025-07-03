@@ -24,10 +24,6 @@ return {
 			tmpl = { "tmpl" },
 			go = { "goimports", "gofmt" },
 			html = { "prettierd" },
-			templ = {
-				"templ",
-				"injected",
-			},
 		},
 		format_on_save = {
 			timeout_ms = 500,

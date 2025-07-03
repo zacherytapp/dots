@@ -9,7 +9,7 @@ font-size = 14
 adjust-underline-position = 4
 
 # Theme
-theme = "rose-pine"
+theme = "GruvboxDark"
 window-theme = ghostty
 cursor-invert-fg-bg = true
 background-opacity = 0.8
