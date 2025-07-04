@@ -1,20 +1,3 @@
-local sf_org = function()
-	local function get_org()
-		return require("sf").get_target_org()
-	end
-	if pcall(get_org) then
-		local org = get_org()
-		local coverage = require("sf").covered_percent()
-		if coverage ~= "" then
-			return org .. " (" .. coverage .. ")"
-		else
-			return org
-		end
-	else
-		return ""
-	end
-end
-
 local recording = function()
 	local reg = vim.fn.reg_recording()
 	if reg ~= "" then
@@ -47,7 +30,6 @@ return {
 			},
 			lualine_c = {
 				{ "filename", path = 1 },
-				{ sf_org, icon = { "󰢎 ", color = { fg = "#009ddc" } } },
 			},
 			lualine_x = {
 				"searchcount",
