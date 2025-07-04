@@ -109,7 +109,7 @@ You can replace `config` with anything - ensure it's aliased in any bash/config 
 
 - [ ] Configure Ansible for Arch Linux
 - [ ] Figure out how to open Gwenview from Dolphin
-- [ ] Figure out how to make electron apps open faster using Ozone for Hyprland
+- [x] Figure out how to make electron apps open faster using Ozone for Hyprland
 - [x] Solve Plymouth Splash Screen Issue
 - [ ] Ensure consistent theming across all used applications
 - [x] Solve issue with OpenBubbles not opening Dolphin
