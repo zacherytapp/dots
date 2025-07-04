@@ -1,6 +1,5 @@
 add_newline = false
 
-# Sets user-defined palette
 palette = "gruvbox_dark"
 
 [character]

@@ -383,7 +383,7 @@
   "theme.bar.buttons.modules.worldclock.icon": "#282828",
   "theme.bar.buttons.modules.worldclock.icon_background": "#d3869b",
   "theme.bar.buttons.modules.worldclock.border": "#d3869b",
-  "notifications.position": "left",
+  "notifications.position": "top right",
   "menus.dashboard.shortcuts.left.shortcut1.command": "firefox",
   "menus.dashboard.shortcuts.left.shortcut1.tooltip": "Firefox",
   "menus.dashboard.shortcuts.left.shortcut4.command": "tofi-drun -c ~/.config/tofi/configA --drun-launch=true\n",
@@ -440,5 +440,7 @@
     }
   },
   "theme.font.name": "Fira Sans",
-  "theme.font.label": "Fira Sans"
+  "theme.font.label": "Fira Sans",
+  "theme.bar.buttons.modules.ram.enableBorder": false,
+  "theme.bar.buttons.modules.microphone.enableBorder": false
 }

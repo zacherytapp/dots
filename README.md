@@ -61,11 +61,9 @@ See [Neovim Documentation](https://github.com/neovim/neovim/blob/master/INSTALL.
   * `echo "bindkey '^ ' autosuggest-accept" >> $ZSH_CUSTOM/autosuggestion-settings.zsh`
   * `source $ZSH_CUSTOM/autosuggestion-settings.zsh`
 - [ ] [Zsh Syntax Highlighting](https://github.com/zsh-users/zsh-syntax-highlighting)
-
   - `git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting`
 
 - [ ] [NVM](https://github.com/nvm-sh/nvm)
-
   - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash`
   - `source ~/.zshrc`
   - `nvm install node -g`
@@ -106,3 +104,12 @@ You can replace `config` with anything - ensure it's aliased in any bash/config 
 - [ ] Instructions for installing ruby
 - [ ] Instructions for installing lua
 - [ ] Instructions for configuring various needed npm packages
+
+## Arch Linux TODO:
+
+- [ ] Configure Ansible for Arch Linux
+- [ ] Figure out how to open Gwenview from Dolphin
+- [ ] Figure out how to make electron apps open faster using Ozone for Hyprland
+- [ ] Solve Plymouth Splash Screen Issue
+- [ ] Ensure consistent theming across all used applications
+- [ ] Solve issue with OpenBubbles not opening Dolphin

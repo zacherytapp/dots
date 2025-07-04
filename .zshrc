@@ -3,12 +3,10 @@ export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 
 plugins=(
-  poetry
   git
   colorize
-  zsh-autosuggestions
+  poetry
   zsh-syntax-highlighting
-  fast-syntax-highlighting
   zsh-autocomplete
 )
 
