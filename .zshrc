@@ -7,6 +7,8 @@ plugins=(
   colorize
   poetry
   zsh-syntax-highlighting
+  fast-syntax-highlighting
+  zsh-autosuggestions
   zsh-autocomplete
 )
 

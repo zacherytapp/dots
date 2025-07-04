@@ -113,3 +113,4 @@ You can replace `config` with anything - ensure it's aliased in any bash/config 
 - [ ] Solve Plymouth Splash Screen Issue
 - [ ] Ensure consistent theming across all used applications
 - [ ] Solve issue with OpenBubbles not opening Dolphin
+- [ ] Docs for enabling bluetooth
