@@ -18,4 +18,3 @@ config/lazygit/*/*.patch
 tt.*
 nvim/lua/config/env.lua
 config/environment.d/secrets.conf
-.config/walls
