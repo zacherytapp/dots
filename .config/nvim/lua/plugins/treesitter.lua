@@ -3,6 +3,13 @@ return {
 		{
 			"nvim-treesitter/nvim-treesitter",
 			build = ":TSUpdate",
+			version = false,
+			event = { "BufReadPost", "BufNewFile" },
+			dependencies = {
+				"nvim-treesitter/playground",
+				"nvim-treesitter/nvim-treesitter-textobjects",
+				"JoosepAlviste/nvim-ts-context-commentstring",
+			},
 			config = function()
 				require("nvim-treesitter.configs").setup({
 					highlight = {

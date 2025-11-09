@@ -48,18 +48,24 @@ return {
 		"stevearc/dressing.nvim",
 		opts = {},
 	},
-	{
-		"echasnovski/mini.pairs",
-	},
+	{ "nvim-mini/mini.surround", version = false },
+
 	{
 		"windwp/nvim-autopairs",
 		event = "InsertEnter",
-		opts = {},
-	},
-	{
-		"folke/trouble.nvim",
-		opts = {},
-		cmd = "Trouble",
+		config = function()
+			local npairs = require("nvim-autopairs")
+			npairs.setup({
+				disable_in_macro = true,
+				check_ts = true,
+				ts_config = {
+					lua = { "string" },
+					javascript = { "template_string" },
+					java = true,
+					yaml = { "string" },
+				},
+			})
+		end,
 	},
 	{
 		"numToStr/Comment.nvim",
@@ -73,37 +79,6 @@ return {
 	{
 		"lukas-reineke/indent-blankline.nvim",
 		main = "ibl",
-	},
-	{
-		"stevearc/oil.nvim",
-		dependencies = { "nvim-tree/nvim-web-devicons" },
-		lazy = true,
-		event = "VimEnter",
-		opts = {
-			columns = {
-				"icon",
-				"size",
-				"mtime",
-			},
-			view_options = {
-				show_hidden = true,
-			},
-			delete_to_trash = true,
-			constrain_cursor = "name",
-			watch_for_changes = true,
-		},
-		commander = {
-			{
-				keys = { "n", "<leader>-" },
-				cmd = [[<cmd>Oil --float .<cr>]],
-				desc = "Oil: Open root",
-			},
-			{
-				keys = { "n", "<leader>_" },
-				cmd = [[<cmd>Oil --float<cr>]],
-				desc = "Oil: Open here",
-			},
-		},
 	},
 	{
 		"hedyhli/outline.nvim",

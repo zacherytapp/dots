@@ -33,7 +33,7 @@ return {
 	event = "VimEnter",
 	opts = {
 		options = {
-			theme = "rose-pine",
+			theme = "everforest",
 			section_separators = { left = "", right = "" },
 			component_separators = { left = "", right = "" },
 		},

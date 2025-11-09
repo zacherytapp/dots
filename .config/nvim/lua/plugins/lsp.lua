@@ -1,4 +1,78 @@
+local icons = {
+	hint = "󰌶",
+	error = " ",
+	warning = " ",
+	info = " ",
+}
+
+local formatters = {
+	javascript = { "prettierd" },
+	javascriptreact = { "prettierd" },
+	typescript = { "prettierd" },
+	typescriptreact = { "prettierd" },
+	markdown = { "prettierd" },
+	astro = { "prettierd" },
+	json = { "prettierd" },
+	jsonc = { "prettierd" },
+	html = { "prettierd" },
+	yaml = { "prettierd" },
+	css = { "stylelint", "prettierd" },
+	sh = { "shellcheck", "shfmt" },
+	python = { "black", "isort" },
+	go = { "gofmt" },
+	lua = { "stylua" },
+	ruby = { "rubocop" },
+	php = { "pint" },
+}
+
 return {
+	{
+		"hrsh7th/vim-vsnip",
+		cond = not vim.g.vscode,
+		dependencies = {
+			"hrsh7th/vim-vsnip-integ",
+		},
+		config = function()
+			local snippet_dir = "/home/zakk/.config/nvim/snippets"
+			vim.g.vsnip_snippet_dir = snippet_dir
+			vim.g.vsnip_filetypes = {
+				javascriptreact = { "javascript" },
+				typescriptreact = { "typescript" },
+				["typescript.tsx"] = { "typescript" },
+			}
+		end,
+	},
+
+	{
+		"vuki656/package-info.nvim",
+		config = true,
+	},
+	{
+		"liuchengxu/vista.vim",
+		lazy = true,
+		cmd = "Vista",
+		cond = not vim.g.vscode,
+		config = function()
+			vim.g.vista_default_executive = "nvim_lsp"
+		end,
+	},
+	{
+		"stevearc/conform.nvim",
+		opts = {
+			format_on_save = {
+				timeout_ms = 2000,
+				lsp_fallback = false,
+			},
+			formatters = {
+				caddy = {
+					command = "caddy",
+					args = { "fmt", "-" },
+					stdin = true,
+				},
+			},
+			formatters_by_ft = formatters,
+		},
+	},
 	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
@@ -26,21 +100,43 @@ return {
 				desc = "LSP actions",
 				callback = function(event)
 					local signs = {
-						ERROR = "✘",
-						WARN = "▲",
-						HINT = "⚑",
-						INFO = "»",
+						ERROR = icons.error,
+						WARN = icons.warning,
+						HINT = icons.hint,
+						INFO = icons.info,
 					}
 					vim.diagnostic.config({
+						signs = {
+							text = {
+								[vim.diagnostic.severity.ERROR] = "",
+								[vim.diagnostic.severity.WARN] = "",
+								[vim.diagnostic.severity.INFO] = "",
+								[vim.diagnostic.severity.HINT] = "",
+							},
+							numhl = {
+								[vim.diagnostic.severity.WARN] = "WarningMsg",
+								[vim.diagnostic.severity.ERROR] = "ErrorMsg",
+								[vim.diagnostic.severity.INFO] = "DiagnosticInfo",
+								[vim.diagnostic.severity.HINT] = "DiagnosticHint",
+							},
+						},
 						virtual_text = {
+							spacing = 4,
+							prefix = "●",
 							errors = { "italic" },
 							hints = { "italic" },
 							warnings = { "italic" },
 							information = { "italic" },
-							prefix = function(diagnostic)
-								return signs[vim.diagnostic.severity[diagnostic.severity]]
-							end,
 						},
+						float = {
+							border = "rounded",
+							source = "if_many",
+							header = "",
+							prefix = "",
+						},
+						underline = true,
+						update_in_insert = false,
+						severity_sort = true,
 					})
 					local opts = { buffer = event.buf }
 
@@ -71,10 +167,12 @@ return {
 					"cssmodules_ls",
 					"jdtls",
 					"astro",
-					"cssls",
 					"vtsls",
-					"cssmodules_ls",
 					"gopls",
+					"ruby_lsp",
+					"tailwindcss",
+					"html",
+					"jsonls",
 					"lua_ls",
 					"htmx",
 					"pyright",
@@ -124,15 +222,32 @@ return {
 						},
 					})
 				end,
+				["vimls"] = function()
+					require("lspconfig").vimls.setup({
+						init_options = { isNeovim = true },
+					})
+				end,
 				["lua_ls"] = function()
 					require("lspconfig").lua_ls.setup({
 						settings = {
 							Lua = {
-								workspace = { checkThirdParty = false },
+								runtime = {
+									version = "LuaJIT",
+								},
 								telemetry = { enable = false },
+								hint = { enable = true },
+								workspace = {
+									checkThirdParty = false,
+									library = vim.api.nvim_get_runtime_file("", true),
+								},
+								codeLens = {
+									enable = true,
+								},
 								diagnostics = {
-									disable = { "missing-fields" },
 									globals = { "vim" },
+								},
+								completion = {
+									callSnippet = "Replace",
 								},
 							},
 						},
@@ -181,11 +296,43 @@ return {
 				["tailwindcss"] = function()
 					require("lspconfig").tailwindcss.setup({
 						filetypes = { "tmpl", "html" },
+						root_markers = {
+							"tailwind.config.js",
+							"tailwind.config.ts",
+							"tailwind.config.cjs",
+						},
+						init_options = {
+							userLanguages = {
+								elixir = "html-eex",
+								eelixir = "html-eex",
+								heex = "html-eex",
+							},
+						},
+						settings = {
+							tailwindCSS = {
+								lint = {
+									cssConflict = "warning",
+									invalidApply = "error",
+									invalidConfigPath = "error",
+									invalidScreen = "error",
+									invalidTailwindDirective = "error",
+									recommendedVariantOrder = "warning",
+									unusedClass = "warning",
+								},
+								experimental = {},
+								validate = true,
+							},
+						},
 					})
 				end,
 				["html"] = function()
 					require("lspconfig").html.setup({
 						filetypes = { "tmpl,gotmpl", "html" },
+					})
+				end,
+				["jinja_lsp"] = function()
+					require("lspconfig").jinja_lsp.setup({
+						filetypes = { "j2", "jinja", "jinja2" },
 					})
 				end,
 			})

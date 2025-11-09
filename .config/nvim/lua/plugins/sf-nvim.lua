@@ -1,4 +1,3 @@
-local commander = require("commander")
 return {
 	"xixiaofinland/sf.nvim",
 	name = "sf.nvim",
@@ -6,10 +5,6 @@ return {
 	dev = false,
 	lazy = true,
 	event = "VeryLazy",
-	-- cond = function()
-	-- 	local ok, _ = pcall(require("sf.util").get_sf_root)
-	-- 	return ok
-	-- end,
 	dependencies = {
 		"nvim-treesitter/nvim-treesitter",
 		{ "ibhagwan/fzf-lua", opts = {
@@ -64,8 +59,7 @@ return {
 		},
 		plugin_folder_name = "/.sf/sf_cache/",
 	},
-
-	commander.add({
+	commander = {
 		{
 			keys = { "n", "<leader>og" },
 			cmd = [[<cmd>lua require'sf'.fetch_org_list()<cr>]],
@@ -166,5 +160,5 @@ return {
 			cmd = [[<cmd>lua require'sf'.run_highlighted_soql()<cr>]],
 			desc = "Salesforce: Run Highlighted Query",
 		},
-	}),
+	},
 }

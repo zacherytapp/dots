@@ -14,10 +14,9 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
 vim.g.python3_host_prog = "/home/zakk/.pyenv/versions/neovim/bin/python"
 vim.opt.termguicolors = true
+vim.g.mapleader = " "
 
 require("lazy").setup({
 
@@ -25,4 +24,7 @@ require("lazy").setup({
 }, {})
 
 require("keymaps")
-require("opts")
+require("options")
+require("filetypes")
+require("colors")
+vim.cmd.colorscheme("catppuccin")
