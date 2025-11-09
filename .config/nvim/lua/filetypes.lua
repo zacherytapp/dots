@@ -17,13 +17,3 @@ vim.filetype.add({
 		["apex-.*%.log"] = "sflog",
 	},
 })
-
--- vim.opt.listchars = {
--- 	eol = "↲",
--- 	tab = "→ ",
--- 	space = "·",
--- 	nbsp = "␣",
--- 	trail = "+",
--- 	extends = "→",
--- 	precedes = "←",
--- }

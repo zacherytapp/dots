@@ -53,5 +53,8 @@ return {
 			routes = {},
 		},
 	},
-	{ "rcarriga/nvim-notify", enabled = false },
+	{
+		"rcarriga/nvim-notify",
+		enabled = true,
+	},
 }

@@ -5,9 +5,7 @@
       "</lightning-button>"
     ],
     "description": "lightning-button",
-    "prefix": [
-      "lightning-button"
-    ],
+    "prefix": ["lightning-button"],
     "scope": "html"
   },
   "LWC lightning-combobox": {
@@ -22,9 +20,7 @@
       "></lightning-combobox>"
     ],
     "description": "lightning-combobox",
-    "prefix": [
-      "lightning-combobox"
-    ],
+    "prefix": ["lightning-combobox"],
     "scope": "html"
   },
   "LWC lightning-datatable": {
@@ -37,9 +33,7 @@
       "></lightning-datatable>"
     ],
     "description": "lightning-datatable",
-    "prefix": [
-      "lightning-datatable"
-    ],
+    "prefix": ["lightning-datatable"],
     "scope": "html"
   },
   "LWC lightning-icon": {
@@ -48,9 +42,7 @@
       "</lightning-icon>"
     ],
     "description": "lightning-icon",
-    "prefix": [
-      "lightning-icon"
-    ],
+    "prefix": ["lightning-icon"],
     "scope": "html"
   },
   "LWC lightning-input": {
@@ -59,9 +51,7 @@
       "</lightning-input>"
     ],
     "description": "lightning-input",
-    "prefix": [
-      "lightning-input"
-    ],
+    "prefix": ["lightning-input"],
     "scope": "html"
   },
   "LWC lightning-input-field": {
@@ -70,9 +60,7 @@
       "</lightning-input-field>"
     ],
     "description": "lightning-input-field ",
-    "prefix": [
-      "lightning-input-field "
-    ],
+    "prefix": ["lightning-input-field "],
     "scope": "html"
   },
   "LWC lightning-layout": {
@@ -87,9 +75,7 @@
       "</lightning-layout>"
     ],
     "description": "lightning-layout",
-    "prefix": [
-      "lightning-layout"
-    ],
+    "prefix": ["lightning-layout"],
     "scope": "html"
   },
   "LWC lightning-layout-item": {
@@ -98,9 +84,7 @@
       "</lightning-layout-item>"
     ],
     "description": "lightning-layout-item",
-    "prefix": [
-      "lightning-layout-item"
-    ],
+    "prefix": ["lightning-layout-item"],
     "scope": "html"
   },
   "LWC lightning-spinner": {
@@ -109,9 +93,7 @@
       "</lightning-spinner>"
     ],
     "description": "lightning-spinner",
-    "prefix": [
-      "lightning-spinner"
-    ],
+    "prefix": ["lightning-spinner"],
     "scope": "html"
   },
   "LWC lightning-tabset": {
@@ -129,20 +111,13 @@
       "</lightning-tabset>"
     ],
     "description": "lightning-tabset",
-    "prefix": [
-      "lightning-tabset"
-    ],
+    "prefix": ["lightning-tabset"],
     "scope": "html"
   },
   "LWC slot": {
-    "body": [
-      "<slot name='${1:name}'>",
-      "</slot>"
-    ],
+    "body": ["<slot name='${1:name}'>", "</slot>"],
     "description": "slot",
-    "prefix": [
-      "slot"
-    ],
+    "prefix": ["slot"],
     "scope": "html"
   },
   "LWC template for:each": {
@@ -151,31 +126,19 @@
       "</template>"
     ],
     "description": "Template for:each.",
-    "prefix": [
-      "templateForEach"
-    ],
+    "prefix": ["templateForEach"],
     "scope": "html"
   },
   "LWC template if:false": {
-    "body": [
-      "<template if:false={${1:property}}>",
-      "</template>"
-    ],
+    "body": ["<template if:false={${1:property}}>", "</template>"],
     "description": "Template if:false.",
-    "prefix": [
-      "templateIfFalse"
-    ],
+    "prefix": ["templateIfFalse"],
     "scope": "html"
   },
   "LWC template if:true": {
-    "body": [
-      "<template if:true={${1:property}}>",
-      "</template>"
-    ],
+    "body": ["<template if:true={${1:property}}>", "</template>"],
     "description": "Template if:true.",
-    "prefix": [
-      "templateIfTrue"
-    ],
+    "prefix": ["templateIfTrue"],
     "scope": "html"
   },
   "LWC template iterator:it": {
@@ -189,9 +152,7 @@
       "</template>"
     ],
     "description": "Template iterator:it.",
-    "prefix": [
-      "templateIteratorIt"
-    ],
+    "prefix": ["templateIteratorIt"],
     "scope": "html"
   }
 }

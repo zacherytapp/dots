@@ -107,8 +107,12 @@ return {
 				end,
 			},
 		},
-		keys = {
-			{ "<leader>e", "<cmd>Neotree toggle reveal<cr>", desc = "Toggle file drawer" },
+		commander = {
+			{
+				keys = { "n", "<leader>e" },
+				cmd = [[<cmd>Neotree toggle reveal<cr>]],
+				desc = "NeoTree: Toggle file drawer",
+			},
 		},
 		opts = {
 			-- don't reset the cursor position when opening a file

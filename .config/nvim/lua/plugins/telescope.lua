@@ -1,3 +1,5 @@
+local utils = require("utils")
+
 return {
 	"nvim-telescope/telescope.nvim",
 	branch = "0.1.x",
@@ -6,6 +8,8 @@ return {
 		"nvim-telescope/telescope-live-grep-args.nvim",
 		"debugloop/telescope-undo.nvim",
 		"nvim-telescope/telescope-ui-select.nvim",
+		"nvim-telescope/telescope-file-browser.nvim",
+		"rcarriga/nvim-notify",
 		{
 			"nvim-telescope/telescope-fzf-native.nvim",
 			build = "make",
@@ -13,13 +17,18 @@ return {
 				return vim.fn.executable("make") == 1
 			end,
 		},
+		{
+			"nvim-tree/nvim-web-devicons",
+			enabled = vim.g.have_nerd_font,
+		},
 	},
 	config = function()
 		local sorters = require("telescope.sorters")
 		local telescope = require("telescope")
 		local actions = require("telescope.actions")
-		local width = 0.70
-		local height = 0.70
+		local width = 0.85
+		local height = 0.85
+		local preview_width = 0.6
 		require("telescope").setup({
 			extensions = {
 				fzf = {},
@@ -63,11 +72,13 @@ return {
 						mirror = false,
 						width = width,
 						height = height,
+						preview_width = preview_width,
 					},
 					vertical = {
 						mirror = false,
 						width = width,
 						height = height,
+						preview_height = 0.5,
 					},
 				},
 				file_sorter = sorters.get_fuzzy_file,
@@ -105,17 +116,94 @@ return {
 		})
 		telescope.load_extension("ui-select")
 		telescope.load_extension("fzf")
+		telescope.load_extension("file_browser")
+		telescope.load_extension("notify")
 	end,
 	commander = {
+		-- Notifications
+		{
+			keys = { "n", "<leader>sn" },
+			cmd = function()
+				utils.notifications()
+			end,
+			desc = "Telescope: Show notifications",
+		},
 		{
 			keys = { "n", "<leader>ff" },
-			cmd = [[<cmd>Telescope find_files<cr>]],
+			cmd = function()
+				utils.find_files()
+			end,
 			desc = "Telescope: Find files",
 		},
-		{ keys = { "n", "<leader>ft" }, cmd = [[<cmd>Telescope live_grep<cr>]], desc = "Telescope: Find text" },
-		{ keys = { "n", "<leader>fg" }, cmd = [[<cmd>Telescope git_files<cr>]], desc = "Telescope: Find git files" },
-		{ keys = { "n", "<leader>fh" }, cmd = [[<cmd>Telescope help_tags<cr>]], desc = "Telescope: Find in help" },
+		{
+			keys = { "n", "<leader>fo" },
+			cmd = function()
+				utils.oldfiles()
+			end,
+			desc = "Telescope: Find old files",
+		},
+		{
+			keys = { "n", "<leader>ft" },
+			cmd = function()
+				utils.live_grep()
+			end,
+			desc = "Telescope: Find text",
+		},
+		{
+			keys = { "n", "<leader>fb" },
+			cmd = function()
+				utils.search_buffers()
+			end,
+			desc = "Telescope: Find buffers",
+		},
 
+		{
+			keys = { "n", "<leader>sh" },
+			cmd = function()
+				utils.search_history()
+			end,
+			desc = "Telescope: Find marks",
+		},
+		{
+			keys = { "n", "<leader>fn" },
+			cmd = function()
+				utils.search_notes()
+			end,
+			desc = "Telescope: Find notes",
+		},
+		{
+			keys = { "n", "<leader>fr" },
+			cmd = function()
+				utils.search_reference()
+			end,
+			desc = "Telescope: Find reference",
+		},
+		{
+			keys = { "n", "<leader>fk" },
+			cmd = function()
+				utils.keymaps()
+			end,
+			desc = "Telescope: Find keymaps",
+		},
+		{
+			keys = { "n", "<leader>fp" },
+			cmd = function()
+				utils.search_projects_dir()
+			end,
+			desc = "Telescope: Find projects",
+		},
+		{
+			keys = { "n", "<leader>fh" },
+			cmd = function()
+				utils.search_help()
+			end,
+			desc = "Telescope: Grep over help",
+		},
+		{
+			keys = { "n", "<leader>fg" },
+			cmd = [[<cmd>Telescope git_files<cr>]],
+			desc = "Telescope: Find git files",
+		},
 		-- Diagnostics
 		{
 			keys = { "n", "<leader>da" },
@@ -144,7 +232,9 @@ return {
 		},
 		{
 			keys = { "n", "<leader>fh" },
-			cmd = [[<cmd>Telescope help_tags<cr>]],
+			cmd = function()
+				utils.search_help()
+			end,
 			desc = "Telescope: Open Search in Help",
 		},
 		{
@@ -172,6 +262,10 @@ return {
 			cmd = [[<cmd>Telescope lsp_document_symbols<cr>]],
 			desc = "Telescope: List symbols in buffer",
 		},
-		{ keys = { "n", "<leader>b" }, cmd = [[<cmd>Telescope buffers<cr>]], desc = "Telescope: List buffers" },
+		{
+			keys = { "n", "<leader>b" },
+			cmd = [[<cmd>Telescope buffers<cr>]],
+			desc = "Telescope: List buffers",
+		},
 	},
 }

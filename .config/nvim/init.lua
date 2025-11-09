@@ -18,6 +18,7 @@ vim.g.python3_host_prog = "/home/zakk/.pyenv/versions/neovim/bin/python"
 vim.opt.termguicolors = true
 vim.g.mapleader = " "
 
+require("assets")
 require("lazy").setup({
 
 	{ import = "plugins" },

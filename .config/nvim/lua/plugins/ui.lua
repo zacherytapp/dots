@@ -6,19 +6,7 @@ return {
 	"tpope/vim-sleuth",
 	"mbbill/undotree",
 	"RRethy/vim-illuminate",
-	"editorconfig/editorconfig-vim", -- TODO is this still required?
-	{
-		"andymass/vim-matchup",
-		cond = not vim.g.vscode,
-		config = function()
-			vim.g.matchup_matchparen_offscreen = { method = "popup" }
-		end,
-	},
-	{
-		"itchyny/vim-qfedit",
-		cond = not vim.g.vscode,
-		event = "VeryLazy",
-	},
+	"editorconfig/editorconfig-vim",
 	{
 		"nvim-pack/nvim-spectre",
 		dependencies = {
@@ -26,11 +14,27 @@ return {
 		},
 		cond = not vim.g.vscode,
 		config = true,
-		keys = {
-			{ "<leader>sr", "<cmd>lua require('spectre').open()<cr>", desc = "Open spectre" },
-			{ "<leader>sw", "<cmd>lua require('spectre').open_visual({select_word=true})<cr>", desc = "Open spectre" },
-			{ "<leader>sp", "<cmd>lua require('spectre').open_file_search()<cr>", desc = "Open spectre" },
-			{ "<leader>ss", "<cmd>lua require('spectre').open()<cr>", desc = "Open spectre" },
+		commander = {
+			{
+				keys = { "n", "<leader>sr" },
+				cmd = "<cmd>lua require('spectre').open()<cr>",
+				desc = "Open spectre",
+			},
+			{
+				keys = { "v", "<leader>sw" },
+				cmd = "<cmd>lua require('spectre').open_visual({select_word=true})<cr>",
+				desc = "Open spectre",
+			},
+			{
+				keys = { "n", "<leader>sp" },
+				cmd = "<cmd>lua require('spectre').open_file_search()<cr>",
+				desc = "Open spectre",
+			},
+			{
+				keys = { "n", "<leader>ss" },
+				cmd = "<cmd>lua require('spectre').open()<cr>",
+				desc = "Open spectre",
+			},
 		},
 	},
 	{
@@ -47,9 +51,6 @@ return {
 			},
 			allow_caps_additions = {
 				{ "enable", "disable" },
-				-- enable → disable
-				-- Enable → Disable
-				-- ENABLE → DISABLE
 			},
 		},
 	},
@@ -73,25 +74,6 @@ return {
 		cond = not vim.g.vscode,
 		dependencies = {
 			"nvim-telescope/telescope-fzf-native.nvim",
-		},
-	},
-	-- fast colorizer for showing hex colors
-	{
-		"NvChad/nvim-colorizer.lua",
-		opts = {
-			filetypes = { "*" },
-			user_default_options = {
-				mode = "background",
-				tailwind = true,
-				RGB = true,
-				RRGGBB = true,
-				names = true,
-				RRGGBBAA = true,
-				rgb_fn = true,
-				hsl_fn = true,
-				css = true,
-				css_fn = true,
-			},
 		},
 	},
 	-- file drawer plugin
@@ -166,17 +148,17 @@ return {
 		cmd = "TodoFzfLua",
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = {},
-		keys = {
+		commander = {
 			{
-				"]t",
-				function()
+				keys = { "n", "]t" },
+				cmd = function()
 					require("todo-comments").jump_next()
 				end,
 				desc = "Next Todo Comment",
 			},
 			{
-				"[t",
-				function()
+				keys = { "n", "[t" },
+				cmd = function()
 					require("todo-comments").jump_prev()
 				end,
 				desc = "Previous Todo Comment",
@@ -194,20 +176,21 @@ return {
 			enable_cmp_integration = true,
 		},
 	},
+	-- fast colorizer for showing hex colors
 	{
 		"norcalli/nvim-colorizer.lua",
 		config = function()
-			require("colorizer").setup({
-				"css",
-			})
+			require("colorizer").setup()
 		end,
 	},
 	{
 		"stevearc/dressing.nvim",
 		opts = {},
 	},
-	{ "nvim-mini/mini.surround", version = false },
-
+	{
+		"nvim-mini/mini.surround",
+		version = false,
+	},
 	{
 		"windwp/nvim-autopairs",
 		event = "InsertEnter",
@@ -226,11 +209,6 @@ return {
 		end,
 	},
 	{
-		"folke/trouble.nvim",
-		opts = {},
-		cmd = "Trouble",
-	},
-	{
 		"numToStr/Comment.nvim",
 		config = function()
 			require("Comment").setup()
@@ -242,13 +220,46 @@ return {
 	{
 		"lukas-reineke/indent-blankline.nvim",
 		main = "ibl",
+		---@module "ibl"
+		---@type ibl.config
+		opts = {},
+		config = function(_, opts)
+			local highlight = {
+				"RainbowRed",
+				"RainbowYellow",
+				"RainbowBlue",
+				"RainbowOrange",
+				"RainbowGreen",
+				"RainbowViolet",
+				"RainbowCyan",
+			}
+
+			local hooks = require("ibl.hooks")
+			-- create the highlight groups in the highlight setup hook, so they are reset
+			-- every time the colorscheme changes
+			hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+				vim.api.nvim_set_hl(0, "RainbowRed", { fg = "#E06C75" })
+				vim.api.nvim_set_hl(0, "RainbowYellow", { fg = "#E5C07B" })
+				vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#61AFEF" })
+				vim.api.nvim_set_hl(0, "RainbowOrange", { fg = "#D19A66" })
+				vim.api.nvim_set_hl(0, "RainbowGreen", { fg = "#98C379" })
+				vim.api.nvim_set_hl(0, "RainbowViolet", { fg = "#C678DD" })
+				vim.api.nvim_set_hl(0, "RainbowCyan", { fg = "#56B6C2" })
+			end)
+
+			require("ibl").setup({ indent = { highlight = highlight } })
+		end,
 	},
 	{
 		"hedyhli/outline.nvim",
 		lazy = true,
 		cmd = { "Outline", "OutlineOpen" },
-		keys = {
-			{ "<leader>o", "<cmd>Outline<CR>", desc = "Toggle outline" },
+		commander = {
+			{
+				keys = { "n", "<leader>o" },
+				cmd = "Outline",
+				desc = "Toggle outline",
+			},
 		},
 		opts = {
 			symbol_folding = {
@@ -282,5 +293,32 @@ return {
 				},
 			},
 		},
+	},
+
+	{
+		"akinsho/toggleterm.nvim",
+		version = "*",
+		opts = {},
+	},
+	{
+		"andymass/vim-matchup",
+		cond = not vim.g.vscode,
+		config = function()
+			vim.g.matchup_matchparen_offscreen = { method = "popup" }
+		end,
+	},
+	{
+		"liuchengxu/vista.vim",
+		lazy = true,
+		cmd = "Vista",
+		cond = not vim.g.vscode,
+		config = function()
+			vim.g.vista_default_executive = "nvim_lsp"
+		end,
+	},
+	{
+		"itchyny/vim-qfedit",
+		cond = not vim.g.vscode,
+		event = "VeryLazy",
 	},
 }

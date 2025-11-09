@@ -4,29 +4,19 @@
       "<capability>${1|lightningCommunity__RelaxedCSP,lightning__ServiceCloudVoiceToolkitApi|}</capability>"
     ],
     "description": "Capability",
-    "prefix": [
-      "capability"
-    ],
+    "prefix": ["capability"],
     "scope": "xml"
   },
   "LWC Is Exposed": {
-    "body": [
-      "<isExposed>${1|true,false|}</isExposed>"
-    ],
+    "body": ["<isExposed>${1|true,false|}</isExposed>"],
     "description": "Is Exposed",
-    "prefix": [
-      "isExposed"
-    ],
+    "prefix": ["isExposed"],
     "scope": "xml"
   },
   "LWC masterLabel": {
-    "body": [
-      "<masterLabel>${1:titleOfTheComponent}</masterLabel>"
-    ],
+    "body": ["<masterLabel>${1:titleOfTheComponent}</masterLabel>"],
     "description": "masterLabel",
-    "prefix": [
-      "masterLabel"
-    ],
+    "prefix": ["masterLabel"],
     "scope": "xml"
   },
   "LWC Property Type": {
@@ -40,9 +30,7 @@
       "/>$0"
     ],
     "description": "Property Type",
-    "prefix": [
-      "propertyType"
-    ],
+    "prefix": ["propertyType"],
     "scope": "xml"
   },
   "LWC Target Config": {
@@ -58,9 +46,7 @@
       "</targetConfig>"
     ],
     "description": "Target Config",
-    "prefix": [
-      "targetConfig"
-    ],
+    "prefix": ["targetConfig"],
     "scope": "xml"
   },
   "LWC Targets": {
@@ -70,9 +56,7 @@
       "</targets>"
     ],
     "description": "Targets",
-    "prefix": [
-      "targets"
-    ],
+    "prefix": ["targets"],
     "scope": "xml"
   }
 }

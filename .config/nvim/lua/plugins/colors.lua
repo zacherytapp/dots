@@ -25,9 +25,9 @@ return {
 			color_overrides = {
 				macchiato = {
 					-- True neutral dark base (no blue or brown tint)
-					base = "#0B1215", -- Clean dark background
-					mantle = "#1c1c1c", -- Darker
-					crust = "#161616", -- Darkest
+					base = "#1f2428", -- Clean dark background
+					mantle = "#161b1d", -- Darker
+					crust = "#14181a", -- Darkest
 
 					-- Pure grayscale text colors
 					text = "#d4d4d4",
@@ -119,7 +119,6 @@ return {
 				notify = true,
 				telescope = {
 					enabled = true,
-					style = "nvchad",
 				},
 				treesitter_context = true,
 				which_key = true,
@@ -127,29 +126,30 @@ return {
 			},
 			custom_highlights = function(colors)
 				return {
-					NormalFloat = { bg = colors.mantle },
-					FloatBorder = { bg = colors.mantle, fg = colors.overlay0 },
-					TelescopeNormal = { bg = colors.mantle },
-					TelescopeBorder = { bg = colors.mantle, fg = colors.overlay0 },
-					NoiceCmdlinePopup = { bg = colors.mantle },
-					NoicePopup = { bg = colors.mantle },
-					WhichKeyFloat = { bg = colors.mantle },
+					NormalFloat = { bg = "none" },
+					FloatBorder = { bg = "none", fg = colors.overlay0 },
+					NoiceCmdlinePopup = { bg = "none" },
+					NoicePopup = { bg = "none" },
+					WhichKeyFloat = { bg = "none" },
+
 					-- Add Telescope prompt specific highlights
-					TelescopePrompt = { bg = colors.crust },
-					TelescopePromptNormal = { bg = colors.crust },
-					TelescopePromptBorder = { bg = colors.crust, fg = colors.overlay0 },
-					TelescopePromptPrefix = { bg = colors.crust, fg = colors.blue },
-					TelescopePromptTitle = { bg = colors.crust, fg = colors.blue },
+					TelescopeNormal = { bg = "none" },
+					TelescopeBorder = { bg = "none", fg = colors.overlay0 },
+					TelescopePrompt = { bg = "none" },
+					TelescopePromptNormal = { bg = "none" },
+					TelescopePromptBorder = { bg = "none", fg = colors.overlay0 },
+					TelescopePromptPrefix = { bg = "none", fg = colors.blue },
+					TelescopePromptTitle = { bg = "none", fg = colors.blue },
 
 					-- Different colors for results and preview
-					TelescopeResults = { bg = colors.mantle },
-					TelescopePreview = { bg = colors.mantle },
-					TelescopeResultsTitle = { bg = colors.mantle, fg = colors.blue },
-					TelescopePreviewTitle = { bg = colors.mantle, fg = colors.blue },
+					TelescopeResults = { bg = "none" },
+					TelescopePreview = { bg = "none" },
+					TelescopeResultsTitle = { bg = "none", fg = colors.blue },
+					TelescopePreviewTitle = { bg = "none", fg = colors.blue },
 
 					-- Selection highlights
-					TelescopeSelection = { bg = colors.surface0, fg = colors.text },
-					TelescopeSelectionCaret = { bg = colors.surface0, fg = colors.blue },
+					TelescopeSelection = { bg = "none", fg = colors.text },
+					TelescopeSelectionCaret = { bg = "none", fg = colors.blue },
 				}
 			end,
 		},

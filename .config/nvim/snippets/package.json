@@ -1,26 +1,26 @@
 {
-    "name": "snippets",
-    "engine": {
-        "vscode": "^1.11.0"
-    },
-    "contributes": {
-        "snippets": [
-            {
-                "language": "apex",
-                "path": "./apex.json"
-            },
-            {
-                "language": "js",
-                "path": "./lwc-js.json"
-            },
-            {
-                "language": "html",
-                "path": "./lwc-html.json"
-            },
-            {
-                "language": "xml",
-                "path": "./lwc-xml.json"
-            }
-        ]
-    }
+  "name": "snippets",
+  "engine": {
+    "vscode": "^1.11.0"
+  },
+  "contributes": {
+    "snippets": [
+      {
+        "language": "apex",
+        "path": "./apex.json"
+      },
+      {
+        "language": "js",
+        "path": "./lwc-js.json"
+      },
+      {
+        "language": "html",
+        "path": "./lwc-html.json"
+      },
+      {
+        "language": "xml",
+        "path": "./lwc-xml.json"
+      }
+    ]
+  }
 }

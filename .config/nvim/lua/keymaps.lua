@@ -28,34 +28,6 @@ commander.add({
 	{ keys = { "n", "<leader>wa" }, cmd = vim.lsp.buf.add_workspace_folder, desc = "LSP: Add workspace folder" },
 	{ keys = { "n", "<leader>u" }, cmd = "<cmd>UndotreeToggle<cr>", desc = "Undotree: Toggle" },
 
-	-- Trouble
-	{ keys = { "n", "<leader>xx" }, cmd = "<cmd>Trouble diagnostics toggle<cr>", desc = "Trouble: Toggle errors" },
-	{
-		keys = { "n", "<leader>xX" },
-		cmd = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
-		desc = "Trouble: Toggle errors",
-	},
-	{
-		keys = { "n", "<leader>cs" },
-		cmd = "<cmd>Trouble symbols toggle focus=false<cr>",
-		desc = "Trouble: Toggle symbols",
-	},
-	{
-		keys = { "n", "<leader>cl" },
-		cmd = "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
-		desc = "Trouble: Toggle LSP",
-	},
-	{
-		keys = { "n", "<leader>xL" },
-		cmd = "<cmd>Trouble loclist toggle<cr>",
-		desc = "Trouble: Toggle location list",
-	},
-	{
-		keys = { "n", "<leader>xQ" },
-		cmd = "<cmd>Trouble qflist toggle<cr>",
-		desc = "Trouble: Toggle quickfix list",
-	},
-
 	-- Utilities
 	{
 		keys = { "n", "<leader>fj" },
@@ -72,9 +44,3 @@ commander.add({
 		end,
 	},
 })
-
--- key.set("i", "<C-l>", 'copilot#Accept("\\<CR>")', {
--- 	expr = true,
--- 	replace_keycodes = false,
--- })
--- vim.g.copilot_no_tab_map = true

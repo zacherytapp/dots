@@ -2,21 +2,17 @@
   "LWC Async/Await": {
     "body": [
       "try {",
-        "\tconst result = await ${1:apexMethodName}({ apexMethodParams });",
-        "} catch (error) {",
-        "\tconsole.error(error)",
-        "}"
+      "\tconst result = await ${1:apexMethodName}({ apexMethodParams });",
+      "} catch (error) {",
+      "\tconsole.error(error)",
+      "}"
     ],
     "description": "Then/Catch",
     "prefix": "asyncAwait",
     "scope": "javascript"
   },
   "LWC constructor": {
-    "body": [
-      "constructor() {",
-        "\t$0",
-        "}"
-    ],
+    "body": ["constructor() {", "\t$0", "}"],
     "description": "constructor.",
     "prefix": "constructor",
     "scope": "javascript"
@@ -34,49 +30,35 @@
   "LWC CustomEvent": {
     "body": [
       "new CustomEvent('${1:eventName}', {",
-        "\tdetail: ${2:details},",
-        "\tbubbles: false,",
-        "\tcomposed: false",
-        "});"
+      "\tdetail: ${2:details},",
+      "\tbubbles: false,",
+      "\tcomposed: false",
+      "});"
     ],
     "description": "CustomEvent",
     "prefix": "customEvent",
     "scope": "javascript"
   },
   "LWC disconnectedCallback": {
-    "body": [
-      "disconnectedCallback() {",
-        "",
-        "}"
-    ],
+    "body": ["disconnectedCallback() {", "", "}"],
     "description": "disconnectedCallback.",
     "prefix": "disconnectedCallback",
     "scope": "javascript"
   },
   "LWC dispatchEvent": {
-    "body": [
-      "this.dispatchEvent(${1:customEvent});"
-    ],
+    "body": ["this.dispatchEvent(${1:customEvent});"],
     "description": "dispatchEvent",
     "prefix": "dispatchEvent",
     "scope": "javascript"
   },
   "LWC ErrorCallback": {
-    "body": [
-      "errorCallback(error, stack) {",
-        "\t",
-        "}"
-    ],
+    "body": ["errorCallback(error, stack) {", "\t", "}"],
     "description": "errorCallback.",
     "prefix": "errorCallback",
     "scope": "javascript"
   },
   "LWC ForEach": {
-    "body": [
-      "${1:array}.forEach((item, index) => {",
-        "\t$0",
-        "});"
-    ],
+    "body": ["${1:array}.forEach((item, index) => {", "\t$0", "});"],
     "description": "The forEach() method executes a provided function once for each array element.",
     "prefix": "forEach",
     "scope": "javascript"
@@ -160,9 +142,7 @@
     "scope": "javascript"
   },
   "LWC Import NavigationMixin": {
-    "body": [
-      "import { NavigationMixin } from 'lightning/navigation';"
-    ],
+    "body": ["import { NavigationMixin } from 'lightning/navigation';"],
     "description": "Import NavigationMixin.",
     "prefix": "importNavigationMixin",
     "scope": "javascript"
@@ -176,9 +156,7 @@
     "scope": "javascript"
   },
   "LWC Import UserId": {
-    "body": [
-      "import userId from '@salesforce/user/Id';"
-    ],
+    "body": ["import userId from '@salesforce/user/Id';"],
     "description": "Import UserId.",
     "prefix": "importUserId",
     "scope": "javascript"
@@ -186,10 +164,10 @@
   "LWC Map": {
     "body": [
       "${1:array}.map((item, index) => {",
-        "\treturn {",
-          "\t\t$0",
-          "\t}",
-          "});"
+      "\treturn {",
+      "\t\t$0",
+      "\t}",
+      "});"
     ],
     "description": "The map() method creates a new array populated with the results of calling a provided function on every element in the calling array.",
     "prefix": "map",
@@ -206,50 +184,40 @@
   "LWC Navigate": {
     "body": [
       "this[NavigationMixin.Navigate]({",
-        "\ttype: '${1|standard__app,comm__externalRecordPage,comm__externalRecordRelationshipPage,standard__component,standard__knowledgeArticlePage,comm__loginPage,standard__managedContentPage,comm__namedPage,standard__navItemPage,standard__objectPage,standard__recordPage,standard__recordRelationshipPage,standard__webPage|}',",
-        "\tattributes: {",
-          "\t\t$0 // Different per page type. ",
-          "\t\t// Check documentation: https://developer.salesforce.com/docs/component-library/documentation/en/lwc/lwc.reference_page_reference_type",
-          "\t},",
-          "\tstate: {",
-            "\t\t$0 // Different per page type.",
-            "\t}",
-            "});"
+      "\ttype: '${1|standard__app,comm__externalRecordPage,comm__externalRecordRelationshipPage,standard__component,standard__knowledgeArticlePage,comm__loginPage,standard__managedContentPage,comm__namedPage,standard__navItemPage,standard__objectPage,standard__recordPage,standard__recordRelationshipPage,standard__webPage|}',",
+      "\tattributes: {",
+      "\t\t$0 // Different per page type. ",
+      "\t\t// Check documentation: https://developer.salesforce.com/docs/component-library/documentation/en/lwc/lwc.reference_page_reference_type",
+      "\t},",
+      "\tstate: {",
+      "\t\t$0 // Different per page type.",
+      "\t}",
+      "});"
     ],
     "description": "NavigationMixin.Navigate.",
     "prefix": "navigate",
     "scope": "javascript"
   },
   "LWC querySelector": {
-    "body": [
-      "this.template.querySelector('${1:element}');"
-    ],
+    "body": ["this.template.querySelector('${1:element}');"],
     "description": "querySelector",
     "prefix": "querySelector",
     "scope": "javascript"
   },
   "LWC querySelectorAll": {
-    "body": [
-      "this.template.querySelectorAll('${1:element}');"
-    ],
+    "body": ["this.template.querySelectorAll('${1:element}');"],
     "description": "querySelectorAll",
     "prefix": "querySelectorAll",
     "scope": "javascript"
   },
   "LWC refreshApex": {
-    "body": [
-      "import { refreshApex } from '@salesforce/apex';"
-    ],
+    "body": ["import { refreshApex } from '@salesforce/apex';"],
     "description": "refreshApex.",
     "prefix": "importRefreshApex",
     "scope": "javascript"
   },
   "LWC render": {
-    "body": [
-      "render() {",
-        "\t$0",
-        "}"
-    ],
+    "body": ["render() {", "\t$0", "}"],
     "description": "render.",
     "prefix": "render",
     "scope": "javascript"
@@ -258,12 +226,12 @@
     "body": [
       "initialRender = true;",
       "renderedCallback() {",
-        "\tif (!this.initialRender) {",
-          "\t\treturn;",
-          "\t}",
-          "\t$0 // Your code here.",
-          "\tthis.initialRender = false;",
-          "}"
+      "\tif (!this.initialRender) {",
+      "\t\treturn;",
+      "\t}",
+      "\t$0 // Your code here.",
+      "\tthis.initialRender = false;",
+      "}"
     ],
     "description": "renderedCallback.",
     "prefix": "renderedCallback",
@@ -290,11 +258,11 @@
     "body": [
       "${1:apexMethodName}({ apexMethodParams })",
       ".then(result => {",
-        "\t",
-        "})",
-        ".catch(error => {",
-          "\tconsole.error(error)",
-          "});"
+      "\t",
+      "})",
+      ".catch(error => {",
+      "\tconsole.error(error)",
+      "});"
     ],
     "description": "Then/Catch",
     "prefix": "thenCatch",
@@ -304,12 +272,12 @@
     "body": [
       "@wire(${1:apexMethodName}, { apexMethodParams })",
       "${5:wiredName}({ error, data }) {",
-        "\tif (data) {",
-          "\t\t$0",
-          "\t} else if (error) {",
-          "\t\tconsole.error(error);",
-          "\t}",
-          "}"
+      "\tif (data) {",
+      "\t\t$0",
+      "\t} else if (error) {",
+      "\t\tconsole.error(error);",
+      "\t}",
+      "}"
     ],
     "description": "wireMethod.",
     "prefix": "wireMethod",

@@ -108,10 +108,10 @@ return {
 					vim.diagnostic.config({
 						signs = {
 							text = {
-								[vim.diagnostic.severity.ERROR] = "",
-								[vim.diagnostic.severity.WARN] = "",
-								[vim.diagnostic.severity.INFO] = "",
-								[vim.diagnostic.severity.HINT] = "",
+								[vim.diagnostic.severity.ERROR] = signs.ERROR,
+								[vim.diagnostic.severity.WARN] = signs.WARN,
+								[vim.diagnostic.severity.INFO] = signs.INFO,
+								[vim.diagnostic.severity.HINT] = signs.HINT,
 							},
 							numhl = {
 								[vim.diagnostic.severity.WARN] = "WarningMsg",
@@ -337,5 +337,46 @@ return {
 				end,
 			})
 		end,
+	},
+	{
+		"vuki656/package-info.nvim",
+		config = true,
+	},
+	{
+		"folke/trouble.nvim",
+		opts = {},
+		cmd = "Trouble",
+		commander = {
+			{
+				keys = { "n", "<leader>xx" },
+				cmd = "<cmd>TroubleToggle<cr>",
+				desc = "Toggle Trouble",
+			},
+			{
+				keys = { "n", "<leader>xX" },
+				cmd = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+				desc = "Trouble: Toggle errors",
+			},
+			{
+				keys = { "n", "<leader>cs" },
+				cmd = "<cmd>Trouble symbols toggle focus=false<cr>",
+				desc = "Trouble: Toggle symbols",
+			},
+			{
+				keys = { "n", "<leader>cl" },
+				cmd = "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+				desc = "Trouble: Toggle LSP",
+			},
+			{
+				keys = { "n", "<leader>xL" },
+				cmd = "<cmd>Trouble loclist toggle<cr>",
+				desc = "Trouble: Toggle location list",
+			},
+			{
+				keys = { "n", "<leader>xQ" },
+				cmd = "<cmd>Trouble qflist toggle<cr>",
+				desc = "Trouble: Toggle quickfix list",
+			},
+		},
 	},
 }
