@@ -11,19 +11,23 @@ return {
 			},
 		},
 		formatters_by_ft = {
-			lua = { "stylua" },
 			javascript = { "prettierd" },
+			javascriptreact = { "prettierd" },
 			typescript = { "prettierd" },
-			apex = { "prettierd" },
-			bash = { "shfmt" },
-			shell = { "shfmt" },
-			zsh = { "shfmt" },
-			go = { "gofmt" },
-			caddy = { "caddy" },
-			sh = { "shfmt" },
-			json = { "prettierd" },
-			yaml = { "prettierd" },
+			typescriptreact = { "prettierd" },
 			markdown = { "prettierd" },
+			astro = { "prettierd" },
+			json = { "prettierd" },
+			jsonc = { "prettierd" },
+			html = { "prettierd" },
+			yaml = { "prettierd" },
+			css = { "stylelint", "prettierd" },
+			sh = { "shellcheck", "shfmt" },
+			terraform = { "terraform_fmt" },
+			go = { "gofmt", "goimports" },
+			lua = { "stylua" },
+			ruby = { "rubocop" },
+			php = { "pint" },
 			python = function(bufnr)
 				if require("conform").get_formatter_info("ruff_format", bufnr).available then
 					return { "ruff_format" }
@@ -33,8 +37,8 @@ return {
 			end,
 		},
 		format_on_save = {
-			timeout_ms = 500,
 			lsp_format = "fallback",
+			timeout_ms = 1000,
 		},
 	},
 }

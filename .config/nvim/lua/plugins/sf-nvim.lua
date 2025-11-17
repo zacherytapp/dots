@@ -28,11 +28,13 @@ return {
 			"CustomObject",
 			"CustomPermission",
 			"CustomTab",
+			"EmailTemplate",
 			"ExperienceBundle",
 			"ExternalCredential",
 			"FlexiPage",
 			"FlowDefinition",
 			"Flow",
+			"Group",
 			"Layout",
 			"LightningComponentBundle",
 			"LightningMessageChannel",
@@ -48,7 +50,9 @@ return {
 			"Settings",
 			"SharingCriteriaRule",
 			"SharingOwnerRule",
+			"StandardValueSet",
 			"StaticResource",
+			"ValidationRule",
 		},
 		term_config = {
 			dimensions = {
@@ -57,7 +61,6 @@ return {
 				y = 0.5,
 			},
 		},
-		plugin_folder_name = "/.sf/sf_cache/",
 	},
 	commander = {
 		{

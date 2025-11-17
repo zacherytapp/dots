@@ -29,3 +29,5 @@ require("options")
 require("filetypes")
 require("colors")
 vim.cmd.colorscheme("catppuccin")
+
+vim.lsp.enable({ "lua_ls", "apex_ls", "ctags_lsp", "gopls", "jsonls", "yamlls", "html" })

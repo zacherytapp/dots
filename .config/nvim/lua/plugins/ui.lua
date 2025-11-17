@@ -8,6 +8,10 @@ return {
 	"RRethy/vim-illuminate",
 	"editorconfig/editorconfig-vim",
 	{
+		"stevearc/overseer.nvim",
+		opts = {},
+	},
+	{
 		"nvim-pack/nvim-spectre",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
