@@ -23,6 +23,7 @@ local formatters = {
 	lua = { "stylua" },
 	ruby = { "rubocop" },
 	php = { "pint" },
+	caddy = { "caddy" },
 }
 
 return {

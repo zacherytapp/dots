@@ -15,5 +15,6 @@ vim.filetype.add({
 	},
 	pattern = {
 		["apex-.*%.log"] = "sflog",
+		["Caddyfile"] = "caddy",
 	},
 })

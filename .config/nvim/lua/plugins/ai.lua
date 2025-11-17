@@ -1,8 +1,13 @@
 return {
 	{
 		"zbirenbaum/copilot.lua",
+		requires = {
+			"copilotlsp-nvim/copilot-lsp", -- (optional) for NES functionality
+		},
 		cmd = "Copilot",
-		event = { "BufReadPre", "InsertEnter" },
+		build = ":Copilot auth",
+		event = { "BufReadPost" },
+		opts = {},
 		config = function()
 			require("copilot").setup({
 				panel = {
@@ -23,7 +28,7 @@ return {
 				suggestion = {
 					enabled = true,
 					auto_trigger = true,
-					debounce = 50,
+					debounce = 20,
 					keymap = {
 						accept = "<C-l>",
 						accept_word = false,
@@ -32,14 +37,9 @@ return {
 					},
 				},
 				filetypes = {
-					yaml = true,
 					markdown = true,
-					help = false,
-					gitcommit = false,
-					gitrebase = false,
-					hgcommit = false,
-					svn = false,
-					cvs = false,
+					go = true,
+					sh = true,
 					["."] = true,
 				},
 				copilot_node_command = "node",
@@ -50,9 +50,13 @@ return {
 	{
 		"NickvanDyke/opencode.nvim",
 		dependencies = {
-			-- Recommended for `ask()` and `select()`.
-			-- Required for `toggle()`.
-			{ "folke/snacks.nvim", opts = { input = {}, picker = {} } },
+			{
+				"folke/snacks.nvim",
+				opts = {
+					input = {},
+					picker = {},
+				},
+			},
 		},
 		config = function()
 			vim.g.opencode_opts = {}

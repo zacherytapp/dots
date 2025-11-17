@@ -28,6 +28,15 @@ commander.add({
 	{ keys = { "n", "<leader>wa" }, cmd = vim.lsp.buf.add_workspace_folder, desc = "LSP: Add workspace folder" },
 	{ keys = { "n", "<leader>u" }, cmd = "<cmd>UndotreeToggle<cr>", desc = "Undotree: Toggle" },
 
+	{
+		keys = { "i", "<C-l>" },
+		cmd = function()
+			require("copilot.suggestion").accept()
+		end,
+		desc = "Copilot: Accept suggestion",
+		opts = { expr = true, silent = true, noremap = true },
+	},
+
 	-- Utilities
 	{
 		keys = { "n", "<leader>fj" },
