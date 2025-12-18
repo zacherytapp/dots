@@ -1,5 +1,85 @@
 return {
 	{
+		"ellisonleao/gruvbox.nvim",
+		priority = 1000,
+		config = true,
+		opts = {
+			terminal_colors = true,
+			undercurl = true,
+			underline = true,
+			bold = true,
+			italic = {
+				strings = false,
+				emphasis = true,
+				comments = true,
+				operators = false,
+				folds = true,
+			},
+			strikethrough = true,
+			invert_selection = false,
+			invert_signs = false,
+			invert_tabline = false,
+			inverse = true,
+			contrast = "",
+			dim_inactive = false,
+			transparent_mode = true,
+			palette_overrides = {},
+			overrides = {
+				NormalFloat = { bg = "none" },
+				FloatBorder = { bg = "none", fg = "#928374" },
+				NoiceCmdlinePopup = { bg = "none" },
+				NoicePopup = { bg = "none" },
+				WhichKeyFloat = { bg = "none" },
+
+				-- Native LSP virtual text styling
+				DiagnosticVirtualTextError = { italic = true },
+				DiagnosticVirtualTextWarn = { italic = true },
+				DiagnosticVirtualTextInfo = { italic = true },
+				DiagnosticVirtualTextHint = { italic = true },
+
+				-- Native LSP underlines
+				DiagnosticUnderlineError = { undercurl = true, sp = "#fb4934" },
+				DiagnosticUnderlineWarn = { undercurl = true, sp = "#fabd2f" },
+				DiagnosticUnderlineInfo = { undercurl = true, sp = "#83a598" },
+				DiagnosticUnderlineHint = { undercurl = true, sp = "#8ec07c" },
+
+				-- Telescope highlights (transparent)
+				TelescopeNormal = { bg = "none" },
+				TelescopeBorder = { bg = "none", fg = "#928374" },
+				TelescopePrompt = { bg = "none" },
+				TelescopePromptNormal = { bg = "none" },
+				TelescopePromptBorder = { bg = "none", fg = "#928374" },
+				TelescopePromptPrefix = { bg = "none", fg = "#83a598" },
+				TelescopePromptTitle = { bg = "none", fg = "#83a598" },
+				TelescopeResults = { bg = "none" },
+				TelescopePreview = { bg = "none" },
+				TelescopeResultsTitle = { bg = "none", fg = "#83a598" },
+				TelescopePreviewTitle = { bg = "none", fg = "#83a598" },
+				TelescopeSelection = { bg = "none", fg = "#ebdbb2" },
+				TelescopeSelectionCaret = { bg = "none", fg = "#83a598" },
+
+				-- Git signs
+				GitSignsAdd = { fg = "#b8bb26" },
+				GitSignsChange = { fg = "#fabd2f" },
+				GitSignsDelete = { fg = "#fb4934" },
+
+				-- Treesitter context
+				TreesitterContext = { bg = "none" },
+				TreesitterContextLineNumber = { bg = "none" },
+
+				-- Functions bold (matching catppuccin style)
+				["@function"] = { bold = true },
+				["@function.call"] = { bold = true },
+				["@method"] = { bold = true },
+				["@method.call"] = { bold = true },
+
+				-- Conditionals italic (matching catppuccin style)
+				["@keyword.conditional"] = { italic = true },
+				Conditional = { italic = true },
+			},
+		},
+	},
+	{
 		"catppuccin/nvim",
 		name = "catppuccin",
 		lazy = true,
