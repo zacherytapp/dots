@@ -30,12 +30,28 @@ return {
 			suggest = {
 				html5 = true,
 			},
+			completion = {
+				attributeDefaultValue = "doublequotes",
+			},
 			validate = {
 				scripts = true,
 				styles = true,
 			},
 			autoClosingTags = true,
+			autoCreateQuotes = true,
 			mirrorCursorOnMatchingTag = false,
+		},
+		css = {
+			validate = true,
+			completion = {
+				triggerPropertyValueCompletion = true,
+			},
+		},
+		javascript = {
+			suggest = {
+				autoImports = true,
+				enabled = true,
+			},
 		},
 	},
 }

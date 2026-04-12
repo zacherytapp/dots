@@ -26,6 +26,14 @@ return {
 				},
 			})
 
+			-- Icons for LSP kinds, filetypes, etc.
+			require("mini.icons").setup({
+				lsp = {
+					snippet = { glyph = "󱄽", hl = "MiniIconsGreen" },
+				},
+			})
+			MiniIcons.mock_nvim_web_devicons()
+
 			-- Highlight word under cursor
 			require("mini.cursorword").setup({})
 
@@ -45,88 +53,6 @@ return {
 				},
 			})
 
-			-- only load tjese plugins if not in vscode
-			if not vim.g.vscode then
-				-- Better pairs
-				require("mini.pairs").setup()
-			end
 		end,
-		commander = {
-			{
-				keys = { "n", "<leader>us" },
-				cmd = "<cmd>MiniSurround<cr>",
-				desc = "Mini: Surround",
-			},
-			{
-				keys = { "n", "<leader>um" },
-				cmd = "<cmd>MiniMove<cr>",
-				desc = "Mini: Move",
-			},
-			{
-				keys = { "n", "saiw)" },
-				cmd = "<cmd>MiniSurroundAdd aiw )<cr>",
-				desc = "Mini: Surround Add aiw with )",
-			},
-			{
-				keys = { "n", "sd'" },
-				cmd = "<cmd>MiniSurroundDelete '<cr>",
-				desc = "Mini: Surround Delete '",
-			},
-			{
-				keys = { "n", "sr)''" },
-				cmd = "<cmd>MiniSurroundReplace ) ''<cr>",
-				desc = "Mini: Surround Replace ) with (",
-			},
-			{
-				keys = { "n", "gS" },
-				cmd = "<cmd>MiniSplitjoinSplit<cr>",
-				desc = "Mini: Splitjoin Split",
-			},
-			{
-				keys = { "n", "gJ" },
-				cmd = "<cmd>MiniSplitjoinJoin<cr>",
-				desc = "Mini: Splitjoin Join",
-			},
-			{
-				keys = { "n", "<M-S-h>" },
-				cmd = "<cmd>MiniMoveLeft<cr>",
-				desc = "Mini: Move Left",
-			},
-			{
-				keys = { "n", "<M-S-l>" },
-				cmd = "<cmd>MiniMoveRight<cr>",
-				desc = "Mini: Move Right",
-			},
-			{
-				keys = { "n", "<M-S-j>" },
-				cmd = "<cmd>MiniMoveDown<cr>",
-				desc = "Mini: Move Down",
-			},
-			{
-				keys = { "n", "<M-S-k>" },
-				cmd = "<cmd>MiniMoveUp<cr>",
-				desc = "Mini: Move Up",
-			},
-			{
-				keys = { "v", "<M-S-h>" },
-				cmd = "<cmd>MiniMoveLeft<cr>",
-				desc = "Mini: Move Line Left",
-			},
-			{
-				keys = { "v", "<M-S-l>" },
-				cmd = "<cmd>MiniMoveRight<cr>",
-				desc = "Mini: Move Line Right",
-			},
-			{
-				keys = { "v", "<M-S-j>" },
-				cmd = "<cmd>MiniMoveDown<cr>",
-				desc = "Mini: Move Line Down",
-			},
-			{
-				keys = { "v", "<M-S-k>" },
-				cmd = "<cmd>MiniMoveUp<cr>",
-				desc = "Mini: Move Line Up",
-			},
-		},
 	},
 }

@@ -1,8 +1,6 @@
-local utils = require("utils")
-
 return {
 	"nvim-telescope/telescope.nvim",
-	branch = "0.1.x",
+	branch = "master",
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 		"nvim-telescope/telescope-live-grep-args.nvim",
@@ -64,6 +62,10 @@ return {
 					i = {
 						["<C-k>"] = actions.move_selection_previous,
 						["<C-j>"] = actions.move_selection_next,
+						["<C-q>"] = actions.smart_send_to_qflist + actions.open_qflist,
+					},
+					n = {
+						["<C-q>"] = actions.smart_send_to_qflist + actions.open_qflist,
 					},
 				},
 				layout_config = {
@@ -123,96 +125,94 @@ return {
 		-- Notifications
 		{
 			keys = { "n", "<leader>sn" },
-			cmd = function()
-				utils.notifications()
-			end,
+			cmd = [[<cmd>Telescope notify<cr>]],
 			desc = "Telescope: Show notifications",
 		},
 		{
 			keys = { "n", "<leader>ff" },
-			cmd = function()
-				utils.find_files()
-			end,
+			cmd = [[<cmd>Telescope find_files<cr>]],
 			desc = "Telescope: Find files",
 		},
 		{
 			keys = { "n", "<leader>fo" },
-			cmd = function()
-				utils.oldfiles()
-			end,
+			cmd = [[<cmd>Telescope oldfiles<cr>]],
 			desc = "Telescope: Find old files",
 		},
 		{
 			keys = { "n", "<leader>ft" },
-			cmd = function()
-				utils.live_grep()
-			end,
+			cmd = [[<cmd>Telescope live_grep<cr>]],
 			desc = "Telescope: Find text",
 		},
 		{
 			keys = { "n", "<leader>fb" },
-			cmd = function()
-				utils.search_buffers()
-			end,
+			cmd = [[<cmd>Telescope buffers<cr>]],
 			desc = "Telescope: Find buffers",
 		},
 
 		{
 			keys = { "n", "<leader>sh" },
-			cmd = function()
-				utils.search_history()
-			end,
-			desc = "Telescope: Find marks",
+			cmd = [[<cmd>Telescope command_history<cr>]],
+			desc = "Telescope: Find command history",
 		},
 		{
 			keys = { "n", "<leader>fn" },
 			cmd = function()
-				utils.search_notes()
+				require("telescope.builtin").find_files({ cwd = "~/Documents/work/" })
 			end,
 			desc = "Telescope: Find notes",
 		},
 		{
 			keys = { "n", "<leader>fr" },
 			cmd = function()
-				utils.search_reference()
+				require("telescope.builtin").find_files({ cwd = "~/projects/ref" })
 			end,
 			desc = "Telescope: Find reference",
 		},
 		{
 			keys = { "n", "<leader>fk" },
-			cmd = function()
-				utils.keymaps()
-			end,
+			cmd = [[<cmd>Telescope keymaps<cr>]],
 			desc = "Telescope: Find keymaps",
 		},
 		{
-			keys = { "n", "<leader>fp" },
+			keys = { "n", "<leader>fP" },
 			cmd = function()
-				utils.search_projects_dir()
+				require("telescope.builtin").find_files({ cwd = "~/projects/" })
 			end,
-			desc = "Telescope: Find projects",
+			desc = "Telescope: Find files in projects dir",
 		},
 		{
 			keys = { "n", "<leader>fh" },
-			cmd = function()
-				utils.search_help()
-			end,
-			desc = "Telescope: Grep over help",
+			cmd = [[<cmd>Telescope help_tags<cr>]],
+			desc = "Telescope: Search help",
 		},
 		{
 			keys = { "n", "<leader>fg" },
 			cmd = [[<cmd>Telescope git_files<cr>]],
 			desc = "Telescope: Find git files",
 		},
-		-- Diagnostics
 		{
-			keys = { "n", "<leader>da" },
-			cmd = [[<cmd>Telescope diagnostics bufnr=0<cr>]],
-			desc = "Telescope: Open diagnostic",
+			keys = { "n", "<leader>gc" },
+			cmd = [[<cmd>Telescope git_commits<cr>]],
+			desc = "Telescope: Git commits",
+		},
+		{
+			keys = { "n", "<leader>gC" },
+			cmd = [[<cmd>Telescope git_bcommits<cr>]],
+			desc = "Telescope: Git commits (current buffer)",
+		},
+		{
+			keys = { "n", "<leader>gR" },
+			cmd = [[<cmd>Telescope git_branches<cr>]],
+			desc = "Telescope: Git branches",
+		},
+		{
+			keys = { "n", "<leader>gS" },
+			cmd = [[<cmd>Telescope git_stash<cr>]],
+			desc = "Telescope: Git stash",
 		},
 		{
 			keys = { "n", "gd" },
-			cmd = [[<cmd>Telescope lsp_defininitions<cr>]],
+			cmd = [[<cmd>Telescope lsp_definitions<cr>]],
 			desc = "Telescope: Open definitions",
 		},
 		{
@@ -221,26 +221,9 @@ return {
 			desc = "Telescope: Open references",
 		},
 		{
-			keys = { "n", "gr" },
+			keys = { "n", "gi" },
 			cmd = [[<cmd>Telescope lsp_implementations<cr>]],
 			desc = "Telescope: Open implementations",
-		},
-		{
-			keys = { "n", "<leader>fr" },
-			cmd = [[<cmd>Telescope lsp_references<cr>]],
-			desc = "Telescope: Find references",
-		},
-		{
-			keys = { "n", "<leader>fh" },
-			cmd = function()
-				utils.search_help()
-			end,
-			desc = "Telescope: Open Search in Help",
-		},
-		{
-			keys = { "n", "<leader>fg" },
-			cmd = [[<cmd>Telescope live_grep<cr>]],
-			desc = "Telescope: Search by Grep",
 		},
 		{
 			keys = { "n", "<leader>fw" },
@@ -248,24 +231,9 @@ return {
 			desc = "Telescope: Search current word",
 		},
 		{
-			keys = { "n", "<leader>dr" },
-			cmd = [[<cmd>Telescope lsp_references<cr>]],
-			desc = "Telescope: Open references",
-		},
-		{
-			keys = { "n", "<leader>ds" },
-			cmd = [[<cmd>Telescope lsp_document_symbols<cr>]],
-			desc = "Telescope: Open document symbols",
-		},
-		{
 			keys = { "n", "<leader>ls" },
 			cmd = [[<cmd>Telescope lsp_document_symbols<cr>]],
 			desc = "Telescope: List symbols in buffer",
-		},
-		{
-			keys = { "n", "<leader>b" },
-			cmd = [[<cmd>Telescope buffers<cr>]],
-			desc = "Telescope: List buffers",
 		},
 	},
 }

@@ -2,14 +2,24 @@ add_newline = false
 
 palette = "gruvbox_dark"
 
-[character]
-success_symbol = "[(color_green)❯](color_purple)"
-error_symbol = "[❯](color_red)"
-vimcmd_symbol = "[❮](color_green)"
+[line_break]
+disabled = true
+
+# Replace the "❯" symbol in the prompt with "➜"
+[character] # The name of the module we are configuring is 'character'
+success_symbol = '[➜](bold green)'
+
+[custom.shell]
+command = "echo $STARSHIP_SHELL"  # shows output of command
+when = """ test "$STARSHIP_SHELL" != "zsh" """
+style = "dimmed blue"
+format = "[$output]($style)"
+shell =["zsh"]
 
 [directory]
 truncation_length = 4
 style = "bold color_purple"
+read_only = " 󰌾"
 
 [palettes.gruvbox_dark]
 color_fg0 = '#fbf1c7'
@@ -23,5 +33,156 @@ color_purple = '#b16286'
 color_red = '#cc241d'
 color_yellow = '#d79921'
 
-[line_break]
-disabled = true
+[git_status]
+untracked = '[ $count](bold yellow) '
+staged = '[ $count](bold green) '
+stashed = "[ ](cyan) "
+deleted = '[ $count](bold red) '
+modified= '[ $count](bold blue) '
+behind = '[ ](bold purple) '
+ahead = '[ ](bold purple) '
+format = '([$all_status$ahead_behind]($style))'
+
+[[battery.display]]
+threshold = 50
+
+[lua]
+detect_folders = []
+symbol = " "
+
+[git_metrics]
+disabled = false
+
+[aws]
+symbol = "  "
+
+[buf]
+symbol = " "
+
+[c]
+symbol = " "
+
+[conda]
+symbol = " "
+
+[dart]
+symbol = " "
+
+[docker_context]
+symbol = " "
+
+[elixir]
+symbol = " "
+
+[elm]
+symbol = " "
+
+[fossil_branch]
+symbol = " "
+
+[git_branch]
+symbol = " "
+
+[golang]
+symbol = " "
+
+[guix_shell]
+symbol = " "
+
+[haskell]
+symbol = " "
+
+[haxe]
+symbol = "⌘ "
+
+[hg_branch]
+symbol = " "
+
+[hostname]
+ssh_symbol = " "
+
+[java]
+symbol = " "
+
+[julia]
+symbol = " "
+
+[memory_usage]
+symbol = "󰍛 "
+
+[meson]
+symbol = "󰔷 "
+
+[nim]
+symbol = "󰆥 "
+
+[nix_shell]
+symbol = " "
+
+[nodejs]
+symbol = " "
+
+[os.symbols]
+Alpaquita = " "
+Alpine = " "
+Amazon = " "
+Android = " "
+Arch = " "
+Artix = " "
+CentOS = " "
+Debian = " "
+DragonFly = " "
+Emscripten = " "
+EndeavourOS = " "
+Fedora = " "
+FreeBSD = " "
+Garuda = "󰛓 "
+Gentoo = " "
+HardenedBSD = "󰞌 "
+Illumos = "󰈸 "
+Linux = " "
+Mabox = " "
+Macos = " "
+Manjaro = " "
+Mariner = " "
+MidnightBSD = " "
+Mint = " "
+NetBSD = " "
+NixOS = " "
+OpenBSD = "󰈺 "
+openSUSE = " "
+OracleLinux = "󰌷 "
+Pop = " "
+Raspbian = " "
+Redhat = " "
+RedHatEnterprise = " "
+Redox = "󰀘 "
+Solus = "󰠳 "
+SUSE = " "
+Ubuntu = " "
+Unknown = " "
+Windows = "󰍲 "
+
+[package]
+symbol = "󰏗 "
+
+[pijul_channel]
+symbol = "🪺 "
+
+[python]
+symbol = " "
+
+[rlang]
+symbol = "󰟔 "
+
+[ruby]
+symbol = " "
+
+[rust]
+symbol = " "
+
+[scala]
+symbol = " "
+
+[spack]
+symbol = "🅢 "

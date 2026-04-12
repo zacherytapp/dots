@@ -56,39 +56,78 @@ return {
 		},
 		config = function()
 			vim.g.opencode_opts = {}
-
-			vim.opt.autoread = true
-
-			vim.keymap.set({ "n", "x" }, "<leader>oa", function()
-				require("opencode").ask("@this: ", { submit = true })
-			end, { desc = "Ask about this" })
-			vim.keymap.set({ "n", "x" }, "<leader>o+", function()
-				require("opencode").prompt("@this")
-			end, { desc = "Add this" })
-			vim.keymap.set({ "n", "x" }, "<leader>os", function()
-				require("opencode").select()
-			end, { desc = "Select prompt" })
-			vim.keymap.set("n", "<leader>ot", function()
-				require("opencode").toggle()
-			end, { desc = "Toggle embedded" })
-			vim.keymap.set("n", "<leader>oc", function()
-				require("opencode").command()
-			end, { desc = "Select command" })
-			vim.keymap.set("n", "<leader>on", function()
-				require("opencode").command("session_new")
-			end, { desc = "New session" })
-			vim.keymap.set("n", "<leader>oi", function()
-				require("opencode").command("session_interrupt")
-			end, { desc = "Interrupt session" })
-			vim.keymap.set("n", "<leader>oA", function()
-				require("opencode").command("agent_cycle")
-			end, { desc = "Cycle selected agent" })
-			vim.keymap.set("n", "<S-C-u>", function()
-				require("opencode").command("messages_half_page_up")
-			end, { desc = "Messages half page up" })
-			vim.keymap.set("n", "<S-C-d>", function()
-				require("opencode").command("messages_half_page_down")
-			end, { desc = "Messages half page down" })
 		end,
+		commander = {
+			{
+				keys = { { "n", "x" }, "<leader>oa" },
+				cmd = function()
+					require("opencode").ask("@this: ", { submit = true })
+				end,
+				desc = "OpenCode: Ask about this",
+			},
+			{
+				keys = { { "n", "x" }, "<leader>o+" },
+				cmd = function()
+					require("opencode").prompt("@this")
+				end,
+				desc = "OpenCode: Add this",
+			},
+			{
+				keys = { { "n", "x" }, "<leader>os" },
+				cmd = function()
+					require("opencode").select()
+				end,
+				desc = "OpenCode: Select prompt",
+			},
+			{
+				keys = { "n", "<leader>ot" },
+				cmd = function()
+					require("opencode").toggle()
+				end,
+				desc = "OpenCode: Toggle embedded",
+			},
+			{
+				keys = { "n", "<leader>oc" },
+				cmd = function()
+					require("opencode").command()
+				end,
+				desc = "OpenCode: Select command",
+			},
+			{
+				keys = { "n", "<leader>on" },
+				cmd = function()
+					require("opencode").command("session_new")
+				end,
+				desc = "OpenCode: New session",
+			},
+			{
+				keys = { "n", "<leader>oi" },
+				cmd = function()
+					require("opencode").command("session_interrupt")
+				end,
+				desc = "OpenCode: Interrupt session",
+			},
+			{
+				keys = { "n", "<leader>oA" },
+				cmd = function()
+					require("opencode").command("agent_cycle")
+				end,
+				desc = "OpenCode: Cycle selected agent",
+			},
+			{
+				keys = { "n", "<S-C-u>" },
+				cmd = function()
+					require("opencode").command("messages_half_page_up")
+				end,
+				desc = "OpenCode: Messages half page up",
+			},
+			{
+				keys = { "n", "<S-C-d>" },
+				cmd = function()
+					require("opencode").command("messages_half_page_down")
+				end,
+				desc = "OpenCode: Messages half page down",
+			},
+		},
 	},
 }

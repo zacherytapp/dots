@@ -154,5 +154,163 @@
     "description": "Template iterator:it.",
     "prefix": ["templateIteratorIt"],
     "scope": "html"
+  },
+  "LWC lwc:if": {
+    "body": [
+      "<template lwc:if={${1:property}}>",
+      "\t$0",
+      "</template>"
+    ],
+    "description": "Modern conditional rendering with lwc:if (replaces if:true)",
+    "prefix": ["lwcIf", "lwc:if"],
+    "scope": "html"
+  },
+  "LWC lwc:elseif": {
+    "body": [
+      "<template lwc:elseif={${1:property}}>",
+      "\t$0",
+      "</template>"
+    ],
+    "description": "Modern conditional elseif directive",
+    "prefix": ["lwcElseif", "lwc:elseif"],
+    "scope": "html"
+  },
+  "LWC lwc:else": {
+    "body": [
+      "<template lwc:else>",
+      "\t$0",
+      "</template>"
+    ],
+    "description": "Modern conditional else directive",
+    "prefix": ["lwcElse", "lwc:else"],
+    "scope": "html"
+  },
+  "LWC lwc:if complete": {
+    "body": [
+      "<template lwc:if={${1:condition1}}>",
+      "\t$2",
+      "</template>",
+      "<template lwc:elseif={${3:condition2}}>",
+      "\t$4",
+      "</template>",
+      "<template lwc:else>",
+      "\t$0",
+      "</template>"
+    ],
+    "description": "Complete if/elseif/else block",
+    "prefix": ["lwcIfComplete", "lwc:if:complete"],
+    "scope": "html"
+  },
+  "LWC lightning-record-form": {
+    "body": [
+      "<lightning-record-form",
+      "\tobject-api-name='${1:ObjectApiName}'",
+      "\trecord-id={recordId}",
+      "\tfields={${2:fields}}",
+      "\tmode='${3|view,edit,readonly|}'",
+      "\tcolumns='${4:2}'",
+      "\tonsuccess={${5:handleSuccess}}",
+      "\tonerror={${6:handleError}}",
+      "></lightning-record-form>"
+    ],
+    "description": "Lightning record form component",
+    "prefix": ["recordForm", "lightning-record-form"],
+    "scope": "html"
+  },
+  "LWC lightning-record-edit-form": {
+    "body": [
+      "<lightning-record-edit-form",
+      "\tobject-api-name='${1:ObjectApiName}'",
+      "\trecord-id={recordId}",
+      "\tonsuccess={${2:handleSuccess}}",
+      "\tonerror={${3:handleError}}",
+      ">",
+      "\t<lightning-messages></lightning-messages>",
+      "\t<lightning-input-field field-name='${4:FieldApiName}'></lightning-input-field>",
+      "\t<lightning-button class='slds-m-top_small' type='submit' label='Save'></lightning-button>",
+      "</lightning-record-edit-form>"
+    ],
+    "description": "Lightning record edit form with messages and submit",
+    "prefix": ["recordEditForm", "lightning-record-edit-form"],
+    "scope": "html"
+  },
+  "LWC lightning-record-view-form": {
+    "body": [
+      "<lightning-record-view-form",
+      "\tobject-api-name='${1:ObjectApiName}'",
+      "\trecord-id={recordId}",
+      ">",
+      "\t<lightning-output-field field-name='${2:FieldApiName}'></lightning-output-field>",
+      "\t$0",
+      "</lightning-record-view-form>"
+    ],
+    "description": "Lightning record view form",
+    "prefix": ["recordViewForm", "lightning-record-view-form"],
+    "scope": "html"
+  },
+  "LWC lightning-card": {
+    "body": [
+      "<lightning-card title='${1:Card Title}' icon-name='${2:standard:account}'>",
+      "\t<p slot='actions'>",
+      "\t\t<lightning-button label='Action' onclick={${3:handleAction}}></lightning-button>",
+      "\t</p>",
+      "\t<div class='slds-p-around_medium'>",
+      "\t\t$0",
+      "\t</div>",
+      "\t<p slot='footer'>",
+      "\t\t${4:Footer content}",
+      "\t</p>",
+      "</lightning-card>"
+    ],
+    "description": "Lightning card with all slots",
+    "prefix": ["card", "lightning-card"],
+    "scope": "html"
+  },
+  "LWC lightning-modal": {
+    "body": [
+      "<!-- In parent component -->",
+      "<!-- Import: import MyModal from 'c/myModal'; -->",
+      "<!-- Call: MyModal.open({ size: 'small', description: 'Modal description' }); -->",
+      "",
+      "<!-- Modal component template (myModal.html) -->",
+      "<template>",
+      "\t<lightning-modal-header label='${1:Modal Title}'></lightning-modal-header>",
+      "\t<lightning-modal-body>",
+      "\t\t$0",
+      "\t</lightning-modal-body>",
+      "\t<lightning-modal-footer>",
+      "\t\t<lightning-button label='Cancel' onclick={handleCancel}></lightning-button>",
+      "\t\t<lightning-button label='Save' variant='brand' onclick={handleSave}></lightning-button>",
+      "\t</lightning-modal-footer>",
+      "</template>"
+    ],
+    "description": "Lightning modal structure",
+    "prefix": ["modal", "lightning-modal"],
+    "scope": "html"
+  },
+  "LWC lightning-accordion": {
+    "body": [
+      "<lightning-accordion allow-multiple-sections-open active-section-name='${1:A}'>",
+      "\t<lightning-accordion-section name='A' label='${2:Section A}'>",
+      "\t\t$0",
+      "\t</lightning-accordion-section>",
+      "\t<lightning-accordion-section name='B' label='${3:Section B}'>",
+      "\t\t",
+      "\t</lightning-accordion-section>",
+      "</lightning-accordion>"
+    ],
+    "description": "Lightning accordion with sections",
+    "prefix": ["accordion", "lightning-accordion"],
+    "scope": "html"
+  },
+  "LWC lightning-tile": {
+    "body": [
+      "<lightning-tile label='${1:Tile Label}' href={${2:url}}>",
+      "\t<p class='slds-truncate' title='${3:description}'>${3:description}</p>",
+      "</lightning-tile>"
+    ],
+    "description": "Lightning tile component",
+    "prefix": ["tile", "lightning-tile"],
+    "scope": "html"
   }
 }

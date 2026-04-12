@@ -30,7 +30,44 @@ return {
 					"StatusLineNC",
 					"EndOfBuffer",
 				},
-				extra_groups = {},
+				extra_groups = {
+					-- Floats
+					"NormalFloat",
+					"FloatBorder",
+					"FloatTitle",
+					-- Noice
+					"NoiceCmdline",
+					"NoiceCmdlinePopup",
+					"NoiceCmdlinePopupBorder",
+					"NoiceCmdlinePopupTitle",
+					"NoiceCmdlineIcon",
+					"NoicePopup",
+					"NoicePopupmenu",
+					"NoicePopupmenuBorder",
+					"NoiceConfirm",
+					"NoiceConfirmBorder",
+					"NoiceMini",
+					-- Telescope
+					"TelescopeNormal",
+					"TelescopeBorder",
+					"TelescopePromptNormal",
+					"TelescopePromptBorder",
+					"TelescopeResults",
+					"TelescopePreview",
+					-- Which-key
+					"WhichKeyFloat",
+					-- Treesitter context
+					"TreesitterContext",
+					"TreesitterContextLineNumber",
+					-- Pmenu
+					"Pmenu",
+					"PmenuSbar",
+					-- Window elements
+					"Folded",
+					"WinSeparator",
+					"WinBar",
+					"WinBarNC",
+				},
 				exclude_groups = {},
 				on_clear = function() end,
 			})

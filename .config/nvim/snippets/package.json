@@ -10,7 +10,7 @@
         "path": "./apex.json"
       },
       {
-        "language": "js",
+        "language": "javascript",
         "path": "./lwc-js.json"
       },
       {
@@ -20,6 +20,10 @@
       {
         "language": "xml",
         "path": "./lwc-xml.json"
+      },
+      {
+        "language": "visualforce",
+        "path": "./visualforce.json"
       }
     ]
   }

@@ -50,8 +50,7 @@ return {
 	{
 		"stevearc/oil.nvim",
 		dependencies = { "nvim-tree/nvim-web-devicons" },
-		lazy = true,
-		event = "VimEnter",
+		lazy = false,
 		opts = {
 			columns = {
 				"icon",
@@ -64,17 +63,16 @@ return {
 			delete_to_trash = true,
 			constrain_cursor = "name",
 			watch_for_changes = true,
+			float = {
+				max_width = 80,
+				max_height = 30,
+			},
 		},
 		commander = {
 			{
-				keys = { "n", "<leader>-" },
+				keys = { "n", "<leader>E" },
 				cmd = [[<cmd>Oil --float .<cr>]],
-				desc = "Oil: Open root",
-			},
-			{
-				keys = { "n", "<leader>_" },
-				cmd = [[<cmd>Oil --float<cr>]],
-				desc = "Oil: Open here",
+				desc = "Oil: Open root (float)",
 			},
 		},
 	},
@@ -83,6 +81,7 @@ return {
 		"nvim-neo-tree/neo-tree.nvim",
 		branch = "v3.x",
 		lazy = true,
+		cmd = { "Neotree" },
 		cond = not vim.g.vscode,
 		dependencies = {
 			"nvim-lua/plenary.nvim",
@@ -102,22 +101,111 @@ return {
 							},
 						},
 						border = { style = "rounded", highlight = "Normal" },
-						other_win_hl_color = "#e35e4f",
+						other_win_hl_color = "#E46876",
 					})
 				end,
 			},
 		},
 		commander = {
+			-- Toggle / Navigation
 			{
 				keys = { "n", "<leader>e" },
 				cmd = [[<cmd>Neotree toggle reveal<cr>]],
 				desc = "NeoTree: Toggle file drawer",
 			},
+			{
+				keys = { "n", "<leader>eG" },
+				cmd = [[<cmd>Neotree float git_status<cr>]],
+				desc = "NeoTree: Git status (float)",
+			},
+			{
+				keys = { "n", "<leader>be" },
+				cmd = [[<cmd>Neotree float buffers<cr>]],
+				desc = "NeoTree: Open buffers (float)",
+			},
+			-- File operations (reveal tree then act)
+			{
+				desc = "NeoTree: Create file (a)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("a", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Create directory (A)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("A", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Delete file/dir (d)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("d", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Rename file/dir (r)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("r", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Move file/dir (m)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("m", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Copy file/dir (c)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("c", "n", false) end, 100) end,
+			},
+			-- Clipboard operations
+			{
+				desc = "NeoTree: Copy to clipboard (y)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("y", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Cut to clipboard (x)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("x", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Paste from clipboard (p)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("p", "n", false) end, 100) end,
+			},
+			-- Navigation & display
+			{
+				desc = "NeoTree: Toggle hidden files (H)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("H", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Fuzzy finder (/)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("/", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Navigate up (<BS>)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<BS>", true, false, true), "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Preview file (P)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("P", "n", false) end, 100) end,
+			},
+			-- Split/tab operations
+			{
+				desc = "NeoTree: Open in split (S)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("S", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Open in vsplit (s)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("s", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Open in new tab (t)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("t", "n", false) end, 100) end,
+			},
+			{
+				desc = "NeoTree: Open with window picker (w)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("w", "n", false) end, 100) end,
+			},
+			-- Oil bridge
+			{
+				desc = "NeoTree: Open directory in Oil (o)",
+				cmd = function() vim.cmd("Neotree reveal action=focus") vim.defer_fn(function() vim.api.nvim_feedkeys("o", "n", false) end, 100) end,
+			},
 		},
 		opts = {
 			-- don't reset the cursor position when opening a file
-			disable_netrw = true,
-			hijack_netrw = true,
+			-- Let Oil handle directory buffers; Neo-tree stays as sidebar only
+			disable_netrw = false,
+			hijack_netrw = false,
 			close_if_last_window = false,
 			enable_git_status = true,
 			enable_diagnostics = true,
@@ -221,6 +309,16 @@ return {
 					["?"] = "show_help",
 					["<"] = "prev_source",
 					[">"] = "next_source",
+					["o"] = {
+						function(state)
+							local node = state.tree:get_node()
+							local path = node.type == "directory" and node:get_id() or vim.fn.fnamemodify(node:get_id(), ":h")
+							-- Close Neo-tree sidebar, then open Oil in that directory
+							vim.cmd("Neotree close")
+							require("oil").open(path)
+						end,
+						desc = "Open in Oil",
+					},
 				},
 			},
 			nesting_rules = {
@@ -258,11 +356,7 @@ return {
 				follow_current_file = { enabled = true }, -- This will find and focus the file in the active buffer every
 				-- time the current file is changed while the tree is open.
 				group_empty_dirs = false, -- when true, empty folders will be grouped together
-				hijack_netrw_behavior = "open_default", -- netrw disabled, opening a directory opens neo-tree
-				-- in whatever position is specified in window.position
-				-- "open_current",  -- netrw disabled, opening a directory opens within the
-				-- window like netrw would, regardless of window.position
-				-- "disabled",    -- netrw left alone, neo-tree does not handle opening dirs
+				hijack_netrw_behavior = "disabled", -- let Oil handle directory opens
 				use_libuv_file_watcher = false, -- This will use the OS level file watchers to detect changes
 				-- instead of relying on nvim autocmd events.
 				window = {

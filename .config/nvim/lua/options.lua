@@ -30,6 +30,7 @@ opt.guicursor = "" -- disable GUI cursor
 
 opt.confirm = true -- confirm changes before exiting a buffer
 opt.autowrite = true -- enable auto-write
+opt.autoread = true -- auto-read files changed outside of Neovim
 opt.backup = false -- don't use backup files
 opt.writebackup = false -- don't backup the file while editing
 opt.swapfile = false -- don't create swap files for new buffers
@@ -43,7 +44,7 @@ opt.textwidth = 120 -- after configured number of characters, wrap line
 -- show the results of substition as they're happening but don't open a split
 opt.inccommand = "nosplit"
 
-opt.backspace = { "indent", "eol,start" } -- make backspace behave in a sane manner
+opt.backspace = { "indent", "eol", "start" } -- make backspace behave in a sane manner
 opt.mouse = "a" -- set mouse mode to all modes
 
 -- searching
@@ -57,10 +58,7 @@ opt.magic = true -- set magic on, for regular expressions
 if fn.executable("rg") then
 	-- if ripgrep installed, use that as a grepper
 	opt.grepprg = "rg --vimgrep --no-heading"
-	-- opt.grepformat = "%f:%l:%c:%m,%f:%l:%m"
 	opt.grepformat = "%f:%l:%c:%m"
-	-- create autocmd to automatically open quickfix window when grepping
-	vim.cmd([[autocmd QuickFixCmdPost [^l]* nested cwindow]])
 else
 	opt.grepformat = "%f:%l:%c:%m"
 end
@@ -120,55 +118,16 @@ opt.foldnestmax = 10 -- deepest fold is 10 levels
 opt.foldenable = false -- don't fold by default
 opt.foldlevel = 99
 vim.opt.foldcolumn = "0"
-vim.opt.fillchars:append({ fold = " " })
-
--- Cache for fold text to avoid repeated treesitter calls
-local fold_cache = {}
-
--- Clear cache on buffer changes
-vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-	callback = function()
-		fold_cache[vim.fn.bufnr()] = {}
-	end,
-})
-
+-- Simple foldtext function
 function _G.custom_foldtext()
-	local buf = vim.fn.bufnr()
-	local start_line = vim.v.foldstart
-	local cache_key = string.format("%d:%d", buf, start_line)
-
-	-- Check cache first
-	if fold_cache[buf] and fold_cache[buf][cache_key] then
-		return fold_cache[buf][cache_key]
-	end
-
-	-- Your existing fold logic here, but simplified
-	local start = vim.fn.getline(start_line):gsub("\t", string.rep(" ", vim.o.tabstop))
+	local start = vim.fn.getline(vim.v.foldstart):gsub("\t", string.rep(" ", vim.o.tabstop))
 	local end_str = vim.trim(vim.fn.getline(vim.v.foldend))
+	local line_count = vim.v.foldend - vim.v.foldstart + 1
 
-	-- Simple version without treesitter parsing every character
-	local result = {
-		{ start, "Folded" },
-		{ " ... ", "Comment" },
-		{ end_str, "Folded" },
-	}
-
-	-- Cache the result
-	if not fold_cache[buf] then
-		fold_cache[buf] = {}
-	end
-	fold_cache[buf][cache_key] = result
-
-	return result
+	return start .. " ... " .. end_str .. " (" .. line_count .. " lines)"
 end
 
-vim.api.nvim_create_autocmd("TextYankPost", {
-	desc = "Highlight when yanking text",
-	group = vim.api.nvim_create_augroup("highlight-yank", { clear = true }),
-	callback = function()
-		vim.highlight.on_yank()
-	end,
-})
+vim.opt.foldtext = "v:lua.custom_foldtext()"
 
 opt.virtualedit = "block"
 
@@ -186,103 +145,9 @@ opt.undofile = true
 -- toggle invisible characters
 opt.list = true
 opt.listchars = {
-	-- tab = "→ ",
 	tab = "  ",
 	-- eol = "¬",
 	trail = "⋅",
 	extends = "❯",
 	precedes = "❮",
 }
-vim.opt.fillchars:append({ fold = " " }) -- Use space for fold
-
--- hide the ~ character on empty lines at the end of the buffer
-opt.fcs = "eob: "
--- vim.g.netrw_browse_split = 0
--- vim.g.netrw_banner = 0
--- vim.g.netrw_winsize = 25
---
--- vim.opt.isfname:append("@-@")
---
--- vim.o.guicursor = ""
--- vim.o.nu = true
--- vim.o.relativenumber = true
--- vim.o.smarttab = true
--- vim.o.expandtab = true
--- vim.o.smartindent = true
--- vim.o.tabstop = 2
--- vim.o.softtabstop = 2
--- vim.o.shiftwidth = 2
--- vim.o.wrap = false
--- vim.o.swapfile = false
--- vim.o.backup = false
--- vim.o.undodir = os.getenv("HOME") .. "/.vim/undodir"
--- vim.o.undofile = true
--- vim.o.hlsearch = false
--- vim.o.incsearch = true
--- vim.o.termguicolors = true
--- vim.o.scrolloff = 8
--- vim.o.colorcolumn = "80"
--- vim.o.clipboard = "unnamedplus"
--- vim.o.breakindent = true
--- vim.o.undofile = true
--- vim.o.ignorecase = true
--- vim.o.smartcase = true
--- vim.o.updatetime = 250
--- vim.o.timeoutlen = 300
--- vim.o.completeopt = "menuone,noselect"
--- vim.o.spelllang = "en_us"
--- vim.o.spell = true
---
--- vim.wo.number = true
--- vim.wo.signcolumn = "yes"
---
--- -- [[ Highlight on yank ]]
--- -- See `:help vim.highlight.on_yank()`
--- local highlight_group = vim.api.nvim_create_augroup("YankHighlight", { clear = true })
--- vim.api.nvim_create_autocmd("TextYankPost", {
--- 	callback = function()
--- 		vim.highlight.on_yank()
--- 	end,
--- 	group = highlight_group,
--- 	pattern = "*",
--- })
---
-vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-	pattern = { "*.cls", "*.trigger", "*.apex" },
-	callback = function()
-		vim.bo.filetype = "apex"
-	end,
-})
-
--- helper function
-local function update_hl(group, tbl)
-	local old_hl = vim.api.nvim_get_hl(0, { name = group })
-	local new_hl = vim.tbl_extend("force", old_hl, tbl)
-	vim.api.nvim_set_hl(0, group, new_hl)
-end
-
-update_hl("TSParameter", { italic = true })
-update_hl("String", { italic = true })
-update_hl("StartifyPath", { italic = true })
-update_hl("StartifySlash", { italic = true })
-update_hl("CmpItemKind", { italic = true })
-update_hl("TSKeyword", { italic = true })
-update_hl("Comment", { italic = true })
-update_hl("Identifier", { italic = true })
-update_hl("Conditional", { italic = true })
-update_hl("TSMethod", { italic = true })
-update_hl("TSEmphasis", { italic = true })
-update_hl("TSComment", { italic = true })
-update_hl("TSConditional", { italic = true })
-update_hl("TSFunction", { italic = true })
-update_hl("TSFuncBuiltin", { italic = true })
-update_hl("TSParameter", { italic = true })
-update_hl("TSKeywordReturn", { italic = true })
-update_hl("TSKeywordFunction", { italic = true })
-update_hl("TSLabel", { italic = true })
-update_hl("TSString", { italic = true })
-update_hl("TSRepeat", { italic = true })
-update_hl("TSVariable", { italic = true })
-update_hl("TSVariableBuiltin", { italic = true })
-
-vim.cmd.highlight("DiagnosticUnderlineError guisp=#ff0000 gui=undercurl")

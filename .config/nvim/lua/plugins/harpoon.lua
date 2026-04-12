@@ -67,6 +67,54 @@ return {
 				end,
 				desc = "Harpoon: Go to 5",
 			},
+			{
+				keys = { "n", "<leader>6" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():select(6)
+				end,
+				desc = "Harpoon: Go to 6",
+			},
+			{
+				keys = { "n", "<leader>7" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():select(7)
+				end,
+				desc = "Harpoon: Go to 7",
+			},
+			{
+				keys = { "n", "<leader>8" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():select(8)
+				end,
+				desc = "Harpoon: Go to 8",
+			},
+			{
+				keys = { "n", "<leader>9" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():select(9)
+				end,
+				desc = "Harpoon: Go to 9",
+			},
+			{
+				keys = { "n", "]h" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():next()
+				end,
+				desc = "Harpoon: Next",
+			},
+			{
+				keys = { "n", "[h" },
+				cmd = function()
+					local harpoon = require("harpoon")
+					harpoon:list():prev()
+				end,
+				desc = "Harpoon: Previous",
+			},
 		},
 	},
 }

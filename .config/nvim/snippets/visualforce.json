@@ -1,0 +1,207 @@
+{
+  "VF Page Template": {
+    "body": [
+      "<apex:page controller=\"${1:ControllerName}\" lightningStylesheets=\"true\" docType=\"html-5.0\">",
+      "\t<apex:slds />",
+      "\t<div class=\"slds-scope\">",
+      "\t\t$0",
+      "\t</div>",
+      "</apex:page>"
+    ],
+    "description": "Visualforce page with SLDS styling",
+    "prefix": ["vfPage", "apexPage"],
+    "scope": "visualforce,html"
+  },
+  "VF Page with Standard Controller": {
+    "body": [
+      "<apex:page standardController=\"${1:ObjectApiName}\" extensions=\"${2:ExtensionName}\" lightningStylesheets=\"true\">",
+      "\t<apex:slds />",
+      "\t<div class=\"slds-scope\">",
+      "\t\t<apex:form>",
+      "\t\t\t$0",
+      "\t\t</apex:form>",
+      "\t</div>",
+      "</apex:page>"
+    ],
+    "description": "VF page with standard controller and extension",
+    "prefix": ["vfPageStandard", "apexPageStandard"],
+    "scope": "visualforce,html"
+  },
+  "VF Form": {
+    "body": [
+      "<apex:form id=\"${1:formId}\">",
+      "\t<apex:pageBlock title=\"${2:Block Title}\" mode=\"edit\">",
+      "\t\t<apex:pageBlockButtons>",
+      "\t\t\t<apex:commandButton value=\"Save\" action=\"{!save}\" />",
+      "\t\t\t<apex:commandButton value=\"Cancel\" action=\"{!cancel}\" immediate=\"true\" />",
+      "\t\t</apex:pageBlockButtons>",
+      "\t\t<apex:pageBlockSection title=\"${3:Section Title}\" columns=\"2\">",
+      "\t\t\t$0",
+      "\t\t</apex:pageBlockSection>",
+      "\t</apex:pageBlock>",
+      "</apex:form>"
+    ],
+    "description": "VF form with pageBlock structure",
+    "prefix": ["vfForm", "apexForm"],
+    "scope": "visualforce,html"
+  },
+  "VF Repeat": {
+    "body": [
+      "<apex:repeat value=\"{!${1:collection}}\" var=\"${2:item}\">",
+      "\t$0",
+      "</apex:repeat>"
+    ],
+    "description": "apex:repeat loop",
+    "prefix": ["vfRepeat", "apexRepeat"],
+    "scope": "visualforce,html"
+  },
+  "VF PageBlockTable": {
+    "body": [
+      "<apex:pageBlockTable value=\"{!${1:records}}\" var=\"${2:record}\">",
+      "\t<apex:column headerValue=\"${3:Name}\">",
+      "\t\t<apex:outputField value=\"{!${2:record}.${4:Field}}\"/>",
+      "\t</apex:column>",
+      "\t$0",
+      "</apex:pageBlockTable>"
+    ],
+    "description": "PageBlockTable component",
+    "prefix": ["vfTable", "pageBlockTable"],
+    "scope": "visualforce,html"
+  },
+  "VF ActionFunction": {
+    "body": [
+      "<apex:actionFunction name=\"${1:jsMethodName}\" action=\"{!${2:apexMethod}}\" reRender=\"${3:componentId}\" oncomplete=\"${4:onCompleteJs}\">",
+      "\t<apex:param name=\"${5:paramName}\" assignTo=\"{!${6:apexProperty}}\" value=\"\" />",
+      "</apex:actionFunction>"
+    ],
+    "description": "ActionFunction for AJAX calls from JavaScript",
+    "prefix": ["actionFunction", "vfActionFunction"],
+    "scope": "visualforce,html"
+  },
+  "VF ActionSupport": {
+    "body": [
+      "<apex:actionSupport event=\"${1|onchange,onclick,onblur,onfocus,onmouseover|}\" action=\"{!${2:apexMethod}}\" reRender=\"${3:componentId}\" status=\"${4:statusId}\"/>"
+    ],
+    "description": "ActionSupport for component events",
+    "prefix": ["actionSupport", "vfActionSupport"],
+    "scope": "visualforce,html"
+  },
+  "VF ActionStatus": {
+    "body": [
+      "<apex:actionStatus id=\"${1:statusId}\">",
+      "\t<apex:facet name=\"start\">",
+      "\t\t<img src=\"/img/loading.gif\" alt=\"Loading...\" />",
+      "\t</apex:facet>",
+      "</apex:actionStatus>"
+    ],
+    "description": "ActionStatus loading indicator",
+    "prefix": ["actionStatus", "vfActionStatus"],
+    "scope": "visualforce,html"
+  },
+  "VF CommandButton": {
+    "body": [
+      "<apex:commandButton value=\"${1:Button Text}\" action=\"{!${2:apexMethod}}\" reRender=\"${3:componentId}\" status=\"${4:statusId}\" styleClass=\"slds-button slds-button_brand\"/>"
+    ],
+    "description": "CommandButton with SLDS styling",
+    "prefix": ["commandButton", "vfButton"],
+    "scope": "visualforce,html"
+  },
+  "VF CommandLink": {
+    "body": [
+      "<apex:commandLink value=\"${1:Link Text}\" action=\"{!${2:apexMethod}}\" reRender=\"${3:componentId}\">"
+    ],
+    "description": "CommandLink component",
+    "prefix": ["commandLink", "vfLink"],
+    "scope": "visualforce,html"
+  },
+  "VF InputField": {
+    "body": [
+      "<apex:inputField value=\"{!${1:record}.${2:Field}}\" required=\"${3|true,false|}\"/>"
+    ],
+    "description": "InputField bound to SObject field",
+    "prefix": ["inputField", "vfInput"],
+    "scope": "visualforce,html"
+  },
+  "VF OutputField": {
+    "body": [
+      "<apex:outputField value=\"{!${1:record}.${2:Field}}\"/>"
+    ],
+    "description": "OutputField for display",
+    "prefix": ["outputField", "vfOutput"],
+    "scope": "visualforce,html"
+  },
+  "VF PageMessages": {
+    "body": [
+      "<apex:pageMessages id=\"${1:messages}\"/>"
+    ],
+    "description": "PageMessages for displaying errors/info",
+    "prefix": ["pageMessages", "vfMessages"],
+    "scope": "visualforce,html"
+  },
+  "VF OutputPanel": {
+    "body": [
+      "<apex:outputPanel id=\"${1:panelId}\" layout=\"block\">",
+      "\t$0",
+      "</apex:outputPanel>"
+    ],
+    "description": "OutputPanel for reRendering sections",
+    "prefix": ["outputPanel", "vfPanel"],
+    "scope": "visualforce,html"
+  },
+  "VF Include Script": {
+    "body": [
+      "<apex:includeScript value=\"{!$Resource.${1:staticResourceName}}\"/>"
+    ],
+    "description": "Include JavaScript from static resource",
+    "prefix": ["includeScript", "vfScript"],
+    "scope": "visualforce,html"
+  },
+  "VF Include Stylesheet": {
+    "body": [
+      "<apex:stylesheet value=\"{!$Resource.${1:staticResourceName}}\"/>"
+    ],
+    "description": "Include CSS from static resource",
+    "prefix": ["includeStylesheet", "vfStylesheet"],
+    "scope": "visualforce,html"
+  },
+  "VF RemoteAction Call": {
+    "body": [
+      "<script>",
+      "\tfunction ${1:functionName}() {",
+      "\t\tvar param1 = '${2:value}';",
+      "\t\t",
+      "\t\t${3:ControllerName}.${4:remoteMethodName}(",
+      "\t\t\tparam1,",
+      "\t\t\tfunction(result, event) {",
+      "\t\t\t\tif (event.status) {",
+      "\t\t\t\t\t$0",
+      "\t\t\t\t} else {",
+      "\t\t\t\t\tconsole.error(event.message);",
+      "\t\t\t\t}",
+      "\t\t\t},",
+      "\t\t\t{ escape: true }",
+      "\t\t);",
+      "\t}",
+      "</script>"
+    ],
+    "description": "JavaScript RemoteAction call pattern",
+    "prefix": ["remoteAction", "vfRemote"],
+    "scope": "visualforce,html"
+  },
+  "VF Detail": {
+    "body": [
+      "<apex:detail subject=\"{!${1:recordId}}\" relatedList=\"${2|true,false|}\" inlineEdit=\"${3|true,false|}\"/>"
+    ],
+    "description": "apex:detail for standard record detail page",
+    "prefix": ["vfDetail", "apexDetail"],
+    "scope": "visualforce,html"
+  },
+  "VF RelatedList": {
+    "body": [
+      "<apex:relatedList list=\"${1:RelationshipName}\" subject=\"{!${2:recordId}}\"/>"
+    ],
+    "description": "apex:relatedList component",
+    "prefix": ["relatedList", "vfRelatedList"],
+    "scope": "visualforce,html"
+  }
+}

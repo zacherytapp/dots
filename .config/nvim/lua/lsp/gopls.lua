@@ -8,6 +8,20 @@ return {
 			templateExtensions = { "tpl", "yaml", "tmpl", "tmpl.html" },
 			gofumpt = true,
 			usePlaceholders = true,
+			completeUnimported = true,
+			completeFunctionCalls = true,
+			semanticTokens = true,
+			vulncheck = "Imports",
+			codelenses = {
+				generate = true,
+				gc_details = false,
+				regenerate_cgo = true,
+				run_govulncheck = true,
+				test = true,
+				tidy = true,
+				upgrade_dependency = true,
+				vendor = true,
+			},
 			analyses = {
 				nilness = true,
 				unusedresult = true,
@@ -15,6 +29,8 @@ return {
 				unusedwrite = true,
 				useany = true,
 				unreachable = true,
+				shadow = true,
+				composites = true,
 			},
 			hints = {
 				assignVariableTypes = true,
@@ -26,6 +42,7 @@ return {
 				rangeVariableTypes = true,
 			},
 			staticcheck = true,
+			directoryFilters = { "-.git", "-.vscode", "-node_modules" },
 		},
 	},
 }

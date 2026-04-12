@@ -14,9 +14,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-vim.g.python3_host_prog = "/home/zakk/.pyenv/versions/neovim/bin/python"
+local python_host = "/home/zakk/.pyenv/versions/neovim/bin/python"
+if vim.fn.filereadable(python_host) == 1 then
+	vim.g.python3_host_prog = python_host
+end
 vim.opt.termguicolors = true
 vim.g.mapleader = " "
+vim.g.have_nerd_font = true
 
 require("assets")
 require("lazy").setup({
@@ -24,10 +28,9 @@ require("lazy").setup({
 	{ import = "plugins" },
 }, {})
 
-require("keymaps")
 require("options")
+require("config.autocmds")
+require("keymaps")
 require("filetypes")
 require("colors")
-vim.cmd.colorscheme("gruvbox")
-
-vim.lsp.enable({ "lua_ls", "apex_ls", "ctags_lsp", "gopls", "jsonls", "yamlls", "html" })
+vim.cmd.colorscheme("kanagawa")

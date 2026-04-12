@@ -8,14 +8,7 @@ return {
 			bigfile = { enabled = true },
 			dashboard = { enabled = true },
 			input = { enabled = true },
-			notifier = {
-				enabled = true,
-				timeout = 1500,
-				filter = function(notif)
-					-- Filter out the "Fetching latest versions" notification
-					return not (notif.msg:match("Fetching latest versions"))
-				end,
-			},
+			notifier = { enabled = false },
 			quickfile = { enabled = true },
 			scroll = { enabled = false },
 			statuscolumn = {
@@ -53,13 +46,6 @@ return {
 					Snacks.scratch.select()
 				end,
 				desc = "Select Scratch Buffer",
-			},
-			{
-				"<leader>n",
-				function()
-					Snacks.notifier.show_history()
-				end,
-				desc = "Notification History",
 			},
 			{
 				"<leader>bd",
@@ -103,13 +89,6 @@ return {
 					Snacks.lazygit.log()
 				end,
 				desc = "Lazygit Log (cwd)",
-			},
-			{
-				"<leader>un",
-				function()
-					Snacks.notifier.hide()
-				end,
-				desc = "Dismiss All Notifications",
 			},
 			{
 				"<c-/>",

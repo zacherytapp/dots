@@ -1,199 +1,37 @@
 return {
-	"tpope/vim-unimpaired",
-	"tpope/vim-ragtag",
-	"tpope/vim-abolish",
-	"tpope/vim-repeat",
-	"tpope/vim-sleuth",
-	"mbbill/undotree",
-	"RRethy/vim-illuminate",
-	"editorconfig/editorconfig-vim",
 	{
-		"stevearc/overseer.nvim",
-		opts = {},
-	},
-	{
-		"nvim-pack/nvim-spectre",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-		},
-		cond = not vim.g.vscode,
-		config = true,
-		commander = {
-			{
-				keys = { "n", "<leader>sr" },
-				cmd = "<cmd>lua require('spectre').open()<cr>",
-				desc = "Open spectre",
-			},
-			{
-				keys = { "v", "<leader>sw" },
-				cmd = "<cmd>lua require('spectre').open_visual({select_word=true})<cr>",
-				desc = "Open spectre",
-			},
-			{
-				keys = { "n", "<leader>sp" },
-				cmd = "<cmd>lua require('spectre').open_file_search()<cr>",
-				desc = "Open spectre",
-			},
-			{
-				keys = { "n", "<leader>ss" },
-				cmd = "<cmd>lua require('spectre').open()<cr>",
-				desc = "Open spectre",
-			},
-		},
-	},
-	{
-		"nat-418/boole.nvim",
-		opts = {
-			mappings = {
-				increment = "<C-a>",
-				decrement = "<C-x>",
-			},
-			-- User defined loops
-			additions = {
-				-- { "Foo", "Bar" },
-				-- { "tic", "tac", "toe" },
-			},
-			allow_caps_additions = {
-				{ "enable", "disable" },
-			},
-		},
-	},
-	{
-		"folke/which-key.nvim",
-		event = "VeryLazy",
-		cond = not vim.g.vscode,
-		init = function()
-			vim.o.timeout = true
-			vim.o.timeoutlen = 300
-		end,
-		opts = {
-			-- your configuration comes here
-			-- or leave it empty to use the default settings
-			-- refer to the configuration section below
-		},
-	},
-	{
-		"Bekaboo/dropbar.nvim",
-		-- optional, but required for fuzzy finder support
-		cond = not vim.g.vscode,
-		dependencies = {
-			"nvim-telescope/telescope-fzf-native.nvim",
-		},
-	},
-	-- file drawer plugin
-	-- Floating statuslines. This is used to show buffer names in splits
-	{
-		"b0o/incline.nvim",
-		cond = not vim.g.vscode,
-		event = "BufReadPre",
-		opts = {
-			highlight = {
-				groups = {
-					InclineNormal = { default = true, group = "lualine_a_normal" },
-					InclineNormalNC = { default = true, group = "lualine_a_normal" },
-				},
-			},
-			window = { margin = { vertical = 0, horizontal = 1 } },
-			render = function(props)
-				local filename = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(props.buf), ":t")
-				local icon, color = require("nvim-web-devicons").get_icon_color(filename)
-				return { { icon, guifg = color }, { icon and " " or "" }, { filename } }
-			end,
-			hide = {
-				cursorline = false,
-				focused_win = false,
-				only_win = true,
-			},
-		},
-	},
-	{ "alvarosevilla95/luatab.nvim", config = true },
-	-- improve the default neovim interfaces, such as refactoring
-	{ "stevearc/dressing.nvim", event = "VeryLazy" },
-	{ "MunifTanjim/nui.nvim", lazy = true },
-	{
-		"folke/noice.nvim",
-		event = "VeryLazy",
-		opts = {
-			-- add any options here
-			lsp = {
-				-- override markdown rendering so that **cmp** and other plugins use **Treesitter**
-				override = {
-					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
-					["vim.lsp.util.stylize_markdown"] = true,
-					["cmp.entry.get_documentation"] = true,
-				},
-			},
-			-- you can enable a preset for easier configuration
-			presets = {
-				bottom_search = false, -- use a classic bottom cmdline for search
-				command_palette = true, -- position the cmdline and popupmenu together
-				long_message_to_split = true, -- long messages will be sent to a split
-				inc_rename = false, -- enables an input dialog for inc-rename.nvim
-				lsp_doc_border = false, -- add a border to hover docs and signature help
-			},
-			routes = {
-				{
-					filter = { find = "No information available" },
-					opts = { stop = true },
-				},
-			},
-		},
-		dependencies = {
-			-- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
-			"MunifTanjim/nui.nvim",
-			-- OPTIONAL:
-			--   `nvim-notify` is only needed, if you want to use the notification view.
-			--   If not available, we use `mini` as the fallback
-			"rcarriga/nvim-notify",
-		},
+		"mbbill/undotree",
 	},
 	{
 		"folke/todo-comments.nvim",
 		cmd = "TodoFzfLua",
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = {},
-		commander = {
+		keys = {
 			{
-				keys = { "n", "]t" },
-				cmd = function()
+				"]t",
+				function()
 					require("todo-comments").jump_next()
 				end,
 				desc = "Next Todo Comment",
 			},
 			{
-				keys = { "n", "[t" },
-				cmd = function()
+				"[t",
+				function()
 					require("todo-comments").jump_prev()
 				end,
 				desc = "Previous Todo Comment",
 			},
 		},
 	},
-	{
-		"allaman/emoji.nvim",
-		ft = "markdown",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-			"hrsh7th/nvim-cmp",
-		},
-		opts = {
-			enable_cmp_integration = true,
-		},
-	},
 	-- fast colorizer for showing hex colors
 	{
 		"norcalli/nvim-colorizer.lua",
 		config = function()
-			require("colorizer").setup()
+			require("colorizer").setup({
+				"css",
+			})
 		end,
-	},
-	{
-		"stevearc/dressing.nvim",
-		opts = {},
-	},
-	{
-		"nvim-mini/mini.surround",
-		version = false,
 	},
 	{
 		"windwp/nvim-autopairs",
@@ -210,15 +48,6 @@ return {
 					yaml = { "string" },
 				},
 			})
-		end,
-	},
-	{
-		"numToStr/Comment.nvim",
-		config = function()
-			require("Comment").setup()
-			local ft = require("Comment.ft")
-			ft.apex = { "//%s", "/**%s*/" }
-			ft({ "tmpl" }, ft.get("html"))
 		end,
 	},
 	{
@@ -242,13 +71,13 @@ return {
 			-- create the highlight groups in the highlight setup hook, so they are reset
 			-- every time the colorscheme changes
 			hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
-				vim.api.nvim_set_hl(0, "RainbowRed", { fg = "#E06C75" })
-				vim.api.nvim_set_hl(0, "RainbowYellow", { fg = "#E5C07B" })
-				vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#61AFEF" })
-				vim.api.nvim_set_hl(0, "RainbowOrange", { fg = "#D19A66" })
-				vim.api.nvim_set_hl(0, "RainbowGreen", { fg = "#98C379" })
-				vim.api.nvim_set_hl(0, "RainbowViolet", { fg = "#C678DD" })
-				vim.api.nvim_set_hl(0, "RainbowCyan", { fg = "#56B6C2" })
+				vim.api.nvim_set_hl(0, "RainbowRed", { fg = "#E46876" })
+				vim.api.nvim_set_hl(0, "RainbowYellow", { fg = "#E6C384" })
+				vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#8ba4b0" })
+				vim.api.nvim_set_hl(0, "RainbowOrange", { fg = "#b6927b" })
+				vim.api.nvim_set_hl(0, "RainbowGreen", { fg = "#87a987" })
+				vim.api.nvim_set_hl(0, "RainbowViolet", { fg = "#8992a7" })
+				vim.api.nvim_set_hl(0, "RainbowCyan", { fg = "#8ea4a2" })
 			end)
 
 			require("ibl").setup({ indent = { highlight = highlight } })
@@ -258,14 +87,13 @@ return {
 		"hedyhli/outline.nvim",
 		lazy = true,
 		cmd = { "Outline", "OutlineOpen" },
-		commander = {
-			{
-				keys = { "n", "<leader>o" },
-				cmd = "Outline",
-				desc = "Toggle outline",
-			},
+		keys = {
+			{ "<leader>lo", "<cmd>Outline<CR>", desc = "Toggle outline" },
 		},
 		opts = {
+			providers = {
+				priority = { "lsp", "treesitter", "markdown", "norg", "man" },
+			},
 			symbol_folding = {
 				autofold_depth = false,
 			},
@@ -297,32 +125,5 @@ return {
 				},
 			},
 		},
-	},
-
-	{
-		"akinsho/toggleterm.nvim",
-		version = "*",
-		opts = {},
-	},
-	{
-		"andymass/vim-matchup",
-		cond = not vim.g.vscode,
-		config = function()
-			vim.g.matchup_matchparen_offscreen = { method = "popup" }
-		end,
-	},
-	{
-		"liuchengxu/vista.vim",
-		lazy = true,
-		cmd = "Vista",
-		cond = not vim.g.vscode,
-		config = function()
-			vim.g.vista_default_executive = "nvim_lsp"
-		end,
-	},
-	{
-		"itchyny/vim-qfedit",
-		cond = not vim.g.vscode,
-		event = "VeryLazy",
 	},
 }

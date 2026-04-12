@@ -1,123 +1,146 @@
 return {
+	"tpope/vim-unimpaired",
+	"tpope/vim-abolish",
+	"tpope/vim-repeat",
+	"tpope/vim-sleuth",
 	{
-		"mbbill/undotree",
-		"RRethy/vim-illuminate",
+		"stevearc/overseer.nvim",
+		opts = {},
 	},
 	{
-		"folke/todo-comments.nvim",
-		cmd = "TodoFzfLua",
-		dependencies = { "nvim-lua/plenary.nvim" },
+		"MagicDuck/grug-far.nvim",
+		cond = not vim.g.vscode,
 		opts = {},
-		keys = {
+		commander = {
 			{
-				"]t",
-				function()
-					require("todo-comments").jump_next()
-				end,
-				desc = "Next Todo Comment",
+				keys = { "n", "<leader>sr" },
+				cmd = "<cmd>GrugFar<cr>",
+				desc = "Search and replace (grug-far)",
 			},
 			{
-				"[t",
-				function()
-					require("todo-comments").jump_prev()
+				keys = { "v", "<leader>sw" },
+				cmd = function()
+					require("grug-far").with_visual_selection()
 				end,
-				desc = "Previous Todo Comment",
+				desc = "Search and replace current selection",
+			},
+			{
+				keys = { "n", "<leader>sp" },
+				cmd = function()
+					require("grug-far").open({ prefills = { paths = vim.fn.expand("%") } })
+				end,
+				desc = "Search and replace in current file",
 			},
 		},
 	},
 	{
-		"allaman/emoji.nvim",
-		ft = "markdown",
+		"nat-418/boole.nvim",
+		opts = {
+			mappings = {
+				increment = "<C-a>",
+				decrement = "<C-x>",
+			},
+			-- User defined loops
+			additions = {
+				-- { "Foo", "Bar" },
+				-- { "tic", "tac", "toe" },
+			},
+			allow_caps_additions = {
+				{ "enable", "disable" },
+			},
+		},
+	},
+	{
+		"folke/which-key.nvim",
+		event = "VeryLazy",
+		cond = not vim.g.vscode,
+		opts = {},
+	},
+	{
+		"Bekaboo/dropbar.nvim",
+		-- optional, but required for fuzzy finder support
+		cond = not vim.g.vscode,
 		dependencies = {
-			"nvim-lua/plenary.nvim",
-			"hrsh7th/nvim-cmp",
+			"nvim-telescope/telescope-fzf-native.nvim",
 		},
+	},
+	-- Floating statuslines. This is used to show buffer names in splits
+	{
+		"b0o/incline.nvim",
+		cond = not vim.g.vscode,
+		event = "BufReadPre",
 		opts = {
-			enable_cmp_integration = true,
-		},
-	},
-	{
-		"norcalli/nvim-colorizer.lua",
-		config = function()
-			require("colorizer").setup({
-				"css",
-			})
-		end,
-	},
-	{
-		"stevearc/dressing.nvim",
-		opts = {},
-	},
-	{ "nvim-mini/mini.surround", version = false },
-
-	{
-		"windwp/nvim-autopairs",
-		event = "InsertEnter",
-		config = function()
-			local npairs = require("nvim-autopairs")
-			npairs.setup({
-				disable_in_macro = true,
-				check_ts = true,
-				ts_config = {
-					lua = { "string" },
-					javascript = { "template_string" },
-					java = true,
-					yaml = { "string" },
+			highlight = {
+				groups = {
+					InclineNormal = { default = true, group = "lualine_a_normal" },
+					InclineNormalNC = { default = true, group = "lualine_a_normal" },
 				},
-			})
-		end,
-	},
-	{
-		"numToStr/Comment.nvim",
-		config = function()
-			require("Comment").setup()
-			local ft = require("Comment.ft")
-			ft.apex = { "//%s", "/**%s*/" }
-			ft({ "tmpl" }, ft.get("html"))
-		end,
-	},
-	{
-		"lukas-reineke/indent-blankline.nvim",
-		main = "ibl",
-	},
-	{
-		"hedyhli/outline.nvim",
-		lazy = true,
-		cmd = { "Outline", "OutlineOpen" },
-		keys = {
-			{ "<leader>o", "<cmd>Outline<CR>", desc = "Toggle outline" },
-		},
-		opts = {
-			symbol_folding = {
-				autofold_depth = false,
+			},
+			window = { margin = { vertical = 0, horizontal = 1 } },
+			render = function(props)
+				local filename = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(props.buf), ":t")
+				local icon, color = require("nvim-web-devicons").get_icon_color(filename)
+				return { { icon, guifg = color }, { icon and " " or "" }, { filename } }
+			end,
+			hide = {
+				cursorline = false,
+				focused_win = false,
+				only_win = true,
 			},
 		},
 	},
+	{ "alvarosevilla95/luatab.nvim", config = true },
 	{
-		"FeiyouG/commander.nvim",
-		lazy = true,
-		dependencies = { "nvim-telescope/telescope.nvim" },
+		"folke/noice.nvim",
+		event = "VeryLazy",
 		opts = {
-			components = {
-				"DESC",
-				"KEYS",
-				"CAT",
-			},
-			sort_by = {
-				"DESC",
-				"KEYS",
-				"CAT",
-				"CMD",
-			},
-			integration = {
-				lazy = {
-					enable = true,
-					set_plugin_name_as_cat = true,
+			-- add any options here
+			lsp = {
+				-- override markdown rendering so that **cmp** and other plugins use **Treesitter**
+				override = {
+					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+					["vim.lsp.util.stylize_markdown"] = true,
 				},
-				telescope = {
-					enable = true,
+			},
+			-- you can enable a preset for easier configuration
+			presets = {
+				bottom_search = false, -- use a classic bottom cmdline for search
+				command_palette = true, -- position the cmdline and popupmenu together
+				long_message_to_split = true, -- long messages will be sent to a split
+				inc_rename = false, -- enables an input dialog for inc-rename.nvim
+				lsp_doc_border = false, -- add a border to hover docs and signature help
+			},
+			routes = {
+				{
+					filter = { find = "No information available" },
+					opts = { stop = true },
 				},
 			},
 		},
+		dependencies = {
+			-- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+			"MunifTanjim/nui.nvim",
+			-- OPTIONAL:
+			--   `nvim-notify` is only needed, if you want to use the notification view.
+			--   If not available, we use `mini` as the fallback
+				{
+				"rcarriga/nvim-notify",
+				opts = {
+					background_colour = "#000000",
+				},
+			},
+		},
+	},
+	{
+		"andymass/vim-matchup",
+		cond = not vim.g.vscode,
+		config = function()
+			vim.g.matchup_matchparen_offscreen = { method = "popup" }
+		end,
+	},
+	{
+		"itchyny/vim-qfedit",
+		cond = not vim.g.vscode,
+		event = "VeryLazy",
 	},
 }
