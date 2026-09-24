@@ -1,0 +1,16 @@
+# Official Sources
+
+Use current official documentation when a platform claim affects a finding. These sources established the checklist; follow their current child/reference pages when APIs evolve.
+
+1. [Salesforce Well-Architected overview](https://architect.salesforce.com/docs/architect/well-architected/guide/overview.html): evaluates healthy solutions as **Trusted** (secure, compliant, reliable), **Easy** (intentional, automated, engaging), and **Adaptable** (resilient, composable). Relevant topics include performance, scalability, maintainability, readability, data integrity, separation of concerns, interoperability, and packageability.
+2. [Reliable, Well-Architected](https://architect.salesforce.com/docs/architect/well-architected/guide/reliable.html): reliability includes availability, performance, and scalability; its guidance calls out data-access anti-patterns such as non-selective SOQL and unused fields.
+3. [Trigger and Bulk Request Best Practices](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_triggers_bestpract.htm): trigger code must handle collections and use consolidated queries rather than per-record queries.
+4. [Execution Governors and Limits](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_gov_limits.htm): Apex resources are governed per transaction; review cumulative behavior rather than each class in isolation.
+5. [Apex DML Operations](https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_dml_section.htm): DML supports collection operations; `Database` methods support partial success and expose per-record results.
+6. [Assert Class](https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_class_System_Assert.htm): purpose-specific assertion methods cover equality, truth, nullness, instance type, and explicit failure. This skill requires it instead of legacy `System.assert*` methods.
+7. [Enforce User Mode for Database Operations](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_classes_enforce_usermode.htm): user mode enforces sharing, CRUD, and FLS for supported queries and data operations.
+8. [Enforce Security with `stripInaccessible`](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_classes_with_security_stripInaccessible.htm): strips fields the current user cannot access and supports sanitizing records before DML.
+9. [Testing Best Practices](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_testing_best_practices.htm): tests should be isolated, self-contained, cover positive and negative behavior, and include bulk trigger testing.
+10. [Queueable Apex](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_queueing_jobs.htm) and [Batch Apex](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_batch.htm): select an asynchronous primitive according to workload, transaction boundaries, chaining, and volume instead of inventing a scheduler or assuming async removes limits.
+
+If an official page cannot be extracted because Salesforce serves a shell or blocks retrieval, use the exact official URL, state that evidence is partial, and do not substitute a blog as authority.

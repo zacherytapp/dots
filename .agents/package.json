@@ -1,0 +1,23 @@
+{
+  "name": "agents-markdown-tools",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Markdown linting and formatting tools for agent and skill documentation.",
+  "scripts": {
+    "check": "npm run lint && npm run check:hooks && npm run check:json && npm run check:skills",
+    "lint": "npm run check:md",
+    "format": "npm run format:md",
+    "check:md": "prettier --check --ignore-unknown \"**/*.md\" && npm run lint:md",
+    "format:md": "prettier --write --ignore-unknown \"**/*.md\"",
+    "lint:md": "markdownlint \"**/*.md\" --ignore node_modules --ignore .git --ignore .worktree --ignore .worktrees",
+    "check:hooks": "bash -n hooks/*.sh && find skills -type f -name '*.sh' -print0 | xargs -0 -r bash -n && shellcheck hooks/*.sh && find skills -type f -name '*.sh' -print0 | xargs -0 -r shellcheck && hooks/test-safety-hook.sh",
+    "check:json": "jq empty hooks/hooks.json .skill-lock.json package.json package-lock.json",
+    "check:skills": "node scripts/validate-skills.mjs"
+  },
+  "devDependencies": {
+    "markdownlint-cli": "^0.49.1",
+    "prettier": "^3.9.6"
+  }
+}

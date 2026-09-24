@@ -1,0 +1,7 @@
+node_modules/
+.git/
+.worktree/
+.worktrees/
+skills/plannotator-compound/
+skills/plannotator-setup-goal/
+skills/plannotator-visual-explainer/
