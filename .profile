@@ -1,8 +1,7 @@
-#
-# ~/.bash_profile
-#
+. "$HOME/.cargo/env"
 
-[[ -f ~/.bashrc ]] && . ~/.bashrc
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # >>> juliaup initialize >>>
 
@@ -16,7 +15,5 @@ case ":$PATH:" in
         export PATH=/home/zakk/.juliaup/bin${PATH:+:${PATH}}
         ;;
 esac
-# Tab completion for juliaup and julia channel selection
-[ -f "/home/zakk/.julia/juliaup/completions/bash.sh" ] && source "/home/zakk/.julia/juliaup/completions/bash.sh"
 
 # <<< juliaup initialize <<<

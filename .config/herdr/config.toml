@@ -1,0 +1,183 @@
+onboarding = false
+# Herdr configuration — mirrors ~/.config/tmux/tmux.conf
+# Docs: https://herdr.dev/docs/configuration/
+# Reload in a running session with prefix+r (herdr server reload-config).
+
+# ---------------------------------------------------------------------------
+# Theme — Gruvbox Material, the palette nvim, tmux, hyprland and noctalia use
+# ---------------------------------------------------------------------------
+[theme]
+name = "gruvbox"
+auto_switch = false
+
+# herdr's built-in gruvbox is the original palette. [theme.custom] is always
+# layered on top of it ([theme.custom.dark] only applies with auto_switch), so
+# the Material colors live here.
+[theme.custom]
+panel_bg = "#282828"        # bg0
+sidebar_bg = "#282828"
+active_row_bg = "#32302f"   # bg1 — ukiyo bg-bar
+selection_bg = "#45403d"    # bg3
+surface0 = "#32302f"
+surface1 = "#45403d"
+surface_dim = "#1b1b1b"     # bg_dim
+overlay0 = "#7c6f64"        # grey0
+overlay1 = "#928374"        # grey1
+text = "#d4be98"            # fg0
+subtext0 = "#a89984"        # grey2
+red = "#ea6962"
+green = "#a9b665"
+yellow = "#d8a657"
+blue = "#7daea3"
+teal = "#89b482"
+peach = "#e78a4e"
+mauve = "#d3869b"
+accent = "#a9b665"          # tmux: pane-active-border-style
+
+# ---------------------------------------------------------------------------
+# Keys — tmux keybindings, one for one where herdr has an equivalent
+# ---------------------------------------------------------------------------
+[keys]
+# tmux: unbind C-b; set -g prefix C-Space
+prefix = "ctrl+space"
+
+# tmux: bind r source-file ~/.config/tmux/tmux.conf
+reload_config = "prefix+r"
+resize_mode = "prefix+shift+r"      # moved off prefix+r to free it for reload
+
+# tmux: bind d detach (default) — herdr also keeps prefix+q
+detach = ["prefix+q", "prefix+d"]
+
+# vim-like pane switching — tmux: bind -r h/j/k/l select-pane
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+# tmux: bind -r H/J/K/L resize-pane (direct, no resize mode)
+resize_pane_left = "prefix+shift+h"
+resize_pane_down = "prefix+shift+j"
+resize_pane_up = "prefix+shift+k"
+resize_pane_right = "prefix+shift+l"
+
+# herdr's swap-pane bindings, moved off shift+hjkl
+swap_pane_left = "prefix+ctrl+h"
+swap_pane_down = "prefix+ctrl+j"
+swap_pane_up = "prefix+ctrl+k"
+swap_pane_right = "prefix+ctrl+l"
+
+# tmux: bind v split-window -h (side by side), bind n split-window -v (stacked)
+split_vertical = "prefix+v"
+split_horizontal = ["prefix+n", "prefix+minus"]
+
+# Tabs == tmux windows. base-index 1 is herdr's default.
+new_tab = "prefix+c"
+previous_tab = "prefix+p"
+next_tab = "prefix+ctrl+n"          # prefix+n is the stacked split, as in tmux
+switch_tab = "prefix+1..9"
+# Workspaces on the shifted digit row. prefix+s then 1-9 also works: it opens
+# navigate mode (workspace_picker), where a digit jumps straight to that workspace.
+switch_workspace = "prefix+shift+1..9"
+rename_tab = "prefix+shift+t"
+close_tab = "prefix+shift+x"
+# tmux: bind ^ last-window — herdr's nearest action is last focused pane
+last_pane = "prefix+^"
+
+close_pane = "prefix+x"
+rename_pane = "prefix+shift+p"
+zoom = "prefix+z"
+copy_mode = "prefix+["               # vi motions, v to select, y to copy
+edit_scrollback = "prefix+e"
+
+# Workspaces (herdr's sessions)
+workspace_picker = ["prefix+w", "prefix+s"]
+goto = "prefix+g"
+new_workspace = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+ctrl+x"    # freed prefix+shift+d for the deploy tab
+toggle_sidebar = "prefix+b"
+
+# tmux: bind f run-shell "tmux neww ~/.local/bin/tmux-sessionizer"
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "~/.config/herdr/scripts/sessionizer.sh"
+description = "project sessionizer"
+width = "70%"
+height = "60%"
+
+# tmux: bind C run-shell "~/.local/bin/tmux-sessionizer ~/projects/bank/"
+[[keys.command]]
+key = "prefix+shift+c"
+type = "shell"
+command = "~/.config/herdr/scripts/sessionizer.sh ~/projects/bank"
+description = "open ~/projects/bank"
+
+# tmux: bind B run-shell "~/.local/bin/tmux-sessionizer ~/projects/ref"
+[[keys.command]]
+key = "prefix+shift+b"
+type = "shell"
+command = "~/.config/herdr/scripts/sessionizer.sh ~/projects/ref"
+description = "open ~/projects/ref"
+
+# tmux: bind i run-shell "tmux neww tmux-cht.sh"
+[[keys.command]]
+key = "prefix+i"
+type = "popup"
+command = "~/.config/herdr/scripts/cht.sh"
+description = "cheat sheets (cht.sh)"
+width = "80%"
+height = "80%"
+
+# tmux: bind O/D/E select-window -t :logs/:deploy/:editor
+[[keys.command]]
+key = "prefix+shift+o"
+type = "shell"
+command = "~/.config/herdr/scripts/goto-tab.sh logs"
+description = "go to logs tab"
+
+[[keys.command]]
+key = "prefix+shift+d"
+type = "shell"
+command = "~/.config/herdr/scripts/goto-tab.sh deploy"
+description = "go to deploy tab"
+
+[[keys.command]]
+key = "prefix+shift+e"
+type = "shell"
+command = "~/.config/herdr/scripts/goto-tab.sh editor"
+description = "go to editor tab"
+
+# ---------------------------------------------------------------------------
+# UI — tmux status bar, borders and mouse behavior
+# ---------------------------------------------------------------------------
+[ui]
+# tmux: set-option -g status-position top
+tab_bar_position = "top"
+
+# tmux-style internal splitters: no outer frame, shared dividers
+pane_borders = "auto"
+pane_outer_borders = false
+pane_gaps = false
+pane_scrollbars = false
+
+# tmux: set -g pane-border-status bottom / pane-border-format " [ ###P #T ] "
+show_agent_labels_on_pane_borders = true
+
+# tmux: setw -g mouse on (+ ghostty copy-on-select)
+mouse_capture = true
+copy_on_select = true
+
+# tmux: bind c creates a window immediately, no name prompt
+prompt_new_tab_name = false
+
+# tmux: pane-active-border-style fg=#a9b665
+accent = "#a9b665"
+
+# tmux status-right: ukiyo cpu / temperature (°F) / battery / clock
+tab_bar_right = [
+  { type = "zoom" },
+  { type = "command", command = "~/.config/herdr/scripts/status.sh", interval_seconds = 5, timeout_seconds = 3 },
+  { type = "datetime", format = "%a %b %d %H:%M" },
+]
+tab_bar_right_separator = "  "

@@ -1,0 +1,84 @@
+[filter "lfs"]
+clean = git-lfs clean -- %f
+smudge = git-lfs smudge -- %f
+process = git-lfs filter-process
+required = true
+
+[user]
+name = Zakk Tapp
+email = zacherytapp@gmail.com
+
+[color]
+ui = true
+
+[alias]
+st = status -sb
+co = checkout
+c = commit
+ci = commit
+p = push
+l = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --decorate --date=short --color
+sw = switch
+br = branch
+pf = push --force-with-lease
+amend = commit --amend --no-edit
+uncommit = reset --soft HEAD^
+unstage = reset HEAD --
+fixup = commit --fixup
+ll = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative --all
+
+[core]
+pager = delta
+editor = nvim
+
+[interactive]
+diffFilter = delta --color-only
+
+[delta]
+navigate = true
+light = false
+# bat's built-in gruvbox, to match the Gruvbox Material desktop
+syntax-theme = gruvbox-dark
+side-by-side = false
+line-numbers = true
+
+[merge]
+conflictstyle = zdiff3
+
+[diff]
+colorMoved = default
+algorithm = histogram
+
+[pull]
+rebase = true
+[push]
+default = upstream
+autoSetupRemote = true
+[fetch]
+prune = true
+pruneTags = true
+[github]
+user = zacherytapp
+[init]
+defaultBranch = main
+[commit]
+gpgsign = true
+verbose = true
+[tag]
+gpgsign = true
+[rerere]
+enabled = true
+[help]
+autocorrect = prompt
+[credential]
+helper = cache
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
