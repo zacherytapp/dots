@@ -49,12 +49,16 @@ install_multimedia() {
   install_packages "${MULTIMEDIA[@]}"
 }
 
+# only fill in what's missing so a stowed ~/.gitconfig is left alone
 configure_git() {
-  as_user git config --global init.defaultBranch main
+  as_user git config --global init.defaultBranch >/dev/null ||
+    as_user git config --global init.defaultBranch main
   if [ -n "${USER_EMAIL}" ]; then
-    as_user git config --global user.email "${USER_EMAIL}"
+    as_user git config --global user.email >/dev/null ||
+      as_user git config --global user.email "${USER_EMAIL}"
   fi
   if [ -n "${USER_NAME}" ]; then
-    as_user git config --global user.name "${USER_NAME}"
+    as_user git config --global user.name >/dev/null ||
+      as_user git config --global user.name "${USER_NAME}"
   fi
 }

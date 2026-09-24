@@ -12,8 +12,10 @@ install_flatpaks() {
     return 0
   fi
 
-  flatpak repair
-  flatpak update --noninteractive
+  # updating apps is part of upgrading, like the `upgrade` step
+  if [ -z "${SKIP_UPGRADE:-}" ]; then
+    flatpak update --noninteractive
+  fi
 
   for pak in "${FLATPAKS[@]}"; do
     if ! flatpak info "$pak" &>/dev/null; then

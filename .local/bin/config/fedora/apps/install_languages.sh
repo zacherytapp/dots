@@ -45,21 +45,46 @@ install_node() {
       curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${tag}/install.sh" | PROFILE=/dev/null bash || exit 1
       . "$NVM_DIR/nvm.sh"
     fi
-    nvm install --lts && nvm alias default "lts/*"
+    # only the first time: later runs would install each new lts and move default
+    [ "$(nvm version default)" != N/A ] || { nvm install --lts && nvm alias default "lts/*"; }
   '
 
-  # pnpm standalone; it adds PNPM_HOME to the login shell rc if missing
+  # pnpm standalone into $PNPM_HOME; the installer's `pnpm setup` edits the
+  # shell rc, so give it a throwaway HOME (.zshrc already sets PNPM_HOME)
   as_user_sh '
     if ! command -v pnpm >/dev/null; then
-      curl -fsSL https://get.pnpm.io/install.sh | env SHELL="$(command -v zsh || command -v bash)" sh -
+      tmp_home=$(mktemp -d)
+      trap "rm -rf \"$tmp_home\"" EXIT
+      curl -fsSL https://get.pnpm.io/install.sh | HOME="$tmp_home" SHELL=/bin/bash sh -
     fi
   '
-  as_user_sh "pnpm add -g ${PNPM_GLOBALS[*]}"
+  # only the missing globals, so a re-run doesn't upgrade or relink the rest
+  as_user_sh "pkgs='${PNPM_GLOBALS[*]}'"'
+    # pnpm 11+ keeps each global in its own dir, so ask pnpm rather than `pnpm root -g`
+    installed=$(pnpm ls -g --depth=0 --parseable)
+    missing=""
+    for pkg in $pkgs; do
+      printf "%s\n" "$installed" | grep -q "/node_modules/$pkg\$" || missing="$missing $pkg"
+    done
+    if [ -n "$missing" ]; then
+      pnpm add -g $missing
+    else
+      echo "pnpm globals already installed"
+    fi
+  '
 }
 
 install_go_tools() {
   install_packages golang
+  local tool bin
   for tool in "${GO_TOOLS[@]}"; do
+    # the binary is named after the last path element (none of these end in /vN)
+    bin="${tool%@*}"
+    bin="${bin##*/}"
+    if [ -x "${ACTUAL_HOME}/go/bin/${bin}" ]; then
+      echo "go tool already installed: ${bin}"
+      continue
+    fi
     as_user_sh "go install ${tool}"
   done
 }

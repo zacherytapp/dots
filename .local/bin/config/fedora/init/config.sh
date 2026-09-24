@@ -52,8 +52,14 @@ configure_system() {
     printf '[commands]\napply_updates = yes\n' >/etc/dnf/automatic.conf
   else
     sed -i 's/^apply_updates\s*=.*/apply_updates = yes/' /etc/dnf/automatic.conf
-    grep -q '^apply_updates' /etc/dnf/automatic.conf ||
-      printf '\n[commands]\napply_updates = yes\n' >>/etc/dnf/automatic.conf
+    # add the key under an existing [commands] rather than a second section
+    if ! grep -q '^apply_updates' /etc/dnf/automatic.conf; then
+      if grep -q '^\[commands\]' /etc/dnf/automatic.conf; then
+        sed -i '/^\[commands\]/a apply_updates = yes' /etc/dnf/automatic.conf
+      else
+        printf '\n[commands]\napply_updates = yes\n' >>/etc/dnf/automatic.conf
+      fi
+    fi
   fi
   enable_service dnf5-automatic.timer
 
@@ -62,12 +68,16 @@ configure_system() {
   enable_service sshd
 }
 
+# only fill in what's missing so a stowed ~/.gitconfig is left alone
 configure_git() {
-  as_user git config --global init.defaultBranch main
+  as_user git config --global init.defaultBranch >/dev/null ||
+    as_user git config --global init.defaultBranch main
   if [ -n "${USER_EMAIL}" ]; then
-    as_user git config --global user.email "${USER_EMAIL}"
+    as_user git config --global user.email >/dev/null ||
+      as_user git config --global user.email "${USER_EMAIL}"
   fi
   if [ -n "${USER_NAME}" ]; then
-    as_user git config --global user.name "${USER_NAME}"
+    as_user git config --global user.name >/dev/null ||
+      as_user git config --global user.name "${USER_NAME}"
   fi
 }

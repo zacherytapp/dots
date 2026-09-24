@@ -17,13 +17,13 @@ install_java() {
   install_packages "${JDK_PACKAGE}"
 }
 
+# re-runs only install what's missing; upgrading is left to the tools
+# themselves (rustup update, pnpm update -g, ...)
 install_rust() {
   if [ ! -x "${ACTUAL_HOME}/.cargo/bin/rustup" ]; then
     as_user bash -c 'curl --proto "=https" --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path'
-  else
-    as_user_sh 'rustup update stable'
   fi
-  as_user_sh 'cargo install --locked viu'
+  as_user_sh "cargo install --list | grep -q '^viu ' || cargo install --locked viu"
 }
 
 # nvm + node lts, then pnpm for global packages
@@ -33,23 +33,36 @@ install_node() {
     nvm_tag=$(latest_github_tag nvm-sh/nvm)
     as_user bash -c "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_tag}/install.sh | PROFILE=/dev/null bash"
   fi
-  as_user_sh 'nvm install --lts && nvm alias default "lts/*"'
+  # shellcheck disable=SC2016 # expanded by the user shell
+  as_user_sh '[ "$(nvm version default)" != N/A ] || { nvm install --lts && nvm alias default "lts/*"; }'
 
+  # the installer's `pnpm setup` edits the shell rc, so give it a throwaway
+  # HOME (the dotfiles already set PNPM_HOME)
   if ! as_user_sh 'command -v pnpm' &>/dev/null; then
     # shellcheck disable=SC2016 # expanded by the user shell
-    as_user bash -c 'curl -fsSL https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(command -v bash)" sh -'
+    as_user_sh 'tmp_home=$(mktemp -d); curl -fsSL https://get.pnpm.io/install.sh | HOME="$tmp_home" SHELL=/bin/bash sh -; rc=$?; rm -rf "$tmp_home"; exit $rc'
   fi
-  as_user_sh "pnpm add -g ${PNPM_GLOBALS[*]}"
+  # only the missing globals, so a re-run doesn't upgrade or relink the rest
+  # shellcheck disable=SC2016 # expanded by the user shell
+  as_user_sh "pkgs='${PNPM_GLOBALS[*]}'"'
+    # pnpm 11+ keeps each global in its own dir, so ask pnpm rather than `pnpm root -g`
+    installed=$(pnpm ls -g --depth=0 --parseable) || exit 1
+    missing=""
+    for pkg in $pkgs; do
+      printf "%s\n" "$installed" | grep -q "/node_modules/$pkg\$" || missing="$missing $pkg"
+    done
+    if [ -n "$missing" ]; then
+      pnpm add -g $missing
+    else
+      echo "pnpm globals already installed"
+    fi
+  '
 }
 
 install_go() {
-  local go_version current=""
-  go_version=$(curl -fsSL "https://go.dev/VERSION?m=text" | head -n 1)
-  if [ -x /usr/local/go/bin/go ]; then
-    current=$(/usr/local/go/bin/go env GOVERSION)
-  fi
-
-  if [ "$current" != "$go_version" ]; then
+  if [ ! -x /usr/local/go/bin/go ]; then
+    local go_version
+    go_version=$(curl -fsSL "https://go.dev/VERSION?m=text" | head -n 1)
     color_echo "yellow" "Installing ${go_version}..."
     curl -fsSL "https://go.dev/dl/${go_version}.linux-$(dpkg --print-architecture).tar.gz" -o "/tmp/${go_version}.tar.gz"
     rm -rf /usr/local/go
@@ -57,8 +70,15 @@ install_go() {
     rm -f "/tmp/${go_version}.tar.gz"
   fi
 
-  local tool
+  local tool bin
   for tool in "${GO_TOOLS[@]}"; do
+    # the binary is named after the last path element (none of these end in /vN)
+    bin="${tool%@*}"
+    bin="${bin##*/}"
+    if [ -x "${ACTUAL_HOME}/go/bin/${bin}" ]; then
+      echo "go tool already installed: ${bin}"
+      continue
+    fi
     as_user_sh "go install ${tool}"
   done
 }
@@ -66,10 +86,10 @@ install_go() {
 # latest luarocks built against lua 5.1 (the version neovim embeds)
 install_lua() {
   local tag version build_dir
-  tag=$(latest_github_tag luarocks/luarocks)
-  version="${tag#v}"
 
-  if ! command -v luarocks &>/dev/null || ! luarocks --version | grep -q "luarocks ${version}"; then
+  if ! command -v luarocks &>/dev/null; then
+    tag=$(latest_github_tag luarocks/luarocks)
+    version="${tag#v}"
     build_dir=$(mktemp -d)
     curl -fsSL "https://luarocks.org/releases/luarocks-${version}.tar.gz" | tar -xz -C "$build_dir"
     (
@@ -80,16 +100,17 @@ install_lua() {
     )
     rm -rf "$build_dir"
   fi
-  luarocks install luasocket
+  luarocks show luasocket &>/dev/null || luarocks install luasocket
 }
 
 install_ruby_tools() {
-  gem install neovim
+  gem list -i '^neovim$' >/dev/null || gem install neovim
 }
 
+# the dotfiles put ~/.juliaup/bin on PATH, so keep the installer out of the rc files
 install_julia() {
   if [ ! -x "${ACTUAL_HOME}/.juliaup/bin/juliaup" ]; then
-    as_user bash -c 'curl -fsSL https://install.julialang.org | sh -s -- --yes'
+    as_user bash -c 'curl -fsSL https://install.julialang.org | sh -s -- --yes --add-to-path=no'
   fi
 }
 

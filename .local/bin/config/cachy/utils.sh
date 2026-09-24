@@ -73,7 +73,7 @@ as_user() {
 as_user_sh() {
   sudo -u "$ACTUAL_USER" -H \
     NVM_DIR="$NVM_DIR" PNPM_HOME="$PNPM_HOME" \
-    PATH="$ACTUAL_HOME/.local/bin:$PNPM_HOME/bin:$ACTUAL_HOME/.cargo/bin:$ACTUAL_HOME/go/bin:/opt/pmd/bin:/usr/local/bin:/usr/bin:/bin" \
+    PATH="$ACTUAL_HOME/.local/bin:$PNPM_HOME/bin:$PNPM_HOME:$ACTUAL_HOME/.cargo/bin:$ACTUAL_HOME/go/bin:/opt/pmd/bin:/usr/local/bin:/usr/bin:/bin" \
     bash -c "$1"
 }
 
@@ -95,9 +95,18 @@ pacman_install() {
   pacman -S --needed --noconfirm "$@"
 }
 
-# paru refuses to run as root; it escalates with sudo itself
+# paru refuses to run as root; it escalates with sudo itself. only missing
+# packages: --needed still rebuilds an installed AUR package when upstream moves
 aur_install() {
-  as_user paru -S --needed --noconfirm --skipreview "$@"
+  local pkg missing=()
+  for pkg in "$@"; do
+    pacman -Qq "$pkg" &>/dev/null || missing+=("$pkg")
+  done
+  if [ ${#missing[@]} -eq 0 ]; then
+    echo "AUR packages already installed"
+    return 0
+  fi
+  as_user paru -S --needed --noconfirm --skipreview "${missing[@]}"
 }
 
 enable_service() {

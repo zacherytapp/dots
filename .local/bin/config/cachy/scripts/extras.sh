@@ -43,6 +43,8 @@ step_stow() {
     return 1
   fi
 
+  # so `run.sh stow` also works before the packages step
+  pacman_install stow
   if ! (cd "$repo_dir" && as_user stow -n .); then
     print_error "stow found conflicts; to replace existing files with the repo's versions:"
     print_error "  cd $repo_dir && stow --adopt . && git restore ."

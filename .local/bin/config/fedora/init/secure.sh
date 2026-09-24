@@ -31,8 +31,16 @@ multi on
 EOC
 
   # --- Enable fail2ban
-  install -m 644 "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local
+  # `enable --now` leaves a running fail2ban alone, so restart it when jail.local changes
+  local changed=0
+  if ! cmp -s "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local; then
+    install -m 644 "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local
+    changed=1
+  fi
   enable_service fail2ban
+  if [ "$changed" -eq 1 ] && ! is_container; then
+    systemctl restart fail2ban
+  fi
 
   echo "listening ports"
   ss -tunlp

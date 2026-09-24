@@ -18,8 +18,16 @@ step_firewall() {
 }
 
 step_fail2ban() {
-  install -Dm644 "$SCRIPT_DIR/config/jail.local" /etc/fail2ban/jail.local
+  # `enable --now` leaves a running fail2ban alone, so restart it when jail.local changes
+  local changed=0
+  if ! cmp -s "$SCRIPT_DIR/config/jail.local" /etc/fail2ban/jail.local; then
+    install -Dm644 "$SCRIPT_DIR/config/jail.local" /etc/fail2ban/jail.local
+    changed=1
+  fi
   enable_service fail2ban.service
+  if [ "$changed" -eq 1 ] && ! is_container; then
+    systemctl restart fail2ban.service
+  fi
 }
 
 step_network() {
@@ -32,10 +40,13 @@ ethernet.cloned-mac-address=random
 EOF
 
   # sshd_config includes sshd_config.d/*.conf ahead of its own settings
-  install -d /etc/ssh/sshd_config.d
-  cat >/etc/ssh/sshd_config.d/10-hardening.conf <<'EOF'
-PermitRootLogin no
-EOF
+  local sshd_conf=/etc/ssh/sshd_config.d/10-hardening.conf
+  if [ "$(cat "$sshd_conf" 2>/dev/null)" != "PermitRootLogin no" ]; then
+    install -d /etc/ssh/sshd_config.d
+    echo "PermitRootLogin no" >"$sshd_conf"
+    # try-: only reloads an sshd that is already running
+    skip_in_container "reload sshd" || systemctl try-reload-or-restart sshd.service
+  fi
 }
 
 step_discovery() {
@@ -54,11 +65,13 @@ step_discovery() {
 
 step_keys() {
   if [ -z "$USER_NAME" ] || [ -z "$USER_EMAIL" ]; then
-    print_error "USER_NAME and USER_EMAIL are needed to generate keys"
-    return 1
+    # skip like fedora/ubuntu, so an unattended run without them still passes
+    print_warning "skipped: USER_NAME/USER_EMAIL not set, not generating keys"
+    return 0
   fi
 
-  if ! as_user gpg --list-secret-keys "$USER_EMAIL" &>/dev/null; then
+  # <email> is an exact match, a bare email matches substrings
+  if ! as_user gpg --list-secret-keys "<$USER_EMAIL>" &>/dev/null; then
     as_user gpg --batch --full-generate-key <<EOF
 %no-protection
 Key-Type: rsa
@@ -74,7 +87,11 @@ EOF
 
   if [ ! -f "$ACTUAL_HOME/.password-store/.gpg-id" ]; then
     local gpg_key
-    gpg_key=$(as_user gpg --list-secret-keys --with-colons "$USER_EMAIL" | awk -F: '/^sec/ {print $5; exit}')
+    gpg_key=$(as_user gpg --list-secret-keys --with-colons "<$USER_EMAIL>" | awk -F: '/^sec/ {print $5; exit}')
+    if [ -z "$gpg_key" ]; then
+      print_error "no gpg secret key for $USER_EMAIL"
+      return 1
+    fi
     as_user pass init "$gpg_key"
   fi
 

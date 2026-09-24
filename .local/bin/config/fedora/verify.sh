@@ -62,7 +62,7 @@ check "git user.name" git config --global user.name
 check "git user.email" git config --global user.email
 check "git init.defaultBranch=main" bash -c '[ "$(git config --global init.defaultBranch)" = main ]'
 if [ -n "${USER_EMAIL:-}" ]; then
-  check "gpg key" gpg --list-secret-keys "$USER_EMAIL"
+  check "gpg key" gpg --list-secret-keys "<$USER_EMAIL>"
   check "pass store" test -f "$HOME/.password-store/.gpg-id"
   check "ssh key" test -f "$HOME/.ssh/id_ed25519"
 fi

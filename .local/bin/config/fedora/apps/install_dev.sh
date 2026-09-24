@@ -5,7 +5,7 @@
 install_nerd_fonts() {
   install_packages fontconfig curl tar xz
   local font_root="/usr/local/share/fonts/NerdFonts"
-  local tmp
+  local tmp added=0
 
   for font in "${NERD_FONTS[@]}"; do
     if [ -d "${font_root}/${font}" ]; then
@@ -14,12 +14,19 @@ install_nerd_fonts() {
     fi
     echo "Installing Nerd Font: ${font}"
     tmp=$(mktemp -d)
-    curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font}.tar.xz" | tar -xJ -C "$tmp"
+    # extract to a temp dir first so a failed download never leaves a partial font dir
+    if ! curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font}.tar.xz" | tar -xJ -C "$tmp"; then
+      rm -rf "$tmp"
+      return 1
+    fi
     mkdir -p "$font_root"
     mv "$tmp" "${font_root}/${font}"
     chmod -R a+rX "${font_root}/${font}"
+    added=1
   done
-  fc-cache -f
+  if [ "$added" -eq 1 ]; then
+    fc-cache -f
+  fi
 }
 
 # neovim from source; NVIM_REF picks the tag/branch, NVIM_REBUILD=1 forces a rebuild
@@ -45,7 +52,13 @@ install_neovim() {
   chown -R "${ACTUAL_USER}:" "${nvim_dir}"
 }
 
+# the 1password rpm rewrites 1password.repo on every install and upgrade, so
+# this repo file is only a bootstrap for the first install
 install_1password() {
+  if is_pkg_installed 1password; then
+    echo "1password already installed; its package manages 1password.repo"
+    return 0
+  fi
   rpm --import https://downloads.1password.com/linux/keys/1password.asc
   cat >/etc/yum.repos.d/1password.repo <<'EOF'
 [1password]
@@ -97,7 +110,9 @@ configure_shell() {
   if [ ! -d "${zsh_custom}/plugins/zsh-syntax-highlighting" ]; then
     as_user git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${zsh_custom}/plugins/zsh-syntax-highlighting"
   fi
-  echo "bindkey '^ ' autosuggest-accept" | as_user tee "${zsh_custom}/autosuggestion-settings.zsh" >/dev/null
+  if ! grep -qxF "bindkey '^ ' autosuggest-accept" "${zsh_custom}/autosuggestion-settings.zsh" 2>/dev/null; then
+    echo "bindkey '^ ' autosuggest-accept" | as_user tee "${zsh_custom}/autosuggestion-settings.zsh" >/dev/null
+  fi
 
   # usermod works without PAM, unlike chsh
   local zsh_path

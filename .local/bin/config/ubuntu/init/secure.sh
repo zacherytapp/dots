@@ -24,9 +24,17 @@ multi on
 CONF
 
   # --- Enable fail2ban
-  cp "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local
+  # `enable --now` leaves a running fail2ban alone, so restart it when jail.local changes
+  local changed=0
+  if ! cmp -s "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local; then
+    cp "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local
+    changed=1
+  fi
   if ! skip_in_container "systemctl enable fail2ban"; then
     systemctl enable --now fail2ban
+    if [ "$changed" -eq 1 ]; then
+      systemctl restart fail2ban
+    fi
     echo "listening ports"
     ss -tunlp
   fi

@@ -9,9 +9,18 @@ GNOME_EXTENSIONS=(
   "switcher@landau.fi"
 )
 
-# gsettings needs the user's session bus
+# gsettings, dconf and gext need the user's session bus
+user_bus() {
+  echo "/run/user/$(id -u "$ACTUAL_USER")/bus"
+}
+
 user_gsettings() {
-  as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" gsettings "$@"
+  as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=$(user_bus)" gsettings "$@"
+}
+
+# gext (pipx, ~/.local/bin) with the session bus
+user_gext() {
+  as_user_sh "export DBUS_SESSION_BUS_ADDRESS='unix:path=$(user_bus)' XDG_RUNTIME_DIR='$(dirname "$(user_bus)")'; gext $*"
 }
 
 configure_gnome() {
@@ -22,6 +31,10 @@ configure_gnome() {
   fi
 
   if skip_in_container "gsettings/gnome extensions need a gnome session"; then
+    return 0
+  fi
+  if [ ! -S "$(user_bus)" ]; then
+    color_echo "yellow" "skipped: no session bus for ${ACTUAL_USER} ($(user_bus)) - run from a logged-in desktop"
     return 0
   fi
 
@@ -53,23 +66,28 @@ configure_gnome() {
   user_gsettings set org.gtk.Settings.FileChooser sort-directories-first true
   user_gsettings set org.gnome.nautilus.list-view use-tree-view true
   # localsearch (formerly tracker) indexing
-  if user_gsettings list-schemas | grep -qx org.freedesktop.Tracker3.Miner.Files; then
+  # captured first: `grep -q` closing the pipe early would fail it under pipefail
+  local schemas
+  schemas=$(user_gsettings list-schemas)
+  if grep -qx org.freedesktop.Tracker3.Miner.Files <<<"$schemas"; then
     user_gsettings set org.freedesktop.Tracker3.Miner.Files index-on-battery false
     user_gsettings set org.freedesktop.Tracker3.Miner.Files index-on-battery-first-time false
     user_gsettings set org.freedesktop.Tracker3.Miner.Files throttle 15
   fi
 
-  local ext
+  local ext installed
+  # --all includes disabled ones, so a re-run doesn't re-enable what the user turned off
+  installed=$(user_gext list --all)
   for ext in "${GNOME_EXTENSIONS[@]}"; do
-    if ! as_user_sh "gext list" | grep -q "$ext"; then
+    if ! grep -qF "$ext" <<<"$installed"; then
       echo "Installing extension: $ext"
-      as_user_sh "gext install '$ext'"
+      user_gext install "'$ext'"
     else
       echo "Extension already installed: $ext"
     fi
   done
 
   # extension settings
-  as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
+  as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=$(user_bus)" \
     dconf load /org/gnome/shell/extensions/ <"${SCRIPT_DIR}/setup/gnome-settings.dconf"
 }

@@ -26,6 +26,10 @@ install_auto_cpufreq() {
   if skip_if_container "auto-cpufreq (systemd daemon)"; then
     return 0
   fi
+  if command -v auto-cpufreq &>/dev/null; then
+    echo "auto-cpufreq already installed"
+    return 0
+  fi
   if [ -n "${NONINTERACTIVE:-}" ]; then
     color_echo "yellow" "skipped: auto-cpufreq installer is interactive"
     return 0

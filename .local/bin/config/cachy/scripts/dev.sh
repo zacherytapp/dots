@@ -25,12 +25,12 @@ step_git() {
   fi
 }
 
+# re-runs only install what's missing; upgrading is left to the tools
+# themselves (rustup update, nvm install node, pnpm update -g, ...)
 step_rust() {
   # .zshrc sources ~/.cargo/env, which only the rustup.rs installer creates
   if [ ! -x "$ACTUAL_HOME/.cargo/bin/rustup" ]; then
     as_user_sh "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path"
-  else
-    as_user_sh "rustup update stable"
   fi
 }
 
@@ -44,11 +44,12 @@ step_node() {
     # PROFILE=/dev/null keeps the installer out of the (stowed) shell rc files
     as_user_sh "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/${tag}/install.sh | PROFILE=/dev/null bash"
   fi
-  if [ ! -e "$ACTUAL_HOME/.nvm" ]; then
+  # -L too: a dangling link would make `ln -s` fail
+  if [ ! -e "$ACTUAL_HOME/.nvm" ] && [ ! -L "$ACTUAL_HOME/.nvm" ]; then
     as_user ln -s "$NVM_DIR" "$ACTUAL_HOME/.nvm"
   fi
 
-  as_user_sh '. "$NVM_DIR/nvm.sh" && nvm install node && nvm alias default node'
+  as_user_sh '. "$NVM_DIR/nvm.sh" && { [ "$(nvm version default)" != N/A ] || { nvm install node && nvm alias default node; }; }'
 
   # standalone pnpm into $PNPM_HOME; the installer's `pnpm setup` edits the
   # shell rc, so give it a throwaway HOME (.zshrc already sets PNPM_HOME)
@@ -56,17 +57,34 @@ step_node() {
     as_user_sh 'tmp_home=$(mktemp -d) && curl -fsSL https://get.pnpm.io/install.sh | HOME="$tmp_home" SHELL=/bin/bash sh - ; rc=$?; rm -rf "$tmp_home"; exit $rc'
   fi
 
-  as_user_sh ". \"\$NVM_DIR/nvm.sh\" && pnpm add -g ${PNPM_GLOBALS[*]}"
+  # only the missing globals, so a re-run doesn't upgrade or relink the rest
+  as_user_sh ". \"\$NVM_DIR/nvm.sh\" && pkgs='${PNPM_GLOBALS[*]}'"'
+    # pnpm 11+ keeps each global in its own dir, so ask pnpm rather than `pnpm root -g`
+    installed=$(pnpm ls -g --depth=0 --parseable) || exit 1
+    missing=""
+    for pkg in $pkgs; do
+      printf "%s\n" "$installed" | grep -q "/node_modules/$pkg\$" || missing="$missing $pkg"
+    done
+    if [ -n "$missing" ]; then
+      pnpm add -g $missing
+    else
+      echo "pnpm globals already installed"
+    fi
+  '
 }
 
 step_pmd() {
+  if [ -x /opt/pmd/bin/pmd ]; then
+    echo "PMD already installed: $(readlink -f /opt/pmd)"
+    return 0
+  fi
+
   local tag version
   tag=$(latest_github_tag pmd/pmd)
   version="${tag#pmd_releases/}"
-
-  if [ -x "/opt/pmd-bin-${version}/bin/pmd" ] && [ "$(readlink -f /opt/pmd)" = "/opt/pmd-bin-${version}" ]; then
-    echo "PMD ${version} already installed"
-    return 0
+  if [ -z "$version" ]; then
+    print_error "could not resolve the latest PMD release"
+    return 1
   fi
 
   local tmp
@@ -80,8 +98,8 @@ step_pmd() {
 step_tmux() {
   # tmux.conf runs ~/.tmux/plugins/tpm/tpm; install plugins with prefix + I
   local tpm_dir="$ACTUAL_HOME/.tmux/plugins/tpm"
-  if [ -d "$tpm_dir/.git" ]; then
-    as_user git -C "$tpm_dir" pull --ff-only --quiet
+  if [ -d "$tpm_dir" ]; then
+    echo "tpm already installed in $tpm_dir"
   else
     as_user git clone --depth 1 https://github.com/tmux-plugins/tpm "$tpm_dir"
   fi

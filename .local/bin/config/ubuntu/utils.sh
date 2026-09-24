@@ -144,6 +144,26 @@ Signed-By: ${keyring}
 EOF
 }
 
+# vendor_apt_repo <package> <add_apt_repo args...>
+# chrome, brave and 1password rewrite their own sources.list.d/<name>.sources
+# (pointing at their own keyring) from postinst on every install and upgrade,
+# so ours is only a bootstrap: skip it once the package is installed, and drop
+# our keyring when the vendor's file has replaced ours
+vendor_apt_repo() {
+  local pkg="$1" name="$2"
+  shift
+  if is_pkg_installed "$pkg"; then
+    echo "$pkg already installed; its package manages ${name}.sources"
+    return 0
+  fi
+  add_apt_repo "$@"
+  apt_update
+  install_packages "$pkg"
+  if ! grep -qs "/etc/apt/keyrings/${name}.gpg" "/etc/apt/sources.list.d/${name}.sources"; then
+    rm -f "/etc/apt/keyrings/${name}.gpg"
+  fi
+}
+
 # latest_github_tag <owner/repo> -- follows the releases/latest redirect (no API rate limit)
 latest_github_tag() {
   curl -fsSI "https://github.com/$1/releases/latest" |

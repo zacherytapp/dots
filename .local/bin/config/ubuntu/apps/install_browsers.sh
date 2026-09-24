@@ -3,21 +3,14 @@
 
 install_chrome() {
   color_echo "yellow" "Installing Google Chrome..."
-  add_apt_repo google-chrome https://dl.google.com/linux/linux_signing_key.pub \
+  vendor_apt_repo google-chrome-stable google-chrome https://dl.google.com/linux/linux_signing_key.pub \
     https://dl.google.com/linux/chrome/deb/ stable main amd64
-  # chrome's postinst writes its own google-chrome.list; drop it so apt doesn't see the repo twice
-  rm -f /etc/apt/sources.list.d/google-chrome.list
-  apt_update
-  install_packages google-chrome-stable
-  rm -f /etc/apt/sources.list.d/google-chrome.list
 }
 
 install_brave() {
   color_echo "yellow" "Installing Brave..."
-  add_apt_repo brave-browser https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg \
+  vendor_apt_repo brave-browser brave-browser https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg \
     https://brave-browser-apt-release.s3.brave.com/ stable main
-  apt_update
-  install_packages brave-browser
 }
 
 install_firefox() {

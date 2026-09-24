@@ -9,8 +9,8 @@ configure_keys() {
     return 0
   fi
 
-  # generate gpg key
-  if ! as_user gpg --list-secret-keys "${USER_EMAIL}" &>/dev/null; then
+  # generate gpg key (<email> is an exact match, a bare email matches substrings)
+  if ! as_user gpg --list-secret-keys "<${USER_EMAIL}>" &>/dev/null; then
     as_user gpg --batch --full-generate-key <<EOK
 %no-protection
 Key-Type: rsa
@@ -26,7 +26,7 @@ EOK
 
   # initialise pass with the key
   local gpg_key
-  gpg_key=$(as_user gpg --list-secret-keys --with-colons "${USER_EMAIL}" | awk -F: '/^sec/ {print $5; exit}')
+  gpg_key=$(as_user gpg --list-secret-keys --with-colons "<${USER_EMAIL}>" | awk -F: '/^sec/ {print $5; exit}')
   if [ -z "$gpg_key" ]; then
     color_echo "red" "Error: Could not find the GPG key ID."
     return 1
