@@ -15,3 +15,7 @@
 
 # Private ssh hosts belong in ~/.ssh/config.d, never here
 .ssh/config.d/
+
+# Local-only agent instructions and planning docs
+/AGENTS.md
+/SPEC.md
