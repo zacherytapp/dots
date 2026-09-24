@@ -19,3 +19,5 @@
 # Local-only agent instructions and planning docs
 /AGENTS.md
 /SPEC.md
+/.agents/AGENTS.md
+/.agents/CLAUDE.md
