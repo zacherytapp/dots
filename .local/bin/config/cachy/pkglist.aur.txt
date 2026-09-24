@@ -1,0 +1,6 @@
+1password
+google-chrome
+slack-desktop
+spotify
+visual-studio-code-bin
+zoom
