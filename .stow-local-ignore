@@ -1,0 +1,16 @@
+# Repo-only files that must never be linked into $HOME.
+# This file replaces stow's built-in ignore list, so VCS files are listed too.
+\.git
+\.gitignore
+\.gitmodules
+\.stowrc
+\.stow-local-ignore
+^/README.*
+^/AGENTS\.md
+^/SPEC\.md
+^/\.github
+^/\.gitleaks\.toml
+^/LICENSE.*
+^/\.local/bin/config
+^/\.agents/node_modules
+^/\.claude/worktrees

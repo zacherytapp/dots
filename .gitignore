@@ -1,0 +1,17 @@
+# Editor/app backups that should never be committed
+*.bak
+*.orig
+*.pre-*
+*.prebnet
+
+# Runtime state some apps write next to their config
+.config/herdr/*.log
+.config/herdr/*.sock
+.config/herdr/session.json
+.config/herdr/.plugins.lock
+
+# Claude Code scratch worktrees
+.claude/worktrees/
+
+# Private ssh hosts belong in ~/.ssh/config.d, never here
+.ssh/config.d/
