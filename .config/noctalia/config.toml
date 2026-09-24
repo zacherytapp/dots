@@ -1,0 +1,227 @@
+# Noctalia v5 config.
+#
+# Noctalia merges every *.toml in this directory, then applies
+# ~/.local/state/noctalia/settings.toml on top. The settings window writes
+# there, not here, so changes made in the GUI never reach this repo on their
+# own: run `noctalia-sync` (in .local/bin) to fold them back into this file.
+#
+# Machine-specific entries are left out on purpose: the lockscreen widget
+# layout (keyed by output name) and the per-monitor / last-used wallpaper.
+
+[accessibility]
+ui_scale = 1.20
+
+[bar.default]
+capsule_group = []
+start = [ "launcher", "workspaces", "active_window", "spacer_1", "temp", "sysmon_2", "sysmon_3" ]
+center = [ "clock", "spacer_1", "audio_visualizer", "media", "weather" ]
+end = [
+    "status",
+    "pulse",
+    "pill",
+    "spacer_1",
+    "tray",
+    "notifications",
+    "network",
+    "volume",
+    "clipboard",
+    "caffeine",
+    "session"
+]
+concave_edge_corners = true
+margin_edge = 0
+margin_ends = 0
+radius_bottom_left = 12
+radius_bottom_right = 12
+radius_top_left = 12
+radius_top_right = 12
+scale = 0.80
+shadow = false
+thickness = 22
+
+[hot_corners]
+enabled = true
+
+# Ported from the old hypridle.conf: lock at 20 min, screens off at 50 min,
+# suspend at 2.5 h. hypridle's 15 min dim step has no noctalia equivalent.
+[idle]
+behavior_order = [ "lock", "screen-off", "lock-and-suspend" ]
+
+    [idle.behavior.lock]
+    enabled = true
+    timeout = 1200.0
+
+    [idle.behavior.screen-off]
+    enabled = true
+    timeout = 3000.0
+
+    [idle.behavior.lock-and-suspend]
+    enabled = true
+    timeout = 9000.0
+
+[location]
+auto_locate = true
+
+[notification]
+scale = 0.80
+
+[plugins]
+enabled = [
+    "lowcache/claude-companion",
+    "raycursive/discord-voice",
+    "noctalia/screen_recorder",
+    "noctalia/notes",
+    "noctalia/wallpaper_depth",
+    "davemhammer/obsidian",
+    "nightwatch75/dns-switcher",
+    "thaer99ob/default-apps",
+    "oldirtty/color_picker",
+    "jrohland/claudecode"
+]
+
+[plugin_settings."jrohland/claudecode"]
+currency = "usd"
+popout_position = "top_left"
+
+[shell]
+clipboard_image_action_command = "swash --stdin --name \"swash-$(date +'%Y-%m-%d_%H:%M:%S').png\""
+corner_radius_scale = 1.0
+launch_apps_as_systemd_services = true
+polkit_agent = true
+settings_show_advanced = true
+
+    [shell.greeter_sync]
+    auto_sync = true
+
+    [shell.panel]
+    launcher_placement = "attached"
+    open_near_click_control_center = true
+    session_placement = "floating"
+    session_position = "center"
+
+    [shell.screenshot]
+    copy_to_clipboard = true
+    pipe_command = "swash --stdin --name \"swash-$(date +'%Y-%m-%d_%H:%M:%S').png\""
+    pipe_to_command = true
+    save_to_file = true
+
+    [[shell.session.actions]]
+    action = "lock"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "1"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "logout"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "2"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "lock_and_suspend"
+    countdown_seconds = 3.0
+    enabled = true
+    shortcut = "3"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "reboot"
+    countdown_seconds = 3.0
+    enabled = true
+    shortcut = "4"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "shutdown"
+    countdown_seconds = 3.0
+    enabled = true
+    shortcut = "5"
+    variant = "destructive"
+
+[system.monitor]
+gpu_poll_seconds = 2
+
+# Gruvbox Material everywhere: the shell uses palettes/GruvboxMaterial.json and
+# the templates below render the same palette into each app's theme file. The
+# repo also carries those rendered files, so apps are themed before noctalia's
+# first run (and on machines without it). hyprland is left out on purpose:
+# .config/hypr/config/colors.lua sets the same colors by hand.
+[theme]
+mode = "dark"
+source = "custom"
+custom_palette = "GruvboxMaterial"
+wallpaper_scheme = "m3-rainbow"
+
+    [theme.templates]
+    builtin_ids = [ "alacritty", "btop", "ghostty", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt" ]
+
+# The wallpapers live in the repo (.config/walls) and are stowed into place.
+[wallpaper]
+directory = "~/.config/walls"
+
+    [wallpaper.default]
+    path = "~/.config/walls/gruvbox1.png"
+
+[widget.clock]
+color = "secondary"
+format = "{:%-I:%M %p %A %m/%d/%y}"
+
+[widget.launcher]
+color = "secondary"
+glyph = "carambola-filled"
+
+[widget.media]
+hide_when_no_media = true
+title_scroll = "on_hover"
+
+[widget.network]
+color = "secondary"
+
+[widget.notifications]
+color = "secondary"
+
+[widget.pill]
+type = "jrohland/claudecode:pill"
+
+[widget.pulse]
+type = "lowcache/claude-companion:pulse"
+
+[widget.session]
+color = "error"
+
+[widget.spacer_1]
+type = "spacer"
+
+[widget.status]
+type = "davemhammer/obsidian:status"
+
+[widget.sysmon_2]
+glyph = "gpu-usage"
+show_value = false
+stat = "gpu_temp"
+type = "sysmon"
+
+[widget.sysmon_3]
+glyph = "cpu-2"
+stat = "ram_used"
+type = "sysmon"
+
+[widget.temp]
+show_value = false
+
+[widget.tray]
+capsule = true
+capsule_fill = "on_secondary"
+
+[widget.volume]
+color = "secondary"
+
+[widget.workspaces]
+active_pill_size = 2.5
+capsule = true
+capsule_fill = "on_primary"
+inactive_pill_size = 1.0
+pill_scale = 0.80
+show_labels = false

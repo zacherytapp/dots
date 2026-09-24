@@ -9,7 +9,7 @@ font-size = 10
 adjust-underline-position = 4
 
 # Theme
-theme = "dark: Kanagawa Dragon,light: Kanagawa Lotus"
+theme = noctalia
 window-theme = ghostty
 cursor-invert-fg-bg = true
 background-opacity = 1
@@ -25,6 +25,7 @@ window-decoration = false
 
 # Other
 copy-on-select = clipboard
+command = "/usr/bin/zsh --login"
 shell-integration = zsh
 shell-integration-features = cursor,sudo,no-title
 

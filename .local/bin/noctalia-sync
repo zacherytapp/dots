@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Shows what the Noctalia settings window changed that isn't in the dots repo.
+#
+# Noctalia merges ~/.config/noctalia/*.toml, then applies GUI changes from
+# ~/.local/state/noctalia/settings.toml on top. Only the first part is stowed,
+# so GUI changes silently drift from the repo.
+#
+#   noctalia-sync          diff: repo config alone -> what noctalia is running
+#   noctalia-sync --clear  after copying the changes into config.toml, archive
+#                          settings.toml so config.toml is the only source again
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia"
+settings="$state_dir/settings.toml"
+
+if ! command -v noctalia >/dev/null 2>&1; then
+    echo "noctalia is not installed" >&2
+    exit 1
+fi
+
+if [[ "${1:-}" == "--clear" ]]; then
+    if [[ ! -f "$settings" ]]; then
+        echo "nothing to clear: $settings does not exist"
+        exit 0
+    fi
+    archive="$settings.synced-$(date +%Y%m%d-%H%M%S)"
+    mv "$settings" "$archive"
+    echo "moved GUI overrides to $archive"
+    noctalia msg config-reload >/dev/null 2>&1 || true
+    exit 0
+fi
+
+if [[ ! -f "$settings" ]]; then
+    echo "in sync: no GUI overrides ($settings does not exist)"
+    exit 0
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# An empty state dir makes export read the config dir alone.
+XDG_STATE_HOME="$tmp" noctalia config export >"$tmp/repo.toml"
+noctalia config export >"$tmp/running.toml"
+
+if diff -u --label "config.toml (repo)" --label "running (with settings.toml)" \
+    "$tmp/repo.toml" "$tmp/running.toml"; then
+    echo "in sync: settings.toml adds nothing to config.toml"
+    echo "run 'noctalia-sync --clear' to archive it"
+else
+    echo
+    echo "copy the + lines you want into ~/.config/noctalia/config.toml,"
+    echo "then run 'noctalia-sync --clear'"
+fi
