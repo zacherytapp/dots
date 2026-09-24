@@ -1,133 +1,29 @@
 {
-	"inputs": [
-		{
-			"id": "GITEA_HOST",
-			"type": "promptString",
-			"description": "Gitea server URL (e.g., https://gitea.example.com)",
-			"password": false
-		},
-		{
-			"id": "GITEA_ACCESS_TOKEN",
-			"type": "promptString",
-			"description": "Gitea personal access token",
-			"password": true
-		},
-		{
-			"id": "CONTEXT7_API_KEY",
-			"type": "promptString",
-			"description": "API key for authentication",
-			"password": true
-		},
-		{
-			"id": "kusto_service_uri",
-			"type": "promptString",
-			"description": "Default Kusto cluster URI (e.g., https://help.kusto.windows.net/ or your cluster).",
-			"password": false
-		},
-		{
-			"id": "kusto_default_db",
-			"type": "promptString",
-			"description": "Default database name for Kusto queries (e.g., Samples).",
-			"password": false
-		},
-		{
-			"id": "az_openai_embedding_endpoint",
-			"type": "promptString",
-			"description": "Azure OpenAI embeddings endpoint for shots/semantic search (format: https://<resource>.openai.azure.com/openai/deployments/<name>/embeddings?api-version=<version>;impersonate).",
-			"password": false
-		},
-		{
-			"id": "kusto_known_services_json",
-			"type": "promptString",
-			"description": "JSON array of preconfigured Kusto services (e.g., [{\"service_uri\":\"https://cluster.kusto.windows.net\",\"default_database\":\"DB\"}]).",
-			"password": false
-		},
-		{
-			"id": "kusto_eager_connect",
-			"type": "promptString",
-			"description": "Whether to eagerly connect to the default service on startup (true/false).",
-			"password": false
-		},
-		{
-			"id": "kusto_allow_unknown_services",
-			"type": "promptString",
-			"description": "Allow connections to services not listed in KUSTO_KNOWN_SERVICES (true/false).",
-			"password": false
-		},
-		{
-			"id": "fabric_api_base",
-			"type": "promptString",
-			"description": "Base URL for Fabric APIs (default https://api.fabric.microsoft.com/v1).",
-			"password": false
-		}
-	],
-	"servers": {
-		"io.github.upstash/context7": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"@upstash/context7-mcp@1.0.31"
-			],
-			"env": {
-				"CONTEXT7_API_KEY": "${input:CONTEXT7_API_KEY}"
-			},
-			"gallery": "https://api.mcp.github.com/2025-09-15/v0/servers/5add8331-ead9-4953-b5f3-4542a235071f",
-			"version": "1.0.31"
-		},
-		"Salesforce DX": {
-			"command": "npx",
-			"args": [
-				"-y",
-				"@salesforce/mcp",
-				"--orgs",
-				"dev-hub-personal ",
-				"--toolsets",
-				"orgs,metadata,data,users",
-				"--tools",
-				"all",
-				"--allow-non-ga-tools"
-			],
-			"type": "stdio"
-		},
-		"io.github.ChromeDevTools/chrome-devtools-mcp": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"--registry",
-				"https://registry.npmjs.org",
-				"chrome-devtools-mcp@0.25.0"
-			],
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.25.0"
-		},
-		"Atlassian-Rovo-MCP": {
-    "command": "npx",
-    "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp/authv2"]
-  },
-
-		"microsoft/playwright-mcp": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"@playwright/mcp@latest"
-			],
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.0.1-seed"
-		},
-		"io.github.github/github-mcp-server": {
-			"type": "http",
-			"url": "https://api.githubcopilot.com/mcp/",
-			"gallery": "https://api.mcp.github.com",
-			"version": "1.0.3"
-		},
-		"microsoft/markitdown": {
-			"type": "stdio",
-			"command": "uvx",
-			"args": [
-				"markitdown-mcp@0.0.1a4"
-			],
-			"gallery": "https://api.mcp.github.com",
-			"version": "1.0.0"
-		}
-	}
+  "inputs": [
+    {
+      "id": "CONTEXT7_API_KEY",
+      "type": "promptString",
+      "description": "API key for authentication",
+      "password": true
+    }
+  ],
+  "servers": {
+    "io.github.upstash/context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@upstash/context7-mcp@1.0.31"],
+      "env": {
+        "CONTEXT7_API_KEY": "${input:CONTEXT7_API_KEY}"
+      },
+      "gallery": "https://api.mcp.github.com/2025-09-15/v0/servers/5add8331-ead9-4953-b5f3-4542a235071f",
+      "version": "1.0.31"
+    },
+    "microsoft/playwright-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+      "gallery": "https://api.mcp.github.com",
+      "version": "0.0.1-seed"
+    }
+  }
 }
