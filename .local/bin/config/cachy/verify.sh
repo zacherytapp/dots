@@ -41,6 +41,9 @@ check_cmd paru git git-lfs gh lazygit zsh tmux nvim vim kitty ghostty stow rg fd
 
 echo "tool checks:"
 check "cargo runs" cargo --version
+check "rust-analyzer component" sh -c 'rustup component list --installed | grep -q ^rust-analyzer'
+check "rust-src component" sh -c 'rustup component list --installed | grep -q ^rust-src'
+check_cmd delta luarocks
 check "node runs" node --version
 check "sf runs" sf --version
 check "pmd runs" pmd --version
@@ -51,6 +54,22 @@ check "tpm cloned" test -x "$HOME/.tmux/plugins/tpm/tpm"
 check "maple mono font" sh -c 'fc-list | grep -qi "maple mono"'
 check "jetbrains mono nerd font" sh -c 'fc-list | grep -qi "JetBrainsMono Nerd"'
 check "bibata cursor" test -d /usr/share/icons/Bibata-Modern-Ice
+
+echo "claude code:"
+statusline="$HOME/.claude/statusline/statusline.sh"
+statusline_renders() {
+  local out cfg
+  cfg=$(mktemp -d)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000}},"rate_limits":{"five_hour":{"used_percentage":12}}}' |
+    CLAUDE_CONFIG_DIR="$cfg" DBUS_SESSION_BUS_ADDRESS='' STATUSLINE_CHECK_UPDATES=false "$statusline")
+  rm -rf "$cfg"
+  grep -q Opus <<<"$out"
+}
+check_cmd claude
+check "claude runs" claude --version
+check "statusline executable" test -x "$statusline"
+check "settings.json statusLine" jq -e '.statusLine.command == "~/.claude/statusline/statusline.sh"' "$HOME/.claude/settings.json"
+check "statusline renders" statusline_renders
 
 echo "user config:"
 check "login shell is zsh" sh -c "getent passwd $(id -un) | grep -q '/zsh$'"

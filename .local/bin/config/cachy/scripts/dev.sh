@@ -32,6 +32,8 @@ step_rust() {
   if [ ! -x "$ACTUAL_HOME/.cargo/bin/rustup" ]; then
     as_user_sh "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path"
   fi
+  # no-op once they're installed
+  as_user_sh "rustup component add --toolchain stable ${RUSTUP_COMPONENTS[*]}"
 }
 
 # shellcheck disable=SC2016 # snippets expand in the user shell

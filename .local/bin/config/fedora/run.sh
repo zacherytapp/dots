@@ -31,6 +31,7 @@ source "${SCRIPT_DIR}/init/keys.sh"
 source "${SCRIPT_DIR}/init/secure.sh"
 source "${SCRIPT_DIR}/apps/install_browsers.sh"
 source "${SCRIPT_DIR}/apps/install_dev.sh"
+source "${SCRIPT_DIR}/apps/install_claude.sh"
 source "${SCRIPT_DIR}/apps/install_languages.sh"
 source "${SCRIPT_DIR}/apps/install_flatpaks.sh"
 source "${SCRIPT_DIR}/setup/post_install_extras.sh"
@@ -102,6 +103,7 @@ STEPS=(
   java:install_java
   rust:install_rust
   node:install_node
+  claude:install_claude
   go:install_go_tools
   lua:install_lua
   python:install_python

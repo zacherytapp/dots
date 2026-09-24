@@ -26,6 +26,8 @@ source "$SCRIPT_DIR/scripts/dev.sh"
 source "$SCRIPT_DIR/scripts/security.sh"
 # shellcheck source=scripts/extras.sh
 source "$SCRIPT_DIR/scripts/extras.sh"
+# shellcheck source=scripts/claude.sh
+source "$SCRIPT_DIR/scripts/claude.sh"
 # shellcheck source=../desktop/desktop.sh
 source "$SCRIPT_DIR/../desktop/desktop.sh"
 
@@ -41,6 +43,7 @@ DEFAULT_STEPS=(
   pmd
   tmux
   herdr
+  claude
   docker
   services
   hooks

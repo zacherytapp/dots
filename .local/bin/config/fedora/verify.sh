@@ -50,6 +50,22 @@ check "pynvim" python3 -c "import pynvim"
 check "nerd fonts" test -d /usr/local/share/fonts/NerdFonts/FiraCode
 check "flathub remote" bash -c "flatpak remotes --system | grep -q flathub"
 
+color_echo "blue" "claude code"
+statusline="$HOME/.claude/statusline/statusline.sh"
+statusline_renders() {
+  local out cfg
+  cfg=$(mktemp -d)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000}},"rate_limits":{"five_hour":{"used_percentage":12}}}' |
+    CLAUDE_CONFIG_DIR="$cfg" DBUS_SESSION_BUS_ADDRESS='' STATUSLINE_CHECK_UPDATES=false "$statusline")
+  rm -rf "$cfg"
+  grep -q Opus <<<"$out"
+}
+check "claude" command -v claude
+check "claude runs" claude --version
+check "statusline executable" test -x "$statusline"
+check "settings.json statusLine" jq -e '.statusLine.command == "~/.claude/statusline/statusline.sh"' "$HOME/.claude/settings.json"
+check "statusline renders" statusline_renders
+
 color_echo "blue" "shell"
 check "oh-my-zsh" test -d "$HOME/.oh-my-zsh"
 check "zsh-autosuggestions" test -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"

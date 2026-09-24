@@ -42,6 +42,23 @@ check test -f "$HOME/.password-store/.gpg-id"
 check test -f /etc/fail2ban/jail.local
 check flatpak remotes --columns=name -d | grep -qx flathub
 
+echo "claude code:"
+statusline="$HOME/.claude/statusline/statusline.sh"
+statusline_renders() {
+  local out cfg
+  cfg=$(mktemp -d)
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000}},"rate_limits":{"five_hour":{"used_percentage":12}}}' |
+    CLAUDE_CONFIG_DIR="$cfg" DBUS_SESSION_BUS_ADDRESS='' STATUSLINE_CHECK_UPDATES=false "$statusline")
+  rm -rf "$cfg"
+  grep -q Opus <<<"$out"
+}
+check command -v claude
+check claude --version
+check test -x "$statusline"
+# shellcheck disable=SC2016 # jq expression, not shell
+check jq -e '.statusLine.command == "~/.claude/statusline/statusline.sh"' "$HOME/.claude/settings.json"
+check statusline_renders
+
 echo "config:"
 check test "$(git config --global init.defaultBranch)" = main
 check test -n "$(git config --global user.email)"
