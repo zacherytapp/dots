@@ -20,6 +20,9 @@ path=(
 export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 export SF_USE_GENERIC_UNIX_KEYCHAIN=true
 
+# lets pinentry ask for the gpg passphrase (commit signing) in terminals and SSH
+export GPG_TTY=$TTY
+
 # Gruvbox Material, matching nvim, tmux, the terminals and noctalia
 export BAT_THEME="gruvbox-dark"
 export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
