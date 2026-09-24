@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# gpg, pass and ssh keys for the real user; sourced by run.sh
+# gpg key (for pass) and ssh key, generated as the real user
 
 configure_keys() {
-  install_packages gnupg2 pass openssh-clients
-
   if [ -z "${USER_NAME}" ] || [ -z "${USER_EMAIL}" ]; then
     color_echo "yellow" "skipped: USER_NAME/USER_EMAIL not set, not generating keys"
     return 0
@@ -11,7 +9,7 @@ configure_keys() {
 
   # generate gpg key
   if ! as_user gpg --list-secret-keys "${USER_EMAIL}" &>/dev/null; then
-    as_user gpg --batch --full-generate-key <<EOK
+    as_user gpg --batch --full-generate-key <<KEY
 %no-protection
 Key-Type: rsa
 Key-Length: 4096
@@ -21,12 +19,11 @@ Name-Real: ${USER_NAME}
 Name-Email: ${USER_EMAIL}
 Expire-Date: 0
 %commit
-EOK
+KEY
   fi
 
-  # initialise pass with the key
   local gpg_key
-  gpg_key=$(as_user gpg --list-secret-keys --with-colons "${USER_EMAIL}" | awk -F: '/^sec/ {print $5; exit}')
+  gpg_key=$(as_user gpg --list-secret-keys --keyid-format LONG "${USER_EMAIL}" | awk '/^sec/ {print $2}' | head -n 1 | cut -d/ -f2)
   if [ -z "$gpg_key" ]; then
     color_echo "red" "Error: Could not find the GPG key ID."
     return 1
@@ -38,7 +35,7 @@ EOK
   # ssh key generation
   if [ ! -f "${ACTUAL_HOME}/.ssh/id_ed25519" ]; then
     as_user mkdir -p "${ACTUAL_HOME}/.ssh"
-    chmod 700 "${ACTUAL_HOME}/.ssh"
+    as_user chmod 700 "${ACTUAL_HOME}/.ssh"
     as_user ssh-keygen -t ed25519 -C "${USER_NAME} <${USER_EMAIL}>" -f "${ACTUAL_HOME}/.ssh/id_ed25519" -N "" -q
   fi
 }

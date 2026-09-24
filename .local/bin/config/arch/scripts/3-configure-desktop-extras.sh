@@ -37,14 +37,6 @@ function install_plymouth {
   fi
 }
 
-function configure_kvantum_theme {
-  if ! [ -d "$ACTUAL_HOME/kvantum"]; then
-    git clone https://github.com/rose-pine/kvantum.git
-    tar -xzf ./kvantum/dist/rose-pine-iris.tar.gz
-  fi
-
-}
-
 function configure_grub_theme {
   cd ${ACTUAL_HOME}
   git clone https://github.com/vinceliuice/grub2-themes.git
@@ -52,23 +44,12 @@ function configure_grub_theme {
   sudo grub-mkconfig -o /boot/grub/grub.cfg
 }
 
-function configure_sddm {
-  cd ${ACTUAL_HOME}
-
-  if ! [ -d "${ACTUAL_HOME}/sddm-rose-pine" ]; then
-    git clone https://github.com/lwndhrst/sddm-rose-pine.git
-  fi
-
-  if [ -d "/usr/share/sddm/themes" ]; then
-    sudo mv sddm-rose-pine /usr/share/sddm/themes
-  fi
-
-  if ! [ -d "/etc/sddm.conf.d" ]; then
-    sudo mkdir /etc/sddm.conf.d
-  fi
-
-  sudo cp /usr/lib/sddm/sddm.conf.d/default.conf /etc/sddm.conf.d/sddm.conf
-  sudo sed -i "s/^Current=.*/Current=sddm-rose-pine/" "/etc/sddm.conf.d/sddm.conf"
+# noctalia-greeter on greetd (replaces the old rose-pine sddm theme); it
+# picks up the gruvbox wallpaper and palette through noctalia's greeter sync
+function configure_greeter {
+  local desktop_sh
+  desktop_sh="$(cd "${SCRIPT_DIR}/../.." && pwd)/desktop/desktop.sh"
+  sudo bash -c 'ACTUAL_USER="$1" && source "$2" && desktop_greeter' _ "${SUDO_USER:-$USER}" "${desktop_sh}"
 }
 
 function configure_laptop {
@@ -93,8 +74,8 @@ configure_grub_theme
 print_info "configuring laptop specific settings"
 configure_laptop
 
-print_info "configure_sddm_theme"
-configure_sddm
+print_info "configuring noctalia-greeter"
+configure_greeter
 
 print_info "setting wallpaper"
 set_wallpaper

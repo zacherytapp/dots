@@ -1,58 +1,108 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # snippets expand in the user's shell
+# editor, terminal, shell and dev tooling; sourced by run.sh
 
-# isntall neovim
-NVIM_DIR="$ACTUAL_HOME/temp/neovim"
-if ! [ -d "${NVIM_DIR}" ]; then
-  git clone https://github.com/neovim/neovim "${NVIM_DIR}"
-  cd "${NVIM_DIR}" && make CMAKE_BUILD_TYPE=RelWithDebInfo
-  sudo make install
-  cd ${ACTUAL_HOME}
-fi
+install_nerd_fonts() {
+  install_packages fontconfig curl tar xz
+  local font_root="/usr/local/share/fonts/NerdFonts"
+  local tmp
 
-## install 1Password
-sudo rpm --import https://downloads.1password.com/linux/keys/1password.asc
-sudo sh -c 'echo -e "[1password]\nname=1Password Stable Channel\nbaseurl=https://downloads.1password.com/linux/rpm/stable/\$basearch\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=\"https://downloads.1password.com/linux/keys/1password.asc\"" > /etc/yum.repos.d/1password.repo'
-sudo dnf install 1password -y
+  for font in "${NERD_FONTS[@]}"; do
+    if [ -d "${font_root}/${font}" ]; then
+      echo "Nerd Font already installed: ${font}"
+      continue
+    fi
+    echo "Installing Nerd Font: ${font}"
+    tmp=$(mktemp -d)
+    curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font}.tar.xz" | tar -xJ -C "$tmp"
+    mkdir -p "$font_root"
+    mv "$tmp" "${font_root}/${font}"
+    chmod -R a+rX "${font_root}/${font}"
+  done
+  fc-cache -f
+}
 
-TPM_DIR="${ACTUAL_HOME}.tmux/plugins/tpm"
+# neovim from source; NVIM_REF picks the tag/branch, NVIM_REBUILD=1 forces a rebuild
+install_neovim() {
+  install_packages "${NEOVIM_PRE[@]}"
+  local nvim_dir="${TEMP_DIR}/neovim"
+  local ref="${NVIM_REF:-stable}"
 
-# Check if TPM is already installed
-if [ -d "$TPM_DIR" ]; then
-  echo "TPM is already installed in $TPM_DIR"
-else
-  echo "Installing Tmux Plugin Manager (TPM)..."
-  git clone https://github.com/tmux-plugins/tpm $TPM_DIR
-fi
+  if [ -x /usr/local/bin/nvim ] && [ -z "${NVIM_REBUILD:-}" ]; then
+    echo "neovim already installed: $(/usr/local/bin/nvim --version | head -n 1)"
+    return 0
+  fi
 
-# tmux new-session -d -s tpm_install_session
-# tmux send-keys -t tpm_install_session C-s "I" C-m
-# tmux attach -t tpm_install_session
+  as_user mkdir -p "${TEMP_DIR}"
+  if [ ! -d "${nvim_dir}/.git" ]; then
+    as_user git clone --filter=blob:none https://github.com/neovim/neovim "${nvim_dir}"
+  fi
+  as_user git -C "${nvim_dir}" fetch --force --tags origin "${ref}"
+  as_user git -C "${nvim_dir}" checkout --force FETCH_HEAD
+  as_user make -C "${nvim_dir}" CMAKE_BUILD_TYPE=RelWithDebInfo
+  make -C "${nvim_dir}" install
+  # make install leaves root-owned files in the build dir
+  chown -R "${ACTUAL_USER}:" "${nvim_dir}"
+}
 
-# install lazygit
-sudo dnf copr enable atim/lazygit -y
-sudo dnf install lazygit -y
+install_1password() {
+  rpm --import https://downloads.1password.com/linux/keys/1password.asc
+  cat >/etc/yum.repos.d/1password.repo <<'EOF'
+[1password]
+name=1Password Stable Channel
+baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://downloads.1password.com/linux/keys/1password.asc
+EOF
+  install_packages 1password
+}
 
-# isntall ghostty
-dnf copr enable pgdev/ghostty -y
-dnf install ghostty
+install_terminal_tools() {
+  # lazygit (atim/lazygit stopped updating; dejan/lazygit tracks releases)
+  dnf copr enable -y dejan/lazygit
+  install_packages lazygit
 
-# install oh-my-zsh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-chsh -s $(which zsh) $ACTUAL_USER
-export ZSH="${ACTUAL_HOME}/.oh-my-zsh"
+  # ghostty
+  dnf copr enable -y scottames/ghostty
+  install_packages ghostty
 
-git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-${ACTUAL_HOME}/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-echo "bindkey '^ ' autosuggest-accept" >>$ZSH_CUSTOM/autosuggestion-settings.zsh
-source $ZSH_CUSTOM/autosuggestion-settings.zsh
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-${ACTUAL_HOME}/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+  install_packages "${DEV_TOOLS[@]}"
+}
 
-# install necessary pip items
-pip install black neovim
-sudo pip install virutalenv
+install_tpm() {
+  local tpm_dir="${ACTUAL_HOME}/.tmux/plugins/tpm"
 
-# install oh-my-zsh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-chsh -s $(which zsh) $ACTUAL_USER
-export ZSH=~/.oh-my-zsh
-git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+  if [ -d "$tpm_dir" ]; then
+    echo "TPM is already installed in $tpm_dir"
+  else
+    echo "Installing Tmux Plugin Manager (TPM)..."
+    as_user git clone --depth 1 https://github.com/tmux-plugins/tpm "$tpm_dir"
+  fi
+}
+
+configure_shell() {
+  install_packages zsh git curl
+  local zsh_custom="${ACTUAL_HOME}/.oh-my-zsh/custom"
+
+  # install oh-my-zsh, keeping any existing (stowed) .zshrc
+  if [ ! -d "${ACTUAL_HOME}/.oh-my-zsh" ]; then
+    as_user_sh 'RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
+  fi
+
+  if [ ! -d "${zsh_custom}/plugins/zsh-autosuggestions" ]; then
+    as_user git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "${zsh_custom}/plugins/zsh-autosuggestions"
+  fi
+  if [ ! -d "${zsh_custom}/plugins/zsh-syntax-highlighting" ]; then
+    as_user git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${zsh_custom}/plugins/zsh-syntax-highlighting"
+  fi
+  echo "bindkey '^ ' autosuggest-accept" | as_user tee "${zsh_custom}/autosuggestion-settings.zsh" >/dev/null
+
+  # usermod works without PAM, unlike chsh
+  local zsh_path
+  zsh_path=$(command -v zsh)
+  if [ "$(getent passwd "$ACTUAL_USER" | cut -d: -f7)" != "$zsh_path" ]; then
+    usermod -s "$zsh_path" "$ACTUAL_USER"
+  fi
+}

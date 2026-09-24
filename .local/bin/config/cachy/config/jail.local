@@ -3,6 +3,8 @@ ignoreip = 127.0.0.1/8 ::1
 bantime = 3600
 findtime = 600
 maxretry = 5
+# Arch doesn't write /var/log/auth.log, sshd failures only reach the journal
+backend = systemd
 
 [sshd]
 enabled = true

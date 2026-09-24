@@ -1,102 +1,169 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2016 # variables here are used by the scripts that source this file
 
-USER_EMAIL=""
-USER_NAME=""
-USER_DIR=""
+ACTUAL_USER="${SUDO_USER:-$(id -un)}"
+ACTUAL_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+TEMP_DIR="${ACTUAL_HOME}/temp"
+LOG_FILE="${LOG_FILE:-/var/log/dots-fedora-setup.log}"
 
-if [ -z "${USER_EMAIL}" ]; then;
-  echo "please ensure user email is entered"
-  echo "what is the user email?"
-  read USER_EMAIL
-fi
+# PATH/env for user-level tools, used by as_user_sh
+USER_ENV='
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export NVM_DIR="$HOME/.nvm"
+export PATH="$HOME/.local/bin:$HOME/.pyenv/bin:$HOME/.cargo/bin:$HOME/go/bin:$PNPM_HOME:$PNPM_HOME/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+'
 
-if [ -z "${USER_NAME}" ]; then;
-  echo "please ensure user name is entered"
-  echo "what is the user name?"
-  read USER_NAME
-fi
+FAILED_STEPS=()
+PASSED_STEPS=()
 
-if [ -z "${USER_DIR}" ]; then;
-  echo "please ensure user directory is entered"
-  echo "what is the user dir?"
-  read USER_DIR
-fi
-
-is_pkg_installed() {
-  rpm -q "$1" &> /dev/null
-}
-
-is_grp_installed() {
-  dnf group list installed ids -q | grep -Fxq "$1" &> /dev/null
-}
-
-install_packages() {
-  local items_to_process=("$@")
-  local to_install=()
-
-  for item in "${items_to_process[@]}"; do
-    if ! is_pkg_installed "$item" && ! is_grp_installed "$item"; then
-      to_install+=("$item")
-    fi
-  done
-
-  if [ ${#to_install[@]} -ne 0 ]; then
-    echo "Installing: ${to_install[*]}"
-    if sudo dnf install --skip-unavailable -y "${to_install[@]}"; then
-      echo "Successfully installed: ${to_install[*]}"
-    else
-      echo "Error installing: ${to_install[*]}" >&2
-    fi
-  else
-    echo "All specified packages and groups are already installed or no items to install."
-  fi
+color_echo() {
+  local color="$1"
+  local text="$2"
+  case "$color" in
+  "red") echo -e "\033[0;31m$text\033[0m" ;;
+  "green") echo -e "\033[0;32m$text\033[0m" ;;
+  "yellow") echo -e "\033[1;33m$text\033[0m" ;;
+  "blue") echo -e "\033[0;34m$text\033[0m" ;;
+  *) echo "$text" ;;
+  esac
 }
 
 get_timestamp() {
-    date +"%Y-%m-%d %H:%M:%S"
+  date +"%Y-%m-%d %H:%M:%S"
 }
 
 log_message() {
-    local message="$1"
-    echo "$(get_timestamp) - $message" | tee -a "$LOG_FILE"
+  echo "$(get_timestamp) - $1" >>"$LOG_FILE"
 }
 
-handle_error() {
-    local exit_code=$?
-    local message="$1"
-    if [ $exit_code -ne 0 ]; then
-        color_echo "red" "ERROR: $message"
-        exit $exit_code
-    fi
+# prompt_var VAR "question" [default]
+# only prompts when VAR is unset, stdin is a tty and NONINTERACTIVE isn't set
+prompt_var() {
+  local var="$1" question="$2" default="${3:-}"
+  if [ -n "${!var:-}" ]; then
+    return 0
+  fi
+  if [ -z "${NONINTERACTIVE:-}" ] && [ -t 0 ]; then
+    read -r -p "${question}${default:+ [$default]}: " "${var?}"
+  fi
+  if [ -z "${!var:-}" ]; then
+    printf -v "$var" '%s' "$default"
+  fi
+  export "${var?}"
 }
 
-prompt_reboot() {
-    sudo -u $ACTUAL_USER bash -c 'read -p "It is time to reboot the machine. Would you like to do it now? (y/n): " choice; [[ $choice == [yY] ]]'
-    if [ $? -eq 0 ]; then
-        color_echo "green" "Rebooting..."
-        reboot
-    else
-        color_echo "red" "Reboot canceled."
+is_container() {
+  if command -v systemd-detect-virt &>/dev/null && systemd-detect-virt --container --quiet; then
+    return 0
+  fi
+  [ -f /.dockerenv ] || [ -f /run/.containerenv ]
+}
+
+# skip_if_container "description" || real_command
+skip_if_container() {
+  if is_container; then
+    color_echo "yellow" "skipped: container - $1"
+    log_message "skipped: container - $1"
+    return 0
+  fi
+  return 1
+}
+
+enable_service() {
+  skip_if_container "systemctl enable --now $*" || systemctl enable --now "$@"
+}
+
+# run a command as the real user with their HOME
+as_user() {
+  sudo -u "$ACTUAL_USER" -H -- "$@"
+}
+
+# run a shell snippet as the real user with user-level tools on PATH
+as_user_sh() {
+  as_user bash -c "${USER_ENV}"$'\nset -e\n'"$1"
+}
+
+is_pkg_installed() {
+  rpm -q --whatprovides "$1" &>/dev/null
+}
+
+# installs anything not already installed; returns non-zero if any package failed
+install_packages() {
+  local to_install=()
+
+  for pkg in "$@"; do
+    if ! is_pkg_installed "$pkg"; then
+      to_install+=("$pkg")
     fi
+  done
+
+  if [ ${#to_install[@]} -eq 0 ]; then
+    echo "All specified packages are already installed."
+    return 0
+  fi
+
+  echo "Installing: ${to_install[*]}"
+  if dnf install -y "${to_install[@]}"; then
+    return 0
+  fi
+
+  # install whatever is available so one stale name doesn't block the rest
+  color_echo "red" "Error installing: ${to_install[*]} - retrying with --skip-unavailable"
+  dnf install -y --skip-unavailable "${to_install[@]}"
+  return 1
 }
 
 backup_file() {
-    local file="$1"
-    if [ -f "$file" ]; then
-        cp "$file" "$file.bak"
-        handle_error "Failed to backup $file"
-        color_echo "green" "Backed up $file"
-    fi
+  local file="$1"
+  if [ -f "$file" ] && [ ! -f "$file.bak" ]; then
+    cp "$file" "$file.bak"
+    color_echo "green" "Backed up $file"
+  fi
 }
 
-color_echo() {
-    local color="$1"
-    local text="$2"
-    case "$color" in
-        "red")     echo -e "\033[0;31m$text\033[0m" ;;
-        "green")   echo -e "\033[0;32m$text\033[0m" ;;
-        "yellow")  echo -e "\033[1;33m$text\033[0m" ;;
-        "blue")    echo -e "\033[0;34m$text\033[0m" ;;
-        *)         echo "$text" ;;
-    esac
+# run_step <name> <function>: runs the function in a `set -e` subshell,
+# records the result and keeps going on failure
+run_step() {
+  local name="$1" fn="$2"
+  color_echo "blue" "==> [$name]"
+  log_message "start: $name"
+  (
+    set -e
+    "$fn"
+  )
+  local rc=$?
+  if [ $rc -eq 0 ]; then
+    PASSED_STEPS+=("$name")
+    color_echo "green" "<== [$name] ok"
+    log_message "ok: $name"
+  else
+    FAILED_STEPS+=("$name")
+    color_echo "red" "<== [$name] FAILED (exit $rc)"
+    log_message "failed: $name (exit $rc)"
+  fi
+}
+
+print_summary() {
+  echo
+  color_echo "blue" "==== summary ===="
+  local s
+  for s in "${PASSED_STEPS[@]}"; do color_echo "green" "  ok      $s"; done
+  for s in "${FAILED_STEPS[@]}"; do color_echo "red" "  FAILED  $s"; done
+  echo "log: $LOG_FILE"
+  [ ${#FAILED_STEPS[@]} -eq 0 ]
+}
+
+prompt_reboot() {
+  if [ -n "${NONINTERACTIVE:-}" ] || [ ! -t 0 ] || is_container; then
+    return 0
+  fi
+  local choice
+  read -r -p "It is time to reboot the machine. Would you like to do it now? (y/n): " choice
+  if [[ $choice == [yY] ]]; then
+    color_echo "green" "Rebooting..."
+    reboot
+  else
+    color_echo "red" "Reboot canceled."
+  fi
 }

@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
+# gruvbox gtk theme + papirus icons; run as the desktop user inside their session
+# (run.sh's `theme` step installs papirus-icon-theme, sassc and git first)
+#
+# Gruvbox (medium, green accent) matches the Gruvbox Material palette the rest
+# of the dots use. No -l: the stowed ~/.config/gtk-4.0/gtk.css imports the
+# noctalia-rendered gruvbox colors for libadwaita apps, and -l would replace it.
 
-wget -qO- https://git.io/papirus-icon-theme-install | sh
-gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+set -e
 
-cd "${ACTUAL_HOME}"
-THEME_DIR="${ACTUAL_HOME}/temp/Rose-Pine-GTK-Theme"
-mkdir ".themes"
-mkdir ".icons"
-# install rose-pine gtk
-if ! [ -d "${THEME_DIR}" ]; then
-  mkdir "${THEME_DIR}/temp/Rose-Pine-GTK-Theme"
-  git clone https://github.com/Fausto-Korpsvart/Rose-Pine-GTK-Theme.git "${THEME_DIR}"
+THEME_DIR="${HOME}/temp/Gruvbox-GTK-Theme"
+mkdir -p "${HOME}/.themes" "${HOME}/.icons" "${HOME}/temp"
+
+gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
+
+if [ ! -d "${THEME_DIR}" ]; then
+  git clone --depth 1 https://github.com/Fausto-Korpsvart/Gruvbox-GTK-Theme.git "${THEME_DIR}"
 fi
-cd "${THEME_DIR}/themes"
-sh ./install.sh --tweaks macos float --name rose-pine --color dark --theme green --dest "/home/zakk/.themes" --size compact -l
-flatpak override --filesystem=/home/zakk/.themes
-flatpak override --filesystem=/home/zakk/.icons
-flatpak override --user --filesystem=xdg-config/gtk-4.0
-flatpak override --filesystem=xdg-config/gtk-4.0
-ln -sf "/home/zakk/.themes/rose-pine/gtk-4.0/assets" "/home/zakk/.config/gtk-4.0/"
-ln -sf "/home/zakk/.themes/rose-pine/gtk-4.0/gtk.css" "/home/zakk/.config/gtk-4.0/"
-ln -sf "/home/zakk/.themes/rose-pine/gtk-4.0/gtk-dark.css" "/home/zakk/.config/gtk-4.0/"
+(cd "${THEME_DIR}/themes" &&
+  bash ./install.sh --tweaks medium macos float --theme green --color dark --dest "${HOME}/.themes" --size compact)
 
-gsettings set org.gnome.desktop.interface gtk-theme "rose-pine-Green-Dark-Compact"
+# let flatpak apps see the theme
+flatpak override --user --filesystem="${HOME}/.themes:ro"
+flatpak override --user --filesystem="${HOME}/.icons:ro"
+flatpak override --user --filesystem=xdg-config/gtk-4.0:ro
+
+theme=$(find "${HOME}/.themes" -maxdepth 1 -name 'Gruvbox-Green-Dark-Compact*' -printf '%f\n' | sort | head -n 1)
+gsettings set org.gnome.desktop.interface gtk-theme "${theme}"
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'

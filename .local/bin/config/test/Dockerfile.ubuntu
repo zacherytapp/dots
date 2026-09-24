@@ -1,0 +1,23 @@
+FROM ubuntu:26.04
+
+# bootstrap only: sudo so run.sh can be run the way a user would run it
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# the image ships an `ubuntu` user at uid 1000; replace it with the test user
+RUN userdel -r ubuntu 2>/dev/null; \
+    useradd -m -u 1000 -s /bin/bash tester \
+    && echo 'tester ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/tester \
+    && chmod 0440 /etc/sudoers.d/tester
+
+COPY --chown=tester:tester . /home/tester/setup
+
+ENV DISTRO=ubuntu \
+    NONINTERACTIVE=1 \
+    USER_NAME="Test User" \
+    USER_EMAIL=test@example.com \
+    LOCAL_IP=192.168.1.0/24
+
+USER tester
+WORKDIR /home/tester/setup

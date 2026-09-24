@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
+# browsers; sourced by run.sh
 
-# chrome install
-color_echo "yellow" "Installing Google Chrome..."
-if command -v dnf4 &>/dev/null; then
-  dnf4 config-manager --set-enabled google-chrome
-else
+install_browsers() {
+  # chrome, via the repo definitions shipped by fedora-workstation-repositories
+  color_echo "yellow" "Installing Google Chrome..."
+  install_packages fedora-workstation-repositories
   dnf config-manager setopt google-chrome.enabled=1
-fi
-sudo dnf install -y google-chrome-stable
+  install_packages google-chrome-stable
 
-# brave
-curl -fsS https://dl.brave.com/install.sh | sh
+  # brave
+  color_echo "yellow" "Installing Brave..."
+  dnf config-manager addrepo --overwrite \
+    --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+  install_packages brave-browser
+}

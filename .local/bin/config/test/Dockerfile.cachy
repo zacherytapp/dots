@@ -1,0 +1,22 @@
+# Test image for .local/bin/config/cachy: a fresh CachyOS userland with a sudo-capable user.
+FROM cachyos/cachyos:latest
+
+# docker can't unshare the network, so pacman's hook sandbox refuses to run
+# hooks (sysusers, tmpfiles) that a real install runs fine
+RUN sed -i '/^\[options\]/a DisableSandboxNetwork' /etc/pacman.conf \
+    && pacman-key --init && pacman-key --populate archlinux cachyos \
+    && pacman -Sy --noconfirm --needed sudo \
+    && useradd -m -G wheel -s /bin/bash tester \
+    && echo 'tester ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/tester \
+    && chmod 440 /etc/sudoers.d/tester
+
+COPY --chown=tester:tester . /home/tester/setup
+
+ENV DISTRO=cachy \
+    NONINTERACTIVE=1 \
+    USER_NAME="Test User" \
+    USER_EMAIL=test@example.com \
+    LOCAL_IP=192.168.1.0/24
+
+USER tester
+WORKDIR /home/tester/setup

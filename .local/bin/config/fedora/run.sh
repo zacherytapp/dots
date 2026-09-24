@@ -1,93 +1,173 @@
 #!/usr/bin/env bash
+# Fedora 44 setup.
+#
+#   sudo ./run.sh             run every default step in order
+#   sudo ./run.sh step ...    run only the named steps (see STEPS / EXTRA_STEPS)
+#   sudo ./run.sh desktop     Hyprland + Noctalia session (opt-in, checked first)
+#
+# Config comes from the environment (prompted for when unset and interactive):
+#   USER_NAME, USER_EMAIL, SETUP_HOSTNAME (default behemoth), LOCAL_IP
+#   NONINTERACTIVE=1 never prompts, SKIP_UPGRADE=1 skips `dnf upgrade`
 
-# Exit on any error
-set -e
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 # Check if the script is run with sudo
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this script with sudo"
+if [ "$EUID" -ne 0 ] || [ -z "${SUDO_USER:-}" ] || [ "${SUDO_USER}" = "root" ]; then
+  echo "Please run this script with sudo as your normal user"
   exit 1
 fi
 
-# Set variables
-DEV=true # dev will prevent some initial stuff from running for speed
-ACTUAL_USER=$SUDO_USER
-ACTUAL_HOME=$(eval echo ~$SUDO_USER)
-LOG_FILE="/var/log/fedora_things_to_do.log"
-INITIAL_DIR=$(pwd)
-TEMP_DIR="${ACTUAL_HOME}/temp"
-if ! [ -d "${TEMP_DIR}" ]; then
-  mkdir "${ACTUAL_HOME}/temp"
+# Source utility functions and the package list
+for file in utils.sh packages.conf; do
+  if [ ! -f "${SCRIPT_DIR}/${file}" ]; then
+    echo "Error: ${file} not found!"
+    exit 1
+  fi
+done
+source "${SCRIPT_DIR}/utils.sh"
+source "${SCRIPT_DIR}/packages.conf"
+source "${SCRIPT_DIR}/init/config.sh"
+source "${SCRIPT_DIR}/init/keys.sh"
+source "${SCRIPT_DIR}/init/secure.sh"
+source "${SCRIPT_DIR}/apps/install_browsers.sh"
+source "${SCRIPT_DIR}/apps/install_dev.sh"
+source "${SCRIPT_DIR}/apps/install_languages.sh"
+source "${SCRIPT_DIR}/apps/install_flatpaks.sh"
+source "${SCRIPT_DIR}/setup/post_install_extras.sh"
+source "${SCRIPT_DIR}/../desktop/desktop.sh"
+
+install_base_packages() {
+  color_echo "green" "Installing system utilities..."
+  install_packages "${SYSTEM_UTILS[@]}"
+  color_echo "green" "Installing neovim pre-requisites..."
+  install_packages "${NEOVIM_PRE[@]}"
+}
+
+install_apps() {
+  color_echo "green" "Installing apps..."
+  install_packages "${APPS[@]}"
+}
+
+# gnome/theme need the user's graphical session bus
+run_in_session() {
+  local uid bus
+  uid=$(id -u "$ACTUAL_USER")
+  bus="/run/user/${uid}/bus"
+  if [ ! -S "$bus" ]; then
+    color_echo "yellow" "skipped: no session bus for ${ACTUAL_USER} ($bus) - run from a logged-in desktop"
+    return 0
+  fi
+  as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=${bus}" XDG_RUNTIME_DIR="/run/user/${uid}" "$@"
+}
+
+configure_gnome() {
+  install_packages pipx gnome-shell-extension-common dconf glib2
+  run_in_session bash "${SCRIPT_DIR}/setup/gnome.sh"
+}
+
+configure_theme() {
+  install_packages papirus-icon-theme sassc git flatpak
+  run_in_session bash "${SCRIPT_DIR}/setup/theme.sh"
+}
+
+# Hyprland + Noctalia next to gnome: checks fedora >= 44, x86_64/aarch64 and
+# that the lionheartp/Hyprland copr offers hyprland >= 0.55 (the dots config
+# is lua), then installs; the config comes from stowing the repo
+install_desktop() {
+  desktop_install
+}
+
+# noctalia-greeter (copr noctalia-greeter-git) on greetd, replacing gdm
+install_greeter() {
+  desktop_greeter
+}
+
+# name:function, in run order
+STEPS=(
+  dnf:configure_dnf
+  repos:enable_repos
+  upgrade:system_update
+  multimedia:configure_multimedia
+  packages:install_base_packages
+  system:configure_system
+  git:configure_git
+  fonts:install_nerd_fonts
+  dev:install_terminal_tools
+  neovim:install_neovim
+  shell:configure_shell
+  tmux:install_tpm
+  browsers:install_browsers
+  1password:install_1password
+  lang:install_lang_packages
+  java:install_java
+  rust:install_rust
+  node:install_node
+  go:install_go_tools
+  lua:install_lua
+  python:install_python
+  ruby:install_ruby
+  homebrew:install_homebrew
+  apps:install_apps
+  flatpak:install_flatpaks
+  keys:configure_keys
+  security:configure_security
+)
+
+# only run when named explicitly
+EXTRA_STEPS=(
+  docker:install_docker
+  auto_cpufreq:install_auto_cpufreq
+  firmware:update_firmware
+  gnome:configure_gnome
+  theme:configure_theme
+  desktop:install_desktop
+  greeter:install_greeter
+)
+
+find_step() {
+  local entry
+  for entry in "${STEPS[@]}" "${EXTRA_STEPS[@]}"; do
+    if [ "${entry%%:*}" = "$1" ]; then
+      echo "${entry#*:}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# validate requested steps before doing anything
+selected=()
+if [ $# -eq 0 ]; then
+  selected=("${STEPS[@]}")
+else
+  for name in "$@"; do
+    if ! fn=$(find_step "$name"); then
+      color_echo "red" "Unknown step: $name"
+      echo "steps: $(printf '%s ' "${STEPS[@]%%:*}")"
+      echo "extra: $(printf '%s ' "${EXTRA_STEPS[@]%%:*}")"
+      exit 1
+    fi
+    selected+=("${name}:${fn}")
+  done
 fi
 
-# Source utility functions
-source utils.sh
+prompt_var USER_NAME "Git/GPG user name"
+prompt_var USER_EMAIL "Git/GPG user email"
+prompt_var SETUP_HOSTNAME "Hostname" "behemoth"
+prompt_var LOCAL_IP "Local IP range to allow through ufw (e.g. 192.168.1.0/24, blank to skip)"
 
-# Source the package list
-if [ ! -f "packages.conf" ]; then
-  echo "Error: packages.conf not found!"
+touch "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+color_echo "blue" "Fedora setup for ${ACTUAL_USER} ($(rpm -E %fedora)), $(get_timestamp)"
+is_container && color_echo "yellow" "Running in a container: service/firewall/hardware steps are skipped"
+
+for entry in "${selected[@]}"; do
+  run_step "${entry%%:*}" "${entry#*:}"
+done
+
+if print_summary; then
+  echo "setup complete. you may want to reboot your system."
+  prompt_reboot
+else
   exit 1
 fi
-
-source packages.conf
-
-# set dnf config
-color_echo "yellow" "Configuring DNF Package Manager..."
-backup_file "/etc/dnf/dnf.conf"
-echo "max_parallel_downloads=10" | tee -a /etc/dnf/dnf.conf >/dev/null
-sudo dnf -y install dnf-plugins-core
-
-# enable rpm fusion
-sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-sudo dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-
-if [[ "$DEV_ONLY" == false ]]; then
-  dnf update -y && dnf upgrade -y
-  git clone https://github.com/ryanoasis/nerd-fonts.git "${TEMP_DIR}/nerd-fonts"
-fi
-
-# color_echo "green" "Installing system utilities..."
-install_packages "${SYSTEM_UTILS[@]}"
-
-color_echo "green" "Installing development tools..."
-install_packages "${DEV_TOOLS[@]}"
-
-color_echo "green" "Installing language tools..."
-install_packages "${LANG_TOOLS[@]}"
-
-color_echo "green" "Installing apps..."
-install_packages "${APPS[@]}"
-
-color_echo "green" "Installing neovim pre-requisites..."
-install_packages "${NEOVIM_PRE[@]}"
-
-initial setup
-color_echo "green" "configuring initial setup"
-. init/config.sh
-
-# keys
-color_echo "green" "configuring keys"
-. fedora/init/keys.sh
-
-# security
-color_echo "green" "configuring security"
-. fedora/init/secure.sh
-
-# browsers
-color_echo "green" "installing browsers and tools"
-. fedora/apps/install_browsers.sh
-
-# developer tools
-color_echo "green" "installing developer tools"
-. fedora/apps/install_dev.sh
-. fedora/apps/install_languages.sh
-
-# flatpak
-color_echo "green" "installing flatpaks"
-. fedora/apps/install_flatpaks.sh
-
-# gnome
-# color_echo "green" "configuring gnome"
-#   . setup/gnome.sh
-
-echo "setup complete. you may want to reboot your system."

@@ -1,44 +1,73 @@
 #!/usr/bin/env bash
+# base system configuration; sourced by run.sh
 
-HOSTNAME="behemoth"
+configure_dnf() {
+  color_echo "yellow" "Configuring DNF Package Manager..."
+  # dnf5 keeps user settings in /etc/dnf/libdnf5.conf.d/, so this is safe to re-run
+  dnf config-manager setopt max_parallel_downloads=10
+  install_packages dnf-plugins-core dnf5-plugins
+}
 
-# set hostname
-color_echo "yellow" "Setting hostname..."
-hostnamectl set-hostname "${HOSTNAME}"
+enable_repos() {
+  color_echo "yellow" "Enabling RPM Fusion and OpenH264..."
+  local fedora_version
+  fedora_version=$(rpm -E %fedora)
+  if ! is_pkg_installed rpmfusion-free-release || ! is_pkg_installed rpmfusion-nonfree-release; then
+    dnf install -y \
+      "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm" \
+      "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"
+  fi
+  install_packages rpmfusion-free-release-tainted rpmfusion-nonfree-release-tainted
+  dnf config-manager setopt fedora-cisco-openh264.enabled=1
+}
 
-# enable automatic system updates
-color_echo "yellow" "Enabling DNF autoupdate..."
-dnf install dnf-automatic -y
-touch /etc/dnf/automatic.conf
-sed -i 's/apply_updates = no/apply_updates = yes/' /etc/dnf/automatic.conf
-systemctl enable --now dnf-automatic.timer
+system_update() {
+  if [ -n "${SKIP_UPGRADE:-}" ]; then
+    color_echo "yellow" "skipped: SKIP_UPGRADE is set"
+    return 0
+  fi
+  dnf upgrade -y --refresh
+}
 
-# Update some codec and chipset stuff
-sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
+configure_multimedia() {
+  color_echo "yellow" "Installing multimedia codecs..."
+  if is_pkg_installed ffmpeg-free; then
+    dnf swap -y ffmpeg-free ffmpeg --allowerasing
+  else
+    install_packages ffmpeg
+  fi
+  dnf group install -y multimedia --setopt=install_weak_deps=False --exclude=PackageKit-gstreamer-plugin
+  dnf group install -y sound-and-video
+  color_echo "yellow" "Installing Intel Hardware Accelerated Codecs..."
+  install_packages intel-media-driver
+}
 
-# replace flathub with package manager
-color_echo "yellow" "Replacing Fedora Flatpak Repo with Flathub..."
-dnf install -y flatpak
-flatpak remote-delete fedora --force || true
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak repair
-flatpak update
+configure_system() {
+  color_echo "yellow" "Setting hostname..."
+  skip_if_container "hostnamectl set-hostname ${SETUP_HOSTNAME}" || hostnamectl set-hostname "${SETUP_HOSTNAME}"
 
-# enable ssh
-color_echo "yellow" "Installing and enabling SSH..."
-dnf install -y openssh-server
-systemctl enable --now sshd
+  color_echo "yellow" "Enabling DNF automatic updates..."
+  install_packages dnf5-plugin-automatic
+  if [ ! -f /etc/dnf/automatic.conf ]; then
+    printf '[commands]\napply_updates = yes\n' >/etc/dnf/automatic.conf
+  else
+    sed -i 's/^apply_updates\s*=.*/apply_updates = yes/' /etc/dnf/automatic.conf
+    grep -q '^apply_updates' /etc/dnf/automatic.conf ||
+      printf '\n[commands]\napply_updates = yes\n' >>/etc/dnf/automatic.conf
+  fi
+  enable_service dnf5-automatic.timer
 
-# multimedia
-color_echo "yellow" "Installing multimedia codecs..."
-dnf swap ffmpeg-free ffmpeg --allowerasing -y
-dnf update @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin -y
-dnf4 install @sound-and-video -y
-dnf4 update @sound-and-video -y
-color_echo "yellow" "Installing Intel Hardware Accelerated Codecs..."
-dnf -y install intel-media-driver
+  color_echo "yellow" "Installing and enabling SSH..."
+  install_packages openssh-server
+  enable_service sshd
+}
 
-# config
-git config --global init.defaultBranch main
-git config --global user.email "${USER_EMAIL}"
-git config --global user.name "${USER_NAME}"
+configure_git() {
+  as_user git config --global init.defaultBranch main
+  if [ -n "${USER_EMAIL}" ]; then
+    as_user git config --global user.email "${USER_EMAIL}"
+  fi
+  if [ -n "${USER_NAME}" ]; then
+    as_user git config --global user.name "${USER_NAME}"
+  fi
+}

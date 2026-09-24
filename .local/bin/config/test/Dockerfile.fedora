@@ -1,0 +1,19 @@
+FROM fedora:44
+
+# bootstrap only: run.sh is responsible for everything else
+RUN dnf install -y sudo ncurses shadow-utils && dnf clean all \
+  && useradd -m -s /bin/bash tester \
+  && echo 'tester ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/tester \
+  && chmod 440 /etc/sudoers.d/tester
+
+COPY --chown=tester:tester . /home/tester/setup
+
+ENV DISTRO=fedora \
+  NONINTERACTIVE=1 \
+  USER_NAME="Test User" \
+  USER_EMAIL=test@example.com \
+  LOCAL_IP=192.168.1.0/24 \
+  TERM=xterm-256color
+
+USER tester
+WORKDIR /home/tester/setup

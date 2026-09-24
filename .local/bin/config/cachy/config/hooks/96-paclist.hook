@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Writing package lists to the dots repo...
+When = PostTransaction
+Exec = /bin/sh -c 'pacman -Qqen > @DIR@/pkglist.native.txt; pacman -Qqem > @DIR@/pkglist.aur.txt; chown @USER@: @DIR@/pkglist.*.txt'
