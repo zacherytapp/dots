@@ -2,13 +2,16 @@
 
 ## Overview
 
-A comprehensive Neovim configuration primarily used for Salesforce and JavaScript development, with extensive LSP support, modern plugins, and sensible defaults.
+A Neovim configuration for Salesforce, web, Go, Python, Rust and infrastructure work. It aims for VS Code-level language support (LSP, formatting, linting, testing, debugging, snippets, icons) with a LazyVim-style layout and keymaps.
 
 **Key Features:**
 
-- Full LSP support for multiple languages (Apex, JavaScript/TypeScript, Go, Python, Lua, Jinja, etc.)
-- Auto-formatting on save with conform.nvim
-- Fuzzy finding with Telescope
+- Per-language support for Lua, Go (+ Go templates, templ, Helm), Python (+ Django, Jinja2), Rust, TypeScript/JavaScript (+ React, Next.js), Svelte, HTML/CSS/Tailwind, Salesforce (Apex, LWC, Visualforce, Aura, SOQL), YAML, JSON, Terraform/OpenTofu, Docker, Ansible and Caddy. See [Language Support](#language-support)
+- Tools installed automatically through Mason; servers start as soon as they're installed
+- Format on save (conform.nvim) and linting (nvim-lint), with toggles
+- LazyVim layout: bufferline, lualine, noice, which-key (helix), snacks dashboard/notifier/indent, flash
+- Every keymap in the commander palette (`<leader>k`) and which-key
+- Fuzzy finding with fzf-lua
 - Git integration with gitsigns, git-conflict, and lazygit
 - Treesitter syntax highlighting with textobjects
 - Blink completion engine with Copilot integration
@@ -16,9 +19,8 @@ A comprehensive Neovim configuration primarily used for Salesforce and JavaScrip
 - AI-assisted coding with GitHub Copilot and OpenCode
 - Quick file navigation with Harpoon
 - Modern UI with Snacks (dashboard, notifications, zen mode)
-- Terminal integration with ToggleTerm
 - Obsidian note-taking integration
-- Multiple color schemes (Gruvbox, Catppuccin, Tokyo Night, Rose Pine, Everforest)
+- Gruvbox Material colorscheme with transparency (matches Hyprland and Noctalia)
 
 ## Table of Contents
 
@@ -28,12 +30,12 @@ A comprehensive Neovim configuration primarily used for Salesforce and JavaScrip
 - [Arch Linux Setup](#arch-linux-setup)
 - [Language Runtimes Setup](#language-runtimes-setup)
 - [Neovim Installation](#neovim-installation)
-- [Plugin Dependencies](#plugin-dependencies)
-- [LSP Servers Installation](#lsp-servers-installation)
-- [Formatters & Linters](#formatters--linters)
+- [Configuration Layout](#configuration-layout)
+- [Language Support](#language-support)
 - [Salesforce-Specific Setup](#salesforce-specific-setup)
 - [Configuration Installation](#configuration-installation)
 - [Verification & Troubleshooting](#verification--troubleshooting)
+- [Key Bindings](#key-bindings)
 
 ---
 
@@ -465,198 +467,169 @@ nvim --version
 
 ---
 
-## Plugin Dependencies
+## Configuration Layout
 
-This configuration uses `lazy.nvim` as the plugin manager, which auto-installs on first run. However, some plugins require external dependencies:
+The layout follows [LazyVim](https://www.lazyvim.org/): a small core plus one
+file per language that contributes to it.
 
-### Telescope Dependencies
-
-- **ripgrep** (rg) - Already installed in system dependencies
-- **fd-find** (fd) - Already installed in system dependencies
-- **make** - Required for fzf-native compilation
-
-### Treesitter Dependencies
-
-- **C compiler** (gcc/clang) - Already installed in build tools
-- **tree-sitter CLI** - Already installed via npm
-
-### Mason Dependencies
-
-Mason will automatically install LSP servers and tools, but requires:
-
-- **curl, wget, unzip, tar, gzip** - Already installed
-- **Node.js, Python, Go, Rust** - Already installed
-
----
-
-## LSP Servers Installation
-
-Most LSP servers can be installed via Mason (`:Mason` in Neovim). However, you can also install them manually:
-
-### Via Mason (Recommended)
-
-1. Open Neovim: `nvim`
-2. Run: `:Mason`
-3. Install the following servers by pressing `i` on each:
-   - `lua-language-server` (lua_ls)
-   - `gopls` - Go with advanced inlay hints
-   - `json-lsp` (jsonls) - JSON with schemastore integration
-   - `yaml-language-server` (yamlls) - YAML with schemastore integration
-   - `html-lsp` - HTML, templ, gotmpl support
-   - `tailwindcss-language-server` - Tailwind CSS
-   - `apex-language-server` - Salesforce Apex (uses bundled apex-jorje-lsp.jar)
-   - `jinja-lsp` - Jinja/Jinja2 templates
-   - `ctags-lsp` - Code navigation via ctags (Apex)
-
-### Manual Installation (Alternative)
-
-```bash
-# Lua Language Server
-brew install lua-language-server
-# Or build from source: https://github.com/LuaLS/lua-language-server
-
-# Go Language Server
-go install golang.org/x/tools/gopls@latest
-
-# JSON/YAML Language Servers (via npm)
-npm install -g vscode-langservers-extracted
-
-# HTML Language Server
-npm install -g vscode-langservers-extracted
-
-# Tailwind CSS Language Server
-npm install -g @tailwindcss/language-server
-
-# Jinja LSP
-pip install jinja-lsp
-
-# Apex Language Server (for Salesforce)
-# The bundled apex-jorje-lsp.jar in lspserver/ is used automatically
-# Requires Java 21+ (Zulu JDK recommended)
-
-# Ctags LSP (for Apex navigation)
-# Install universal-ctags first, then:
-pip install ctags-lsp
+```
+init.lua                    bootstrap lazy.nvim, load config/*, import plugins + plugins/lang
+lua/config/
+  options.lua               editor options (2-space default indent)
+  filetypes.lua             filetype detection for every supported language
+  keymaps.lua               global keymaps (commander registry) + keymap convention
+  autocmds.lua              LazyVim-style autocommands
+  python_venv.lua           auto-activate a project's .venv / venv
+lua/util/
+  init.lua                  root detection, format toggles, helpers
+  salesforce_lsp.lua        :SalesforceLspInstall (Apex / Visualforce / Aura servers)
+lua/plugins/                core: lsp, formatting (conform), linting (nvim-lint),
+                            treesitter, dap, testing (neotest), blink, fzf-lua,
+                            snacks, ui (bufferline, noice, commander), editor
+                            (which-key, flash, grug-far, ...), git, files, ...
+lua/plugins/lang/*.lua      one file per language (see below)
+after/ftplugin/*.lua        per-filetype indent / commentstring
+snippets/                   VSCode-style snippets (Apex, LWC, Visualforce)
 ```
 
----
+Each `lua/plugins/lang/<language>.lua` adds to the core specs through lazy.nvim
+`opts` merging:
 
-## Formatters & Linters
+| Core spec | What a language adds |
+| --- | --- |
+| `nvim-treesitter` | `ensure_installed` parsers, `register` (filetype → parser), `runtime_indent` |
+| `mason.nvim` | `ensure_installed` packages (installed automatically on startup) |
+| `nvim-lspconfig` | `servers.<name>` = a `vim.lsp.Config` merged over nvim-lspconfig's defaults (`enabled = false` skips it, `filetypes_include` extends the default filetypes) |
+| `conform.nvim` | `formatters_by_ft`, `formatters` overrides |
+| `nvim-lint` | `linters_by_ft`, `linters.<name>` overrides with an optional `condition(ctx)` |
+| `neotest` | `adapters` |
+| `nvim-dap` | `configurations`, or a language-specific DAP plugin as a dependency |
 
-### Via Mason (Recommended)
+Servers are only enabled when their command exists, and they start as soon as Mason finishes
+installing them (no restart). `:LspMissing` lists configured servers that aren't
+installed, `:LintInfo` shows the linters for the current buffer, and `:ConformInfo`
+shows its formatters.
 
-Open `:Mason` in Neovim and install:
+To add a language, copy the closest `lua/plugins/lang/*.lua` file.
 
-- `prettierd` - JavaScript/TypeScript/HTML/CSS/JSON formatter
-- `stylua` - Lua formatter
-- `shellcheck` - Shell script linter
-- `shfmt` - Shell script formatter
-- `black` - Python formatter
-- `isort` - Python import sorter
-- `ruff` - Fast Python linter/formatter
-- `gofumpt` - Go formatter (stricter than gofmt)
-- `goimports` - Go import organizer
+## Language Support
 
-### Manual Installation
+| Language | LSP | Format | Lint | Test / Debug | Extras |
+| --- | --- | --- | --- | --- | --- |
+| Lua | lua_ls + lazydev | stylua (2 spaces without a stylua.toml) | lua_ls | — | Neovim API completion |
+| Go | gopls (gofumpt, staticcheck, hints, codelens) | goimports, gofumpt | golangci-lint | neotest-golang, delve | gopher.nvim (`<leader>cg`), coverage |
+| Go templates | gopls + html + tailwind + emmet | html LSP | — | — | `.tmpl` `.gotmpl` `.gohtml`, `templates/*.html` in Go modules |
+| templ | templ + html + tailwind + emmet | templ fmt | templ | — | |
+| Helm | helm_ls | — | helm lint | — | chart `templates/` and `values*.yaml` |
+| Python | basedpyright + ruff | ruff (organize imports + format) | ruff | pytest (neotest), debugpy | venv auto-activation, `<leader>cv` picker |
+| Django templates | djlsp + html + emmet | djlint (django profile) | djlint | — | `templates/*.html` in projects with `manage.py` |
+| Jinja2 | jinja-lsp + html + emmet | djlint (jinja profile) | djlint | — | `.j2` `.jinja` `.jinja2`, Flask `templates/` |
+| Rust | rust-analyzer (rustaceanvim, clippy) | rustfmt (LSP) | clippy | neotest, codelldb | crates.nvim, taplo for TOML |
+| TypeScript / JavaScript / React | vtsls + eslint | prettierd (+ eslint fix-all on save) | eslint | jest, vitest, js-debug | nvim-vtsls commands, tsc.nvim, package-info |
+| Next.js | vtsls (workspace TS + tsconfig plugins) + tailwind + cssmodules | prettierd | eslint | jest/vitest, "Next.js: debug server" | `.mdx` |
+| Svelte | svelte + typescript-svelte-plugin | prettierd | eslint | vitest | |
+| HTML / CSS | html, cssls, tailwindcss, emmet | prettierd (+ stylelint when configured) | stylelint | — | colour previews |
+| Apex | apex_ls (+ ctags_lsp with universal-ctags) | prettier-plugin-apex (when installed in the project) | PMD | sf.nvim tests + coverage (`<leader>mt`) | sObject refresh, snippets |
+| Lightning Web Components | lwc_ls + vtsls + eslint + html | prettierd | eslint | Jest via sf.nvim | |
+| Visualforce | visualforce_ls + emmet | visualforce_ls | — | — | `.page` `.component` |
+| Aura | aura_ls | — | — | — | `.cmp` `.auradoc` |
+| SOQL / SOSL / Apex logs | treesitter | — | — | run via sf.nvim | |
+| Salesforce metadata XML | lemminx | lemminx | — | — | |
+| YAML | yamlls + SchemaStore | prettierd | actionlint (workflows), yamllint (if configured) | — | |
+| JSON / JSONC / JSON5 | jsonls + SchemaStore (+ sfdx-project schema) | prettierd | jsonls | — | |
+| Terraform | terraform-ls | terraform fmt (or tofu fmt) | tflint | — | |
+| OpenTofu | tofu-ls | tofu fmt (or terraform fmt) | tflint | — | `.tofu` |
+| Docker | docker-language-server (Dockerfile, Compose, Bake) + yamlls | — | hadolint | — | |
+| Ansible | ansible-language-server | prettierd | ansible-lint (via the LSP) | `<leader>ta` run playbook | playbook/role detection |
+| Caddy | — (no Caddyfile LSP exists) | caddy fmt | caddy adapt | — | tabs, 4 wide |
 
-```bash
-# Prettierd (faster prettier)
-npm install -g prettierd
+Indentation: 2 spaces everywhere except Go, Caddy and templ (tabs, as their
+formatters emit), Python and Rust (4 spaces, PEP 8 / rustfmt). `vim-sleuth` and
+`.editorconfig` adapt to existing files.
 
-# Stylua (Lua formatter)
-cargo install stylua
+### Tools Mason can't install
 
-# Shellcheck & shfmt
-# Ubuntu/Debian:
-sudo apt install shellcheck
-GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@latest
+Everything in the table is installed by Mason except:
 
-# Fedora:
-sudo dnf install shellcheck ShellCheck
-GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@latest
-
-# Arch:
-sudo pacman -S shellcheck shfmt
-
-# Python formatters
-pip install black isort ruff
-
-# Go formatters
-go install mvdan.cc/gofumpt@latest
-go install golang.org/x/tools/cmd/goimports@latest
-
-# Rubocop (Ruby)
-gem install rubocop
-
-# Pint (PHP - Laravel formatter)
-composer global require laravel/pint
-```
-
----
+| Tool | Needed for | Install |
+| --- | --- | --- |
+| `rust-analyzer` | Rust | `rustup component add rust-analyzer` |
+| `lwc-language-server` | LWC | `npm i -g @salesforce/lwc-language-server` |
+| Apex / Visualforce / Aura servers | Salesforce | `:SalesforceLspInstall` (see below) |
+| `java` 17+ | Apex LSP | your distro's JDK |
+| `pmd` 7 | Apex linting | see [PMD](#pmd-apex-static-analysis) |
+| `ctags` (universal-ctags) | Apex ctags jump | your distro's `universal-ctags` package |
+| `terraform` / `tofu` | Terraform / OpenTofu formatting + terraform-ls validation | HashiCorp / OpenTofu packages |
+| `caddy` | Caddyfile formatting / validation | your distro's `caddy` package |
+| `ansible` | Ansible module docs and lint | `pipx install ansible-core` |
+| `node`, `go`, `cargo`, `python3` | runtimes for several Mason packages | see [Language Runtimes Setup](#language-runtimes-setup) |
 
 ## Salesforce-Specific Setup
 
 ### SFDX CLI
 
 ```bash
-# Already installed via npm in Node.js setup
 npm install -g @salesforce/cli
-
-# Verify installation
 sf --version
 ```
+
+### Language servers
+
+Apex, Visualforce and Aura servers ship only inside Salesforce's VS Code
+extensions. Install or update them from Open VSX with:
+
+```vim
+:SalesforceLspInstall              " all three
+:SalesforceLspInstall visualforce  " or one of apex / visualforce / aura
+:SalesforceLspStatus               " installed versions
+```
+
+They're unpacked into `~/.local/share/nvim/salesforce-lsp/` and start
+immediately; no restart needed. Until the Apex server is installed there,
+the jar bundled in `lspserver/apex-jorje-lsp.jar` is used. The LWC server
+comes from npm (`npm i -g @salesforce/lwc-language-server`). All Salesforce servers
+attach only inside an sfdx project (`sfdx-project.json`).
+
+For Apex completion of sObjects and custom fields, run **Refresh sObject
+definitions** (`<leader>mms`, like VS Code's "SFDX: Refresh SObject Definitions")
+once per org.
 
 ### PMD (Apex Static Analysis)
 
 ```bash
-# Download PMD
-PMD_VERSION="7.0.0"
+PMD_VERSION="7.19.0"
 wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip
-
-# Extract and install
 unzip pmd-dist-${PMD_VERSION}-bin.zip
 sudo mv pmd-bin-${PMD_VERSION} /opt/pmd
 sudo ln -s /opt/pmd/bin/pmd /usr/local/bin/pmd
-
-# Clean up
-rm pmd-dist-${PMD_VERSION}-bin.zip
-
-# Verify
 pmd --version
 ```
 
-### Apex Ruleset Configuration
-
-```bash
-# Create config directory
-mkdir -p ~/.config/apex
-
-# Create or download your apex_ruleset.xml
-# Place it at: ~/.config/apex/apex_ruleset.xml
-# This is referenced in lua/plugins/none-ls.lua
-```
+PMD runs through nvim-lint on open/save of Apex files (files over 10,000 lines
+are skipped). It uses `~/.config/apex/apex_ruleset.xml` when present and PMD's
+bundled `rulesets/apex/quickstart.xml` otherwise.
 
 ### Prettier Plugin for Apex
 
-```bash
-# Install prettier-plugin-apex
-npm install -g prettier-plugin-apex
+Apex is formatted with prettier only when the project has
+`prettier-plugin-apex` in `node_modules` (otherwise prettier can't parse Apex):
 
-# Create .prettierrc in your Salesforce project root
-cat > ~/.prettierrc << EOF
+```bash
+npm install --save-dev prettier prettier-plugin-apex
+cat > .prettierrc << EOF
 {
   "plugins": ["prettier-plugin-apex"],
-  "overrides": [
-    {
-      "files": "*.apex",
-      "options": {
-        "parser": "apex"
-      }
-    }
-  ]
+  "overrides": [{ "files": ["*.cls", "*.trigger", "*.apex"], "options": { "parser": "apex" } }]
 }
 EOF
 ```
+
+### sf.nvim
+
+Org, deploy, retrieve, test and metadata workflows come from
+[sf.nvim](https://github.com/xixiaofinland/sf.nvim) on `<leader>m` (see
+[Salesforce keys](#salesforce-leaderm)). The statusline shows the target org
+and the current file's test coverage.
 
 ---
 
@@ -664,32 +637,17 @@ EOF
 
 ### Clone Dotfiles Repository
 
-This configuration is part of a larger dotfiles setup using a bare git repository:
+This configuration is part of a larger dotfiles repository managed
+with [GNU Stow](https://www.gnu.org/software/stow/):
 
 ```bash
-# Add git alias for dotfiles management
-alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-
-# Add .cfg to global gitignore
-echo ".cfg" >> ~/.gitignore
-
-# Clone the bare repository
-git clone --bare git@github.com:zacherytapp/dots.git $HOME/.cfg
-
-# Define the alias in the current shell
-alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-
-# Checkout the actual content from the bare repository
-config checkout
-
-# Ignore untracked files
-config config --local status.showUntrackedFiles no
-
-# Make alias permanent
-echo "alias config='/usr/bin/git --git-dir=\$HOME/.cfg/ --work-tree=\$HOME'" >> ~/.zshrc
+git clone git@github.com:zacherytapp/dots.git ~/projects/dots
+cd ~/projects/dots
+stow .
 ```
 
-If you get conflicts during checkout, back up the existing files and retry.
+See the top-level `README.md` in the dots repository for handling conflicts with
+existing files.
 
 ### First Neovim Launch
 
@@ -768,14 +726,13 @@ nvim +checkhealth
 **Should be OK:**
 
 - ✅ nvim-treesitter - All parsers installed
-- ✅ telescope - ripgrep and fd found
+- ✅ fzf-lua - fzf, ripgrep and fd found
 - ✅ mason - All core utils found
 - ✅ vim.lsp - No errors
 - ✅ clipboard - xclip found
 
 **Expected Warnings (Safe to Ignore):**
 
-- ⚠️ lazy.nvim - luarocks warnings (if no plugins need it)
 - ⚠️ mason - Composer warning (if not using PHP)
 - ⚠️ mason - Julia warning (if not using Julia)
 - ⚠️ overseer - Various task runner warnings (project-specific)
@@ -785,7 +742,7 @@ nvim +checkhealth
 
 - ❌ vim.provider - Python/Node.js/Ruby providers not found
 - ❌ lazy.nvim - Git not found
-- ❌ telescope - ripgrep or fd not found
+- ❌ fzf-lua - fzf, ripgrep or fd not found
 
 ### Common Issues & Solutions
 
@@ -824,18 +781,24 @@ rbenv rehash  # or: rvm reload
 
 #### LSP Not Starting
 
-```bash
-# Check if LSP is configured
-nvim some_file.lua
-# Type: :LspInfo
-
-# If not attached, check logs
+```vim
+" Attached clients and their configuration
+:LspInfo            " (<leader>cl)
+" Configured servers whose command isn't installed yet
+:LspMissing
+" Linters / formatters that apply to the current buffer
+:LintInfo
+:ConformInfo
+" Server logs
 :LspLog
-
-# Manually install via Mason
-:Mason
-# Find the server and press 'i' to install
+" Install / inspect tools
+:Mason              " (<leader>cm)
 ```
+
+Mason installs run in the background on first start. Servers start as soon as
+their package finishes installing. Salesforce Apex / Visualforce / Aura servers
+come from `:SalesforceLspInstall`, and `rust-analyzer` from `rustup component
+add rust-analyzer` (see [Tools Mason can't install](#tools-mason-cant-install)).
 
 #### Treesitter Compilation Fails
 
@@ -848,7 +811,7 @@ gcc --version
 # Example: :TSInstall lua
 ```
 
-#### Telescope Not Finding Files
+#### fzf-lua Not Finding Files
 
 ```bash
 # Verify ripgrep and fd are in PATH
@@ -894,11 +857,12 @@ sudo ln -s $(which fdfind) /usr/local/bin/fd
 2. Save it (`:w`)
 3. Format-on-save should auto-format the file
 
-### Test Telescope
+### Test the Picker
 
-- `<leader>ff` - Find files
-- `<leader>fg` - Live grep
-- `<leader>fb` - List buffers
+- `<leader><space>` - Find files (root dir)
+- `<leader>/` - Grep (root dir)
+- `<leader>,` - Buffers
+- `<leader>k` - Command palette
 
 ### Test Treesitter
 
@@ -910,391 +874,279 @@ sudo ln -s $(which fdfind) /usr/local/bin/fd
 
 ## Key Bindings
 
-Leader key is `<Space>`
+`<leader>` is `Space`. The layout follows [LazyVim's keymaps](https://www.lazyvim.org/keymaps).
+Every binding appears in two places:
 
-### File Navigation (Telescope)
+- **`<leader>k`**: commander palette (fuzzy search over every keymap and palette-only command)
+- **which-key**: press `<leader>` (or `g`, `[`, `]`, `z`, ...) and wait; `<leader>?` shows buffer-local keys
 
-- `<leader>ff` - Find files
-- `<leader>fg` - Live grep
-- `<leader>fb` - Find buffers
-- `<leader>fo` - Find old files
-- `<leader>fk` - Find keymaps
-- `<leader>fh` - Find help tags
-- `<leader>ls` - LSP document symbols
-- `-` - Open Oil file browser (parent directory)
+How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
 
-### Harpoon (Quick File Access)
+### General
 
-- `<leader>ha` - Add file to Harpoon
-- `<leader>ho` - Open Harpoon menu
-- `<leader>1-9` - Jump to Harpoon file 1-9
-- `[h` / `]h` - Previous/Next Harpoon file
+| Key | Action |
+| --- | --- |
+| `<leader>k` | Command palette (commander) |
+| `<C-s>` | Save file |
+| `<Esc>` | Clear search highlight |
+| `<C-h/j/k/l>` | Move between windows |
+| `<C-Up/Down/Left/Right>` | Resize window |
+| `<M-h/j/k/l>` | Move line / selection (mini.move) |
+| `s` / `S` | Flash jump / Flash treesitter select |
+| `gsa` `gsd` `gsr` `gsf` `gsh` | Surround add / delete / replace / find / highlight |
+| `gS` / `gJ` | Split / join arguments |
+| `gco` / `gcO` | Add comment below / above |
+| `<C-a>` / `<C-x>` | Increment / decrement (incl. true/false, enable/disable) |
+| `-` | Oil: parent directory |
+| `<leader>p` (visual) | Paste without yanking the selection |
+| `<leader>y` / `<leader>Y` | Yank to system clipboard |
+| `<leader>l` | Lazy |
+| `<leader>cm` | Mason |
+| `<leader>.` / `<leader>S` | Scratch buffer / select scratch |
+| `<C-/>` | Terminal (root dir) |
+| `<leader>K` | Keywordprg |
 
-### LSP
+### Files, buffers, windows, tabs
 
-- `gd` - Go to definition
-- `gr` - Find references
-- `gi` - Go to implementation
-- `K` - Hover documentation
-- `<C-k>` - Signature help
-- `<leader>ca` - Code actions
-- `<leader>rn` - Rename symbol
-- `<leader>ge` - Go to declaration
-- `<leader>fF` - Format buffer
-- `<leader>li` - LSP info
-- `<leader>lr` - LSP restart
-- `<leader>wa` / `<leader>wr` - Add/Remove workspace folder
+| Key | Action |
+| --- | --- |
+| `<leader><space>` | Find files (root dir) |
+| `<leader>ff` / `<leader>fF` | Find files (root dir / cwd) |
+| `<leader>fr` / `<leader>fR` | Recent files (all / cwd) |
+| `<leader>fg` | Git files |
+| `<leader>fb` / `<leader>,` | Buffers |
+| `<leader>fc` | Config files |
+| `<leader>fp` | Files in `~/projects` |
+| `<leader>fn` | New file |
+| `<leader>fe` / `<leader>fE` | Neo-tree (root dir / cwd), also `<leader>e` / `<leader>E` |
+| `<leader>fo` | Oil (float, cwd) |
+| `<leader>ft` / `<leader>fT` | Terminal (root dir / cwd) |
+| `<S-h>` / `<S-l>`, `[b` / `]b` | Previous / next buffer |
+| `[B` / `]B` | Move buffer left / right |
+| `<leader>bb`, ``<leader>` `` | Alternate buffer |
+| `<leader>bd` / `<leader>bD` | Delete buffer / buffer and window |
+| `<leader>bo` | Delete other buffers |
+| `<leader>bp` / `<leader>bP` | Pin buffer / delete unpinned buffers |
+| `<leader>br` / `<leader>bl` | Delete buffers to the right / left |
+| `<leader>bj` | Pick buffer |
+| `<leader>be` | Buffer explorer |
+| `<leader>-` / `<leader>\|` | Split below / right |
+| `<leader>wd` | Close window |
+| `<leader>wm`, `<leader>uZ` | Zoom window |
+| `<leader>w…` | Any `<C-w>` command (`<C-w><space>` = window hydra) |
+| `<leader><tab><tab>` | New tab |
+| `<leader><tab>]` / `<leader><tab>[` | Next / previous tab |
+| `<leader><tab>d` / `<leader><tab>o` | Close tab / close other tabs |
+| `<leader><tab>f` / `<leader><tab>l` | First / last tab |
+| `<leader>h` / `<leader>H` | Harpoon menu / harpoon file |
+| `<leader>1` … `<leader>9` | Harpoon file 1…9 |
+| `<leader>qq` | Quit all |
+| `<leader>qs` / `<leader>ql` / `<leader>qS` | Restore session (cwd / last / select) |
+| `<leader>qd` | Don't save the current session |
 
-### Diagnostics
+### Search
 
-- `<leader>xx` - Toggle Trouble diagnostics
-- `<leader>da` - Show buffer diagnostics
+| Key | Action |
+| --- | --- |
+| `<leader>/` | Grep (root dir) |
+| `<leader>sg` / `<leader>sG` | Grep (root dir / cwd) |
+| `<leader>sw` / `<leader>sW` | Word or selection (root dir / cwd) |
+| `<leader>sb` | Lines in buffer |
+| `<leader>ss` / `<leader>sS` | LSP symbols (buffer / workspace) |
+| `<leader>sd` / `<leader>sD` | Diagnostics (buffer / workspace) |
+| `<leader>sr` | Search and replace (grug-far, visual selection too) |
+| `<leader>sF` | Search and replace in the current file |
+| `<leader>sh` / `<leader>sk` / `<leader>sC` | Help / keymaps / commands |
+| `<leader>:`, `<leader>sc` | Command history |
+| `<leader>sj` / `<leader>sm` / `<leader>s"` | Jumps / marks / registers |
+| `<leader>sq` / `<leader>sl` | Quickfix / location list |
+| `<leader>sR` | Resume last picker |
+| `<leader>st` / `<leader>sT` | Todo comments (all / TODO,FIX,FIXME) |
+| `<leader>su` | Undo tree |
+| `<leader>sN` | Notification history |
+| `<leader>snl` `snh` `sna` `snd` `snt` | Noice: last / history / all / dismiss / picker |
+| `<leader>sH` / `<leader>sa` / `<leader>sM` | Highlights / autocommands / man pages |
+| `<leader>uC` | Colorschemes |
+
+In fzf-lua pickers: `<C-q>` sends everything to quickfix, `<M-i>` toggles ignored
+files, `<M-h>` hidden files.
+
+### Code / LSP
+
+| Key | Action |
+| --- | --- |
+| `gd` / `gr` / `gI` / `gy` / `gD` | Definition / references / implementation / type definition / declaration |
+| `K` / `gK` | Hover / signature help (`<C-k>` in insert mode) |
+| `]]` / `[[` | Next / previous reference of the word under the cursor |
+| `<leader>ca` / `<leader>cA` | Code action / source action |
+| `<leader>cr` | Rename symbol |
+| `<leader>cR` | Rename file (updates imports) |
+| `<leader>cf` | Format buffer / selection |
+| `<leader>cJ` | Format buffer as JSON (jq) |
+| `<leader>cd` | Line diagnostics |
+| `<leader>cs` / `<leader>cS` | Symbols outline / LSP references (Trouble) |
+| `<leader>cc` / `<leader>cC` | Run codelens / toggle codelens |
+| `<leader>cl` / `<leader>cL` | LSP info / restart LSP |
+| `<leader>cwa` `cwr` `cwl` | Workspace folders add / remove / list |
+| `<leader>cxa` `cxA` `cxf` `cxF` `cxp` `cxP` | Swap argument / function / property with next / previous |
+| `]f` `[f` `]c` `[c` `]a` `[a` | Next / previous function, class, argument (capitals = end) |
+| `]i` `[i` `]o` `[o` | Next / previous conditional, loop |
+| `af` `if` `ac` `ic` `ao` `io` `aa` `ia` `at` `au` `ag` | Textobjects: function, class, block, argument, tag, call, buffer |
+
+Language-specific (buffer-local):
+
+| Key | Where | Action |
+| --- | --- | --- |
+| `gD` / `gR` | TS/JS | Source definition / file references |
+| `<leader>co` / `<leader>cM` / `<leader>cu` / `<leader>cD` | TS/JS | Organize / add missing / remove unused imports / fix all |
+| `<leader>cV` / `<leader>cp` / `<leader>ck` | TS/JS | TS version / goto tsconfig / type-check project |
+| `<leader>cn…` | package.json | npm: `s` show versions, `u` update, `d` delete, `i` install, `v` change version |
+| `<leader>cgt` `cgT` `cge` `cgi` `cgg` `cgG` `cgm` | Go | Tags add/remove, if err, implement interface, generate tests, mod tidy |
+| `<leader>cv` | Python | Select virtualenv |
+| `<leader>cR` / `<leader>ce` / `<leader>cE` / `<leader>cX` | Rust | Grouped code action / expand macro / explain error / runnables |
+| `<leader>dr` | Rust | Debuggables |
+| `<leader>ta` | Ansible | Run playbook / role |
+
+### Diagnostics / quickfix
+
+| Key | Action |
+| --- | --- |
+| `]d` `[d` / `]e` `[e` / `]w` `[w` | Next / previous diagnostic / error / warning |
+| `<leader>xx` / `<leader>xX` | Diagnostics (Trouble: workspace / buffer) |
+| `<leader>xL` / `<leader>xQ` | Location list / quickfix (Trouble) |
+| `<leader>xl` / `<leader>xq` | Location list / quickfix (native) |
+| `[q` / `]q` | Previous / next quickfix item |
+| `<leader>xt` / `<leader>xT` | Todo comments (Trouble) |
+| `]t` / `[t` | Next / previous todo comment |
 
 ### Git
 
-- `<leader>gs` - Git status (Telescope)
-- `<leader>gc` - Git commits (Telescope)
-- `<leader>gg` - Open Lazygit
-- `<leader>gl` - Lazygit log
-- `<leader>gf` - Lazygit current file history
-- `<leader>gB` - Git browse (open in browser)
+| Key | Action |
+| --- | --- |
+| `<leader>gg` / `<leader>gG` | Lazygit (root dir / cwd) |
+| `<leader>gl` / `<leader>gL` | Lazygit log / current file history |
+| `<leader>gs` / `<leader>gc` / `<leader>gC` | Status / commits / buffer commits |
+| `<leader>gr` / `<leader>gS` | Branches / stash |
+| `<leader>gb` | Blame line |
+| `<leader>gB` / `<leader>gY` | Open in browser / copy URL |
+| `<leader>gd` / `<leader>gD` | Diffview open / close |
+| `<leader>gf` / `<leader>gF` | File history / repo history (Diffview) |
+| `<leader>gv` | Fugitive status |
+| `<leader>ge` | Git explorer (Neo-tree) |
+| `]h` / `[h`, `]H` / `[H` | Next / previous hunk, last / first hunk |
+| `<leader>ghs` / `<leader>ghr` | Stage / reset hunk (visual: selection) |
+| `<leader>ghS` / `<leader>ghR` / `<leader>ghu` | Stage buffer / reset buffer / undo stage |
+| `<leader>ghp` / `<leader>ghb` / `<leader>ghB` | Preview hunk / blame line / blame buffer |
+| `<leader>ghd` / `<leader>ghD` | Diff this / diff against `~` |
+| `ih` | Hunk textobject |
+| `<leader>gpl` `gpc` `gpr` `gpR` | Octo: list / create PR, start / submit review |
+| `<leader>gil` `gic` | Octo: list / create issue |
+| `co` `ct` `cb` `c0`, `]x` `[x` | Conflicts: ours / theirs / both / none, next / previous |
 
-### AI/Copilot
+### Test
 
-- `<C-l>` - Accept Copilot suggestion
-- `<C-u>` - Dismiss Copilot suggestion
-- `<C-p>` - Open Copilot panel
-- `<leader>oa` - Ask about selection (OpenCode)
-- `<leader>ot` - Toggle OpenCode embedded
-- `<leader>os` - Select OpenCode prompt
-- `<leader>oc` - OpenCode command
-- `<leader>on` - New OpenCode session
+| Key | Action |
+| --- | --- |
+| `<leader>tr` | Run nearest |
+| `<leader>tt` / `<leader>tT` | Run file / all test files |
+| `<leader>tl` | Run last |
+| `<leader>td` | Debug nearest |
+| `<leader>ts` / `<leader>to` / `<leader>tO` | Summary / output / output panel |
+| `<leader>tw` / `<leader>tS` / `<leader>ta` | Watch file / stop / attach |
+| `<leader>tc` / `<leader>tC` | Go coverage toggle / load |
 
-### Buffer/Window Management
+### Debug (DAP)
 
-- `<leader>w` - Write file
-- `<leader>q` - Close buffer
-- `<leader>Q` - Close window
-- `<leader><leader>` - Switch to last buffer
-- `[b` / `]b` - Previous/Next buffer
-- `<leader>bd` - Delete buffer (Snacks)
+| Key | Action |
+| --- | --- |
+| `<leader>db` / `<leader>dB` / `<leader>dL` | Toggle breakpoint / conditional breakpoint / log point |
+| `<leader>dx` | Clear breakpoints |
+| `<leader>dc` / `<leader>da` / `<leader>dl` | Run or continue / run with args / run last |
+| `<leader>dC` / `<leader>dg` | Run to cursor / go to line without running |
+| `<leader>di` / `<leader>do` / `<leader>dO` | Step into / out / over |
+| `<leader>dj` / `<leader>dk` | Down / up the stack |
+| `<leader>dp` / `<leader>dt` / `<leader>dR` | Pause / terminate / restart |
+| `<leader>du` / `<leader>de` / `<leader>dw` | DAP UI / evaluate / widgets |
+| `<leader>dr` / `<leader>ds` | REPL / session |
+| `<leader>dPt` / `<leader>dPc` | Python: debug test method / class |
 
-### Snacks UI
+`.vscode/launch.json` configurations are picked up automatically.
 
-- `<leader>z` - Toggle Zen mode
-- `<leader>Z` - Toggle Zoom
-- `<leader>/` - Toggle scratch buffer
-- `<leader>S` - Select scratch buffer
-- `<leader>n` - Notification history
-- `<leader>un` - Dismiss all notifications
-- `<C-/>` - Toggle terminal
+### Salesforce (`<leader>m`)
 
-### Toggles (Snacks)
+| Key | Action |
+| --- | --- |
+| `<leader>mof` `mog` `moG` | Fetch org list / set target org / set global target org |
+| `<leader>moo` `moF` `mol` | Open org / open current file in org / pull Apex log |
+| `<leader>mds` / `<leader>mdd` | Save and push file / deploy project delta |
+| `<leader>mrf` `mrd` `mra` `mrp` | Retrieve file / project delta / Apex under cursor / package |
+| `<leader>mct` / `<leader>mco` | Diff file against target org / chosen org |
+| `<leader>mqq` | Run SOQL in file (visual: selection) |
+| `<leader>mqt` / `<leader>mqa` / `<leader>mqb` | Tooling query / run file as anonymous Apex / run unsaved buffer |
+| `<leader>mtm` `mtf` | Test method / file with coverage |
+| `<leader>mtM` `mtF` | Test method / file (quick, no coverage) |
+| `<leader>mto` `mtr` `mtl` | Select tests / repeat last / all local tests |
+| `<leader>mtj` `mtJ` | All Jest tests / Jest tests in file |
+| `<leader>mts`, `]v` / `[v` | Toggle coverage signs, next / previous uncovered line |
+| `<leader>mnc` `mnt` `mnw` `mna` | New Apex class / trigger / LWC / Aura bundle |
+| `<leader>mng` / `<leader>mnG` | Generate ctags / generate and list |
+| `<leader>mmr` `mmt` `mmp` `mmT` `mmP` | Metadata: list / list types / pull names / pull types / set package |
+| `<leader>mms` | Refresh sObject definitions (Apex completion) |
+| `<leader>my` | Copy Apex class name |
+| `<leader>mT` / `<leader>mC` | Toggle SF terminal / cancel running command |
+| `<leader>mxd` / `<leader>mxr` | Delete Apex / rename Apex class (org + local) |
 
-- `<leader>us` - Toggle spelling
-- `<leader>uw` - Toggle wrap
-- `<leader>ul` - Toggle line numbers
-- `<leader>uL` - Toggle relative numbers
-- `<leader>ud` - Toggle diagnostics
-- `<leader>uh` - Toggle inlay hints
-- `<leader>ub` - Toggle dark/light background
-- `<leader>uT` - Toggle Treesitter
+Palette-only (`<leader>k`): install/update Salesforce LSPs, LSP versions,
+refresh custom sObjects, `cd` terminal to project root.
 
-### Utilities
+### AI
 
-- `<leader>k` - Open Commander (command palette)
-- `<leader>u` - Toggle Undotree
-- `<leader>fj` - Format JSON
-- `<leader>cR` - Rename file
-- `<M-j>` / `<M-k>` - Move selection down/up (visual mode)
-- `<leader>y` - Yank to system clipboard
-- `<leader>Y` - Yank lines to system clipboard
-- `<leader>p` - Paste without replacing register
+| Key | Action |
+| --- | --- |
+| `<C-l>` / `<C-u>` (insert) | Copilot: accept / dismiss suggestion |
+| `<leader>aa` / `<leader>a+` | OpenCode: ask about this / add this to the prompt |
+| `<leader>as` / `<leader>ac` | OpenCode: select prompt / command |
+| `<leader>at` / `<leader>an` / `<leader>ai` / `<leader>aA` | OpenCode: toggle / new session / interrupt / cycle agent |
 
-### Terminal
+### Notes (Obsidian, `<leader>n`)
 
-- `<C-\>` - Toggle terminal (ToggleTerm)
-- `<C-/>` - Toggle terminal (Snacks)
+| Key | Action |
+| --- | --- |
+| `<leader>nf` / `<leader>no` / `<leader>ns` | Find note file / open note / search |
+| `<leader>nn` / `<leader>nd` | New note / daily note |
+| `<leader>nb` / `<leader>nl` / `<leader>nt` | Backlinks / links / tags |
+| `<leader>nr` / `<leader>np` | Rename / paste image |
 
-### Obsidian Notes
+### Overseer (`<leader>o`)
 
-- `<leader>noo` - Open note (quick switch)
-- `<leader>non` - New note
-- `<leader>nod` - Daily note
-- `<leader>nos` - Search notes
-- `<leader>nob` - Show backlinks
-- `<leader>nol` - Show links
-- `<leader>not` - Browse tags
-- `<leader>nor` - Rename note
-- `<leader>nop` - Paste image
+| Key | Action |
+| --- | --- |
+| `<leader>ow` / `<leader>oo` / `<leader>os` / `<leader>ot` | Task list / run task / shell command / task action |
 
-### Salesforce (sf.nvim)
+### UI toggles (`<leader>u`)
 
-- `<leader>ss` - Save and push to org
-- `<leader>rp` - Retrieve file from org
-- `<leader>rf` - Retrieve Apex under cursor (visual)
-- `<leader>df` - Diff file against org
-- `<leader>og` - Set target org
-- `<leader>st` - Toggle Salesforce terminal
-- `<leader>rq` - Run SOQL query in file
-- `<leader>tq` - Run tooling query
-- `<leader>hq` - Run highlighted SOQL (visual)
-- `<leader>ra` - Run file as anonymous Apex
-- `<leader>rk` - Retrieve package
-- `<leader>mr` - List metadata to retrieve
-- `<leader>cc` - Create Apex class
-- `<leader>ca` - Create Aura bundle
-- `<leader>cl` - Create LWC bundle
-- `<leader>tm` - Run current test method
-- `<leader>tf` - Run all tests in file
-- `<leader>tr` - Repeat last test run
-- `<leader>tl` - Run all local tests
+| Key | Toggle |
+| --- | --- |
+| `<leader>uf` / `<leader>uF` | Format on save (buffer / global) |
+| `<leader>uh` | Inlay hints |
+| `<leader>ud` | Diagnostics |
+| `<leader>us` / `<leader>uw` | Spelling / wrap |
+| `<leader>ul` / `<leader>uL` | Line numbers / relative numbers |
+| `<leader>ug` / `<leader>ut` | Indent guides / treesitter context |
+| `<leader>uc` / `<leader>uA` | Conceal / tabline |
+| `<leader>uT` / `<leader>uG` | Treesitter highlighting / git signs |
+| `<leader>ub` / `<leader>uD` | Dark background / dim inactive code |
+| `<leader>uz` / `<leader>uZ` / `<leader>uS` | Zen / zoom / smooth scroll |
+| `<leader>un` / `<leader>ur` | Dismiss notifications / redraw |
+| `<leader>ui` / `<leader>uI` | Inspect highlight / treesitter tree |
 
----
+### Completion (blink.cmp)
 
-## Additional Configuration
-
-### Switching Color Schemes
-
-Five color schemes are available. To change the default, edit `init.lua`:
-
-```lua
--- Current default (line 32 in init.lua)
-vim.cmd.colorscheme("gruvbox")
-
--- Other options:
-vim.cmd.colorscheme("catppuccin")      -- Soothing pastel theme
-vim.cmd.colorscheme("tokyonight")      -- Clean dark theme
-vim.cmd.colorscheme("rose-pine")       -- Elegant low-contrast
-vim.cmd.colorscheme("everforest")      -- Green-based comfortable
-```
-
-Or toggle temporarily in Neovim: `:colorscheme <name>`
-
-Toggle dark/light mode: `<leader>ub`
-
-### Obsidian Notes Setup
-
-The Obsidian integration expects notes at `~/notes/obsidian/`. To change this path, edit `lua/plugins/obsidian.lua`:
-
-```lua
-workspaces = {
-    { name = "personal", path = "/your/notes/path" },
-},
-```
-
-### Configure Prettier for Apex
-
-Create `.prettierrc` in your Salesforce project:
-
-```json
-{
-  "plugins": ["prettier-plugin-apex"],
-  "printWidth": 120,
-  "tabWidth": 2,
-  "useTabs": false,
-  "semi": true,
-  "singleQuote": true,
-  "trailingComma": "es5",
-  "bracketSpacing": true,
-  "overrides": [
-    {
-      "files": "*.apex",
-      "options": {
-        "parser": "apex"
-      }
-    }
-  ]
-}
-```
-
----
-
-## Updating
-
-### Update Neovim Configuration
-
-```bash
-# Using the config alias
-config pull
-```
-
-### Update Plugins
-
-```bash
-# In Neovim
-:Lazy sync
-```
-
-### Update LSP Servers
-
-```bash
-# In Neovim
-:Mason
-# Press 'U' to update all installed packages
-```
-
-### Update Neovim
-
-```bash
-# If installed from source
-cd neovim
-git pull
-make CMAKE_BUILD_TYPE=RelWithDebInfo
-sudo make install
-```
-
----
-
-## Architecture Notes
-
-### Configuration Structure
-
-```
-~/.config/nvim/
-├── init.lua                 # Entry point (lazy.nvim bootstrap, colorscheme)
-├── lazy-lock.json           # Plugin version lock file
-├── lua/
-│   ├── options.lua          # Neovim options
-│   ├── keymaps.lua          # Key mappings (uses commander.nvim)
-│   ├── colors.lua           # Color scheme setup
-│   ├── filetypes.lua        # Custom filetype detection
-│   ├── assets.lua           # Asset loading utilities
-│   ├── icons.lua            # Icon definitions
-│   ├── config/
-│   │   └── autocmds.lua     # Autocommands
-│   ├── after/
-│   │   ├── ftplugin/
-│   │   │   └── apex.lua     # Apex-specific settings
-│   │   └── queries/         # Treesitter query injections
-│   │       ├── go/
-│   │       └── gotmpl/
-│   ├── lsp/                 # LSP server configurations
-│   │   ├── apex_ls.lua      # Salesforce Apex
-│   │   ├── ctags_lsp.lua    # Ctags-based navigation
-│   │   ├── gopls.lua        # Go with inlay hints
-│   │   ├── html.lua         # HTML/templ/gotmpl
-│   │   ├── jinja_lsp.lua    # Jinja templates
-│   │   ├── jsonls.lua       # JSON with schemastore
-│   │   ├── lua_ls.lua       # Lua
-│   │   ├── lwc_ls.lua       # Lightning Web Components
-│   │   ├── tailwindcss.lua  # Tailwind CSS
-│   │   ├── visualforce_ls.lua # Visualforce pages
-│   │   └── yamlls.lua       # YAML with schemastore
-│   ├── plugins/             # Plugin specifications (23 files)
-│   │   ├── ai.lua           # Copilot + OpenCode
-│   │   ├── blink.lua        # Completion engine
-│   │   ├── colors.lua       # Color schemes (5 themes)
-│   │   ├── conform.lua      # Formatter config
-│   │   ├── editor.lua       # Editor enhancements
-│   │   ├── files.lua        # Oil + Neo-tree
-│   │   ├── git.lua          # Git integration
-│   │   ├── harpoon.lua      # Quick file navigation
-│   │   ├── icons.lua        # Icon plugin
-│   │   ├── lsp.lua          # LSP config
-│   │   ├── mini.lua         # Mini.nvim utilities
-│   │   ├── noice.lua        # Command line UI
-│   │   ├── none-ls.lua      # Linting/diagnostics
-│   │   ├── obsidian.lua     # Obsidian integration
-│   │   ├── render-markdown.lua # Markdown rendering
-│   │   ├── sf-nvim.lua      # Salesforce tools
-│   │   ├── snacks.lua       # UI enhancements
-│   │   ├── statusline.lua   # Status line
-│   │   ├── telescope.lua    # Fuzzy finder
-│   │   ├── toggleterm.lua   # Terminal
-│   │   ├── transparent.lua  # Transparency
-│   │   ├── treesitter.lua   # Syntax highlighting
-│   │   └── ui.lua           # Additional UI
-│   └── util/
-│       └── telescope.lua    # Telescope utilities
-├── lspserver/               # Bundled LSP binaries
-│   ├── apex-colors.json     # Apex syntax colors
-│   └── apex-jorje-lsp.jar   # Apex language server
-├── snippets/                # Custom snippets
-│   ├── apex.json
-│   ├── lwc-html.json
-│   ├── lwc-js.json
-│   ├── lwc-xml.json
-│   ├── package.json
-│   └── visualforce.json
-├── spell/                   # Spell check
-│   └── en.utf-8.add
-└── data/                    # Plugin data
-    └── plenary/filetypes/   # Custom filetype definitions
-```
-
-### Key Plugins
-
-**Core:**
-- **lazy.nvim** - Plugin manager
-- **nvim-lspconfig** - LSP configuration
-- **blink.cmp** - Completion engine
-- **nvim-treesitter** - Syntax highlighting + textobjects
-- **telescope.nvim** - Fuzzy finder
-- **conform.nvim** - Formatter
-- **none-ls.nvim** - Linting and diagnostics
-
-**Navigation & Files:**
-- **harpoon** - Quick file navigation (ThePrimeagen)
-- **oil.nvim** - File browser
-- **neo-tree.nvim** - File tree explorer
-
-**Git:**
-- **gitsigns.nvim** - Git signs in gutter
-- **git-conflict.nvim** - Conflict resolution
-- **lazygit** integration via Snacks
-
-**AI:**
-- **copilot.lua** - GitHub Copilot
-- **opencode.nvim** - AI code assistant
-
-**UI:**
-- **snacks.nvim** - Dashboard, notifications, zen mode, terminal
-- **noice.nvim** - Command line UI
-- **mini.nvim** - Various utilities
-- **commander.nvim** - Command palette
-
-**Salesforce:**
-- **sf.nvim** - SFDX integration
-
-**Color Schemes (5 available):**
-- **gruvbox** - Default, warm retro theme with transparency
-- **catppuccin** - Soothing pastel theme (macchiato/latte)
-- **tokyonight** - Clean dark theme
-- **rose-pine** - Elegant low-contrast theme
-- **everforest** - Green-based comfortable theme
-
----
-
-## Support & Resources
-
-**Core:**
-- [Neovim Documentation](https://neovim.io/doc/)
-- [Lazy.nvim](https://github.com/folke/lazy.nvim)
-- [Mason.nvim](https://github.com/williamboman/mason.nvim)
-- [LSP Config](https://github.com/neovim/nvim-lspconfig)
-- [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
-
-**Key Plugins:**
-- [Telescope](https://github.com/nvim-telescope/telescope.nvim)
-- [Harpoon](https://github.com/ThePrimeagen/harpoon)
-- [Snacks.nvim](https://github.com/folke/snacks.nvim)
-- [Blink.cmp](https://github.com/Saghen/blink.cmp)
-- [Conform.nvim](https://github.com/stevearc/conform.nvim)
-
-**Salesforce:**
-- [sf.nvim](https://github.com/xixiaofinland/sf.nvim)
-- [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli)
-
-**Color Schemes:**
-- [Gruvbox](https://github.com/ellisonleao/gruvbox.nvim)
-- [Catppuccin](https://github.com/catppuccin/nvim)
-- [Tokyo Night](https://github.com/folke/tokyonight.nvim)
-- [Rose Pine](https://github.com/rose-pine/neovim)
-- [Everforest](https://github.com/neanias/everforest-nvim)
-
----
-
-## License
-
-This configuration is provided as-is for personal use and learning.
+| Key | Action |
+| --- | --- |
+| `<CR>` | Accept |
+| `<Tab>` / `<S-Tab>` | Next / previous item or snippet field |
+| `<C-n>` / `<C-p>`, `<Up>` / `<Down>` | Next / previous item |
+| `<C-y>` | Show completion / toggle docs |
+| `<C-e>` | Close menu (`<C-E>` also cycles LuaSnip choices) |
+| `<C-u>` / `<C-d>` | Scroll docs |

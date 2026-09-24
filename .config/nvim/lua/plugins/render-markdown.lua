@@ -1,9 +1,8 @@
 return {
-	"MeanderingProgrammer/render-markdown.nvim",
-	dependencies = {
-		"nvim-treesitter/nvim-treesitter",
-		"nvim-tree/nvim-web-devicons",
-	},
-	ft = { "markdown" },
-	opts = {},
+  "MeanderingProgrammer/render-markdown.nvim",
+  dependencies = {
+    "nvim-treesitter/nvim-treesitter",
+  },
+  ft = { "markdown" },
+  opts = {},
 }
