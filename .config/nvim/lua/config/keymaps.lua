@@ -16,7 +16,7 @@ commander binding still needs a `cmd`/`event`/`ft` trigger on its spec.
 
 Exceptions (not in commander; lazy `keys` are still listed in the palette):
   1. Filetype-scoped keys  -> lazy `keys = { ..., ft = "..." }` in plugins/lang/*.lua
-  2. Completion-menu keys  -> blink.cmp / copilot / LuaSnip configs
+  2. Completion-menu keys  -> blink.cmp / minuet / LuaSnip configs
   3. UI toggles            -> Snacks.toggle():map("<leader>u*") in plugins/snacks.lua
   4. Textobjects / motions -> treesitter-textobjects, mini.ai, flash configs
 which-key group names and icons live in plugins/editor.lua.

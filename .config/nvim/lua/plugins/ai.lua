@@ -1,52 +1,83 @@
 return {
   {
-    "zbirenbaum/copilot.lua",
-    cmd = "Copilot",
-    event = { "BufReadPre", "InsertEnter" },
-    config = function()
-      require("copilot").setup({
-        panel = {
-          enabled = true,
-          auto_refresh = false,
-          keymap = {
-            jump_prev = "[[",
-            jump_next = "]]",
-            accept = "<CR>",
-            refresh = "gr",
-            open = "<C-p>",
+    -- Inline ghost-text completion from the local LM Studio server (raw FIM, no chat template)
+    "milanglacier/minuet-ai.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = "Minuet",
+    -- Auto-trigger is enabled per buffer on FileType, so load before the first one fires
+    event = { "BufReadPre", "BufNewFile" },
+    opts = {
+      provider = "openai_fim_compatible",
+      -- One request per trigger: every completion costs a pass through a 27B model
+      n_completions = 1,
+      -- ~2k tokens of surrounding code; raise if latency stays low
+      context_window = 8000,
+      throttle = 1000,
+      debounce = 300,
+      -- Streaming, so a timeout still yields whatever has been generated so far
+      request_timeout = 3,
+      notify = "warn",
+      -- Only real file buffers (not pickers, prompts, terminals, ...)
+      enable_predicates = {
+        function()
+          return vim.bo.buftype == ""
+        end,
+      },
+      virtualtext = {
+        auto_trigger_ft = { "*" },
+        auto_trigger_ignore_ft = {
+          "help",
+          "gitcommit",
+          "gitrebase",
+          "hgcommit",
+          "svn",
+          "cvs",
+          "dotenv", -- keep .env secrets out of the prompt
+        },
+        keymap = {
+          accept = "<C-l>",
+          accept_line = "<M-l>",
+          -- Cycle suggestions, or request one manually when none is shown
+          next = "<M-]>",
+          prev = "<M-[>",
+          dismiss = "<C-u>",
+        },
+      },
+      provider_options = {
+        openai_fim_compatible = {
+          name = "LM Studio",
+          end_point = "http://10.15.30.166:1234/v1/completions",
+          model = "qwen/qwen3.8-27b",
+          -- LM Studio ignores the key, but minuet refuses to send a request without one
+          api_key = function()
+            return "lm-studio"
+          end,
+          stream = true,
+          optional = {
+            max_tokens = 96,
+            top_p = 0.9,
           },
-          layout = {
-            position = "bottom",
-            ratio = 0.4,
+          -- LM Studio's /v1/completions has no `suffix` field, so build Qwen's FIM prompt by hand
+          template = {
+            prompt = function(context_before_cursor, context_after_cursor, _)
+              return "<|fim_prefix|>"
+                .. context_before_cursor
+                .. "<|fim_suffix|>"
+                .. context_after_cursor
+                .. "<|fim_middle|>"
+            end,
+            suffix = false,
           },
         },
-        suggestion = {
-          enabled = true,
-          auto_trigger = true,
-          debounce = 50,
-          keymap = {
-            accept = "<C-l>",
-            accept_word = false,
-            accept_line = false,
-            dismiss = "<C-u>",
-          },
-        },
-        filetypes = {
-          yaml = true,
-          markdown = true,
-          help = false,
-          gitcommit = false,
-          gitrebase = false,
-          hgcommit = false,
-          svn = false,
-          cvs = false,
-          dotenv = false, -- never send .env secrets to Copilot
-          ["."] = true,
-        },
-        copilot_node_command = "node",
-        server_opts_overrides = {},
-      })
-    end,
+      },
+    },
+    commander = {
+      {
+        keys = { "n", "<leader>al" },
+        cmd = "<cmd>Minuet virtualtext toggle<cr>",
+        desc = "Local LLM: Toggle auto-completion (buffer)",
+      },
+    },
   },
   {
     "NickvanDyke/opencode.nvim",

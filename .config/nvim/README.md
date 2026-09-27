@@ -14,9 +14,9 @@ A Neovim configuration for Salesforce, web, Go, Python, Rust and infrastructure 
 - Fuzzy finding with fzf-lua
 - Git integration with gitsigns, git-conflict, and lazygit
 - Treesitter syntax highlighting with textobjects
-- Blink completion engine with Copilot integration
+- Blink completion engine
 - Salesforce development tools (SFDX, Apex LSP, LWC, Visualforce, PMD linting)
-- AI-assisted coding with GitHub Copilot and OpenCode
+- AI-assisted coding: local-LLM inline completion (minuet-ai + LM Studio) and OpenCode
 - Quick file navigation with Harpoon
 - Modern UI with Snacks (dashboard, notifications, zen mode)
 - Obsidian note-taking integration
@@ -1103,7 +1103,9 @@ refresh custom sObjects, `cd` terminal to project root.
 
 | Key | Action |
 | --- | --- |
-| `<C-l>` / `<C-u>` (insert) | Copilot: accept / dismiss suggestion |
+| `<C-l>` / `<M-l>` / `<C-u>` (insert) | Local LLM: accept suggestion / accept line / dismiss |
+| `<M-]>` / `<M-[>` (insert) | Local LLM: next / previous suggestion (requests one if none shown) |
+| `<leader>al` | Local LLM: toggle auto-completion for the buffer |
 | `<leader>aa` / `<leader>a+` | OpenCode: ask about this / add this to the prompt |
 | `<leader>as` / `<leader>ac` | OpenCode: select prompt / command |
 | `<leader>at` / `<leader>an` / `<leader>ai` / `<leader>aA` | OpenCode: toggle / new session / interrupt / cycle agent |
