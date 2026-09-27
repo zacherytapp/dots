@@ -121,8 +121,8 @@ return {
       { keys = { "n", "<leader>fR" }, cmd = pick_cwd("oldfiles", { cwd_only = true }), desc = "Recent files (cwd)" },
       {
         keys = { "n", "<leader>fp" },
-        cmd = pick("files", { cwd = vim.fn.expand("~/projects") }),
-        desc = "Find in ~/projects",
+        cmd = pick("files", { cwd = vim.fn.expand("~/Projects") }),
+        desc = "Find in ~/Projects",
       },
       -- Git
       { keys = { "n", "<leader>gc" }, cmd = pick("git_commits"), desc = "Git commits" },

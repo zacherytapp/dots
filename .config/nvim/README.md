@@ -641,8 +641,8 @@ This configuration is part of a larger dotfiles repository managed
 with [GNU Stow](https://www.gnu.org/software/stow/):
 
 ```bash
-git clone git@github.com:zacherytapp/dots.git ~/projects/dots
-cd ~/projects/dots
+git clone git@github.com:zacherytapp/dots.git ~/Projects/dots
+cd ~/Projects/dots
 stow .
 ```
 
@@ -916,7 +916,7 @@ How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
 | `<leader>fg` | Git files |
 | `<leader>fb` / `<leader>,` | Buffers |
 | `<leader>fc` | Config files |
-| `<leader>fp` | Files in `~/projects` |
+| `<leader>fp` | Files in `~/Projects` |
 | `<leader>fn` | New file |
 | `<leader>fe` / `<leader>fE` | Neo-tree (root dir / cwd), also `<leader>e` / `<leader>E` |
 | `<leader>fo` | Oil (float, cwd) |
