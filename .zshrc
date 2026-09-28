@@ -45,3 +45,7 @@ export PATH
 
 # openssh's user agent, except over ssh with a forwarded agent
 [[ -n $SSH_CONNECTION && -S $SSH_AUTH_SOCK ]] || export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+
+# Machine-specific settings (e.g. PATH entries that installers append) go in
+# ~/.config/shell/local.sh, which is not in dots.
+if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi

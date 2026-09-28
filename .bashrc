@@ -26,3 +26,7 @@ esac
 [ -f "/home/zakk/.julia/juliaup/completions/bash.sh" ] && source "/home/zakk/.julia/juliaup/completions/bash.sh"
 
 # <<< juliaup initialize <<<
+
+# Machine-specific settings (e.g. PATH entries that installers append) go in
+# ~/.config/shell/local.sh, which is not in dots.
+if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi
