@@ -16,6 +16,12 @@
 # Private ssh hosts belong in ~/.ssh/config.d, never here
 .ssh/config.d/
 
+# Real secrets live in ~/.config/credstore*, and the 1Password references in
+# ~/.config/with-secrets; neither belongs here (see with-secrets)
+.config/credstore/
+.config/credstore.encrypted/
+.config/with-secrets/
+
 # Local-only agent instructions and planning docs
 /AGENTS.md
 /SPEC.md

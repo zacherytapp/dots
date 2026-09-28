@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Launches forgejo-mcp for Claude Code. The access token and host come from
+# with-secrets (see ~/.config/with-secrets/forgejo.env), so neither lands in
+# ~/.claude.json, the shell environment, or this repo.
+set -euo pipefail
+
+prog=${0##*/}
+
+# First pass: re-run this script under with-secrets to get token and host.
+if [[ -z ${_FORGEJO_MCP_CLAUDE_INNER:-} ]]; then
+  export _FORGEJO_MCP_CLAUDE_INNER=1
+  exec "$HOME/.local/bin/with-secrets" forgejo -- "$0" "$@"
+fi
+
+[[ -n ${FORGEJO_ACCESS_TOKEN:-} ]] || { echo "$prog: FORGEJO_ACCESS_TOKEN is empty" >&2; exit 1; }
+url=${FORGEJO_HOST:-}
+[[ -n $url ]] || { echo "$prog: FORGEJO_HOST is empty" >&2; exit 1; }
+[[ $url == *://* ]] || url=https://$url
+
+exec "$HOME/go/bin/forgejo-mcp" --transport stdio --url "$url" "$@"

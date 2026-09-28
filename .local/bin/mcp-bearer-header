@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Prints {"Authorization": "Bearer <token>"} for a remote MCP server, for use
+# as a Claude Code headersHelper. The token is MCP_BEARER_TOKEN from
+# `with-secrets <name>` (see ~/.config/with-secrets/<name>.env).
+#
+#   mcp-bearer-header <name>
+set -euo pipefail
+
+prog=${0##*/}
+[[ $# -eq 1 ]] || { echo "usage: $prog <name>" >&2; exit 1; }
+
+# First pass: re-run this script under with-secrets to get the token.
+if [[ -z ${_MCP_BEARER_HEADER_INNER:-} ]]; then
+  export _MCP_BEARER_HEADER_INNER=1
+  exec "$HOME/.local/bin/with-secrets" "$1" -- "$0" "$1"
+fi
+
+[[ -n ${MCP_BEARER_TOKEN:-} ]] || { echo "$prog: MCP_BEARER_TOKEN is empty for '$1'" >&2; exit 1; }
+jq -cn --arg t "$MCP_BEARER_TOKEN" '{Authorization: ("Bearer " + $t)}'
