@@ -40,10 +40,13 @@ DEFAULT_STEPS=(
   git
   rust
   node
+  go
   pmd
   tmux
   herdr
+  task
   claude
+  plannotator
   docker
   services
   hooks

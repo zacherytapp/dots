@@ -37,7 +37,8 @@ check_cmd paru git git-lfs gh lazygit zsh tmux nvim vim kitty ghostty stow rg fd
   Hyprland hyprctl hyprpicker noctalia uwsm qt6ct grim slurp wl-copy dolphin \
   firefox thunderbird obsidian discord code 1password google-chrome-stable slack spotify zoom \
   ufw fail2ban-client pass gpg ssh-keygen flatpak \
-  rustup cargo node npm pnpm sf stylelint opencode herdr pmd
+  rustup cargo node npm pnpm sf stylelint opencode herdr pmd \
+  op tea htop task plannotator forgejo-mcp with-secrets obs opendeck
 
 echo "tool checks:"
 check "cargo runs" cargo --version
@@ -80,6 +81,7 @@ check "gpg secret key" sh -c 'gpg --list-secret-keys --with-colons | grep -q ^se
 check "pass initialized" test -f "$HOME/.password-store/.gpg-id"
 check "ssh key" test -f "$HOME/.ssh/id_ed25519"
 check "arch-update timer enabled" test -L "$HOME/.config/systemd/user/timers.target.wants/arch-update.timer"
+check "ssh-agent socket enabled" test -L "$HOME/.config/systemd/user/sockets.target.wants/ssh-agent.socket"
 
 echo "system config:"
 check "fail2ban jail.local" test -f /etc/fail2ban/jail.local

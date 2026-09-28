@@ -31,7 +31,7 @@ git clone https://aur.archlinux.org/paru.git && cd paru && makepkg -si
 
 ```
 sudo pacman -S --needed zsh kitty ghostty tmux git github-cli lazygit fzf ripgrep \
-stow unzip ctags vim neovim tree-sitter-cli cmake gettext
+stow unzip ctags vim neovim tree-sitter-cli cmake gettext htop tea cpupower
 ```
 
 **Languages and runtimes**
@@ -54,7 +54,8 @@ sudo usermod -aG docker $USER
 
 ```
 sudo pacman -S --needed obsidian discord thunderbird libreoffice-fresh remmina \
-nautilus gimp darktable digikam opencv gpu-screen-recorder playerctl flatpak
+nautilus gimp darktable digikam opencv gpu-screen-recorder playerctl flatpak \
+obs-studio opendeck proton-vpn-gtk-app winboat
 ```
 
 **CachyOS extras and gaming**
@@ -67,7 +68,8 @@ appmenu-gtk-module libdbusmenu-glib cachyos-gaming-meta cachyos-gaming-applicati
 **AUR packages**
 
 ```
-paru -S 1password google-chrome slack-desktop spotify visual-studio-code-bin zoom
+paru -S 1password 1password-cli google-chrome slack-desktop spotify visual-studio-code-bin zoom \
+lmstudio-bin
 ```
 
 **Installed outside pacman**
@@ -75,11 +77,18 @@ paru -S 1password google-chrome slack-desktop spotify visual-studio-code-bin zoo
 - [rustup](https://rustup.rs): `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - Node via [NVM](#all-operating-systems), plus [pnpm](https://pnpm.io/installation) for global packages:
   - `pnpm add -g @salesforce/cli @salesforce/lwc-language-server stylelint opencode-ai`
+- [Task](https://taskfile.dev) as `task` in `~/.local/bin` (Arch's `go-task` package names it
+  `go-task`): `sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
+- [Plannotator](https://plannotator.ai): `curl -fsSL https://plannotator.ai/install.sh | bash`
+- forgejo MCP server: `go install git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest`
+- Flatpaks: `flatpak install flathub com.github.tchx84.Flatseal app.bluebubbles.BlueBubbles`
 
 **User services**
 
 - `systemctl --user enable --now arch-update.timer` (from `cachy-update`: update checks and the tray
   notifier)
+- `systemctl --user enable --now ssh-agent.socket` (openssh's agent; `.zshrc` points
+  `SSH_AUTH_SOCK` at it)
 
 **Desktop (Hyprland + Noctalia)**
 

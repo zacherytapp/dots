@@ -62,6 +62,11 @@ step_services() {
   local wants="$ACTUAL_HOME/.config/systemd/user/timers.target.wants"
   as_user mkdir -p "$wants"
   as_user ln -sfn /usr/lib/systemd/user/arch-update.timer "$wants/arch-update.timer"
+
+  # openssh's user ssh-agent, which .zshrc points SSH_AUTH_SOCK at
+  wants="$ACTUAL_HOME/.config/systemd/user/sockets.target.wants"
+  as_user mkdir -p "$wants"
+  as_user ln -sfn /usr/lib/systemd/user/ssh-agent.socket "$wants/ssh-agent.socket"
 }
 
 step_hooks() {

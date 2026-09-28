@@ -42,3 +42,6 @@ export PATH
 [ -f "/home/zakk/.julia/juliaup/completions/zsh.zsh" ] && source "/home/zakk/.julia/juliaup/completions/zsh.zsh"
 
 # <<< juliaup initialize <<<
+
+# openssh's user agent, except over ssh with a forwarded agent
+[[ -n $SSH_CONNECTION && -S $SSH_AUTH_SOCK ]] || export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"

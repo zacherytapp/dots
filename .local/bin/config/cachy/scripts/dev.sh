@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# User-level dev tooling: shell, git, rust, node, pmd, tmux, herdr.
+# User-level dev tooling: shell, git, rust, node, go, pmd, tmux, herdr, task,
+# plannotator.
 
 step_shell() {
   # oh-my-zsh, powerlevel10k and the zsh plugins come from cachyos-zsh-config
@@ -115,4 +116,38 @@ step_herdr() {
   fi
   as_user mkdir -p "$ACTUAL_HOME/.local/bin"
   as_user_sh "curl -fsSL https://herdr.dev/install.sh | sh"
+}
+
+step_go() {
+  # only the missing binaries, so a re-run doesn't upgrade the rest
+  local tool bin
+  for tool in "${GO_TOOLS[@]}"; do
+    bin=${tool%@*}
+    bin=${bin%/v[0-9]*}
+    bin=${bin##*/}
+    if [ -x "$ACTUAL_HOME/go/bin/$bin" ]; then
+      echo "$bin already installed"
+    else
+      as_user_sh "go install $tool"
+    fi
+  done
+}
+
+step_task() {
+  # go-task, as `task` in ~/.local/bin (Arch's go-task package names it go-task)
+  if [ -x "$ACTUAL_HOME/.local/bin/task" ]; then
+    echo "task already installed: $(as_user "$ACTUAL_HOME/.local/bin/task" --version)"
+    return 0
+  fi
+  as_user mkdir -p "$ACTUAL_HOME/.local/bin"
+  as_user_sh 'sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b "$HOME/.local/bin"'
+}
+
+step_plannotator() {
+  # binary into ~/.local/bin, plus its skills for claude, opencode and pi
+  if [ -x "$ACTUAL_HOME/.local/bin/plannotator" ]; then
+    echo "plannotator already installed: $(as_user "$ACTUAL_HOME/.local/bin/plannotator" --version)"
+    return 0
+  fi
+  as_user_sh "curl -fsSL https://plannotator.ai/install.sh | bash"
 }

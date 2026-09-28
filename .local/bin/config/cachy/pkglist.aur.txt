@@ -1,5 +1,9 @@
 1password
+1password-cli
+bibata-cursor-theme-bin
 google-chrome
+lmstudio-bin
+maplemono-ttf
 slack-desktop
 spotify
 visual-studio-code-bin
