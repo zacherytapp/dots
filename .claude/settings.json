@@ -4,6 +4,7 @@
     "pr": "",
     "sessionUrl": false
   },
+  "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
       "WebSearch",
@@ -55,11 +56,6 @@
       "Read(~/.config/credstore/**)"
     ]
   },
-  "includeCoAuthoredBy": false,
-  "alwaysThinkingEnabled": true,
-  "autoMemoryEnabled": true,
-  "autoDreamEnabled": true,
-  "showThinkingSummaries": true,
   "hooks": {
     "SessionStart": [
       {
@@ -159,18 +155,22 @@
       }
     ]
   },
-  "tui": "fullscreen",
-  "theme": "dark",
-  "modelSettings": {
-    "claude-opus-5-5": {
-      "effortLevel": "high"
-    }
+  "worktree": {
+    "bgIsolation": "none"
   },
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline/statusline.sh"
   },
-  "worktree": {
-    "bgIsolation": "none"
-  }
+  "alwaysThinkingEnabled": true,
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "tui": "fullscreen",
+  "autoMemoryEnabled": true,
+  "autoDreamEnabled": true,
+  "showThinkingSummaries": true,
+  "theme": "dark"
 }
