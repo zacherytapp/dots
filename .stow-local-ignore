@@ -12,6 +12,7 @@
 ^/\.github
 ^/\.gitleaks\.toml
 ^/LICENSE.*
+^/docs
 ^/\.local/bin/config
 ^/\.agents/node_modules
 ^/\.claude/worktrees
