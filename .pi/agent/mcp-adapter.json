@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "firefox-devtools": {
+      "command": "npx",
+      "args": ["-y", "@mozilla/firefox-devtools-mcp@latest", "--tool-preset", "developer"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "forgejo": {
+      "command": "~/.local/bin/forgejo-mcp-claude"
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "!\"$HOME/.local/bin/mcp-bearer-header\" context7 | jq -r .Authorization"
+      }
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "!\"$HOME/.local/bin/mcp-bearer-header\" github | jq -r .Authorization"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 {
   "packages": [
-    "npm:@plannotator/pi-extension"
+    "npm:@plannotator/pi-extension",
+    "npm:pi-mcp-adapter"
   ]
 }
