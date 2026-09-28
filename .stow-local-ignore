@@ -2,6 +2,7 @@
 # This file replaces stow's built-in ignore list, so VCS files are listed too.
 \.git
 \.gitignore
+\.gitattributes
 \.gitmodules
 \.stowrc
 \.stow-local-ignore

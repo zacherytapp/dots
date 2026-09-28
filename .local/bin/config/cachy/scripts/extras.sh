@@ -51,4 +51,6 @@ step_stow() {
     return 1
   fi
   (cd "$repo_dir" && as_user stow .)
+  # keeps machine-local keys of the stowed settings files out of commits
+  as_user "$repo_dir/.local/bin/config/local-keys.sh" install
 }
