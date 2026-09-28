@@ -13,12 +13,19 @@
 -- To pin an exact mode instead of "preferred":
 -- hl.monitor({ output = MONITOR1, mode = "2560x1600@240", position = "0x0", scale = MONITOR_SCALE })
 
-hl.monitor({
-    output    = MONITOR1,
-    mode      = "preferred",
-    position  = "auto",
-    scale     = MONITOR_SCALE,
-})
+-- A machine with its own layout keeps its rules in
+-- ~/.config/hypr/local/monitors.lua, which is not in dots; when that file
+-- exists it replaces this default.
+if package.searchpath("local.monitors", package.path) then
+    require("local.monitors")
+else
+    hl.monitor({
+        output    = MONITOR1,
+        mode      = "preferred",
+        position  = "auto",
+        scale     = MONITOR_SCALE,
+    })
+end
 
 -- The dots config also appended `,mirror,DP-1` to the monitor line, which
 -- mirrors every output onto DP-1. No DP-1 exists on this machine, so it is left

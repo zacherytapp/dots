@@ -26,3 +26,11 @@ MONITOR_SCALE = 1.25
 
 -- Workspaces
 NUM_WPM = 10 -- Number of workspaces per monitor (Max 10)
+
+-- Machine-specific values (monitor outputs, scale) go in
+-- ~/.config/hypr/local/variables.lua, which is not in dots. It's loaded last so
+-- it can override anything above; set PRIMARY_MONITOR there too when it sets
+-- MONITOR1.
+if package.searchpath("local.variables", package.path) then
+    require("local.variables")
+end
