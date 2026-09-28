@@ -10,7 +10,7 @@
 #
 # Never name a local `path` in here: zsh ties it to $PATH.
 
-: ${GIT_WORKTREES_ROOT:=$HOME/projects/git-worktrees}
+: ${GIT_WORKTREES_ROOT:=$HOME/Projects/git-worktrees}
 
 # oh-my-zsh's git plugin aliases gpr to `git pull --rebase`, and an alias
 # would win over the function

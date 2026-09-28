@@ -5,7 +5,7 @@ set -euo pipefail
 
 herdr="${HERDR_BIN_PATH:-herdr}"
 
-dots="$HOME/projects/dots"
+dots="$HOME/Projects/dots"
 
 # Directories whose immediate children are candidates — tmux-sessionizer's list
 # (~/.config covers nvim, tmux, herdr, ...), plus the dotfiles repo's configs
@@ -13,9 +13,8 @@ dots="$HOME/projects/dots"
 search_dirs=(
     "$HOME/.config"
     "$HOME/.local"
-    "$HOME/projects"
     "$HOME/Projects"
-    "$HOME/projects/boiler"
+    "$HOME/Projects/boiler"
     "$HOME/work"
     "$HOME/personal"
     "$dots"
@@ -34,7 +33,7 @@ if [[ $# -ge 1 ]]; then
 else
     existing_dirs=()
     for d in "${search_dirs[@]}"; do [[ -d "$d" ]] && existing_dirs+=("$d"); done
-    # find (not fd) so hidden and gitignored dirs like ~/projects/dots/.config
+    # find (not fd) so hidden and gitignored dirs like ~/Projects/dots/.config
     # show up; -xtype d also keeps symlinked dirs.
     selected=$(find "${existing_dirs[@]}" -mindepth 1 -maxdepth 1 -xtype d \
             ! -name .git 2>/dev/null \

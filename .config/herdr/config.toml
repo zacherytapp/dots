@@ -106,19 +106,19 @@ description = "project sessionizer"
 width = "70%"
 height = "60%"
 
-# tmux: bind C run-shell "~/.local/bin/tmux-sessionizer ~/projects/bank/"
+# tmux: bind C run-shell "~/.local/bin/tmux-sessionizer ~/Projects/bank/"
 [[keys.command]]
 key = "prefix+shift+c"
 type = "shell"
-command = "~/.config/herdr/scripts/sessionizer.sh ~/projects/bank"
-description = "open ~/projects/bank"
+command = "~/.config/herdr/scripts/sessionizer.sh ~/Projects/bank"
+description = "open ~/Projects/bank"
 
-# tmux: bind B run-shell "~/.local/bin/tmux-sessionizer ~/projects/ref"
+# tmux: bind B run-shell "~/.local/bin/tmux-sessionizer ~/Projects/ref"
 [[keys.command]]
 key = "prefix+shift+b"
 type = "shell"
-command = "~/.config/herdr/scripts/sessionizer.sh ~/projects/ref"
-description = "open ~/projects/ref"
+command = "~/.config/herdr/scripts/sessionizer.sh ~/Projects/ref"
+description = "open ~/Projects/ref"
 
 # tmux: bind i run-shell "tmux neww tmux-cht.sh"
 [[keys.command]]

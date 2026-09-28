@@ -234,8 +234,8 @@ never linked, so run them from the repo checkout.
 **Fresh machine (repo wins)**
 
 ```
-git clone git@github.com:zacherytapp/dots.git ~/projects/dots
-cd ~/projects/dots
+git clone git@github.com:zacherytapp/dots.git ~/Projects/dots
+cd ~/Projects/dots
 stow -n -v .   # dry run: shows links and conflicts
 stow .
 ```
