@@ -1,4 +1,3 @@
-# Fonts
 term = xterm-256color
 font-family = "JetBrainsMono Nerd Font Mono"
 font-family = "Symbols Nerd Font Mono"
@@ -8,13 +7,11 @@ font-family-bold-italic = "Maple Mono"
 font-size = 10
 adjust-underline-position = 4
 
-# Theme
 theme = noctalia
 window-theme = ghostty
 cursor-invert-fg-bg = true
 background-opacity = 1
 
-# Window
 gtk-single-instance = true
 gtk-tabs-location = bottom
 gtk-wide-tabs = false
@@ -23,14 +20,12 @@ window-padding-x = 10
 window-padding-balance = true
 window-decoration = false
 
-# Other
 copy-on-select = clipboard
 command = "/usr/bin/zsh --login"
 shell-integration = zsh
 shell-integration-features = cursor,sudo,no-title
 
-# Slowdown mouse scrolling
 mouse-scroll-multiplier = 0.95
 
-# Fix general slowness on hyprland (https://github.com/ghostty-org/ghostty/discussions/3224)
+# Works around general slowness under Hyprland.
 async-backend = epoll

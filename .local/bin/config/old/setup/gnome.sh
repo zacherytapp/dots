@@ -3,7 +3,6 @@
 gsettings set org.gnome.mutter dynamic-workspaces false
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 10
 
-# set some keybindings
 gsettings set "org.gnome.desktop.wm.keybindings" "switch-to-workspace-1" "['<Super>1']"
 gsettings set "org.gnome.desktop.wm.keybindings" "switch-to-workspace-2" "['<Super>2']"
 gsettings set "org.gnome.desktop.wm.keybindings" "switch-to-workspace-3" "['<Super>3']"
@@ -28,14 +27,12 @@ gsettings set "org.gnome.desktop.wm.keybindings" "move-to-workspace-10" "['<Supe
 
 gsettings set "org.gnome.desktop.wm.keybindings" "close" "['<Super><Shift>Q']"
 
-# usability settings
 gsettings set org.gnome.desktop.peripherals.mouse accel-profile 'adaptive'
 gsettings set org.gnome.desktop.sound allow-volume-above-100-percent true
 gsettings set org.gnome.desktop.calendar show-weekdate true
 gsettings set org.gnome.desktop.wm.preferences resize-with-right-button true
 gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
 
-# file settings
 gsettings set org.gnome.nautilus.icon-view default-zoom-level 'standard'
 gsettings set org.gnome.nautilus.preferences executable-text-activation 'ask'
 gsettings set org.gtk.Settings.FileChooser sort-directories-first true
@@ -45,12 +42,10 @@ gsettings set org.freedesktop.Tracker.Miner.Files index-on-battery-first-time fa
 gsettings set org.freedesktop.Tracker.Miner.Files throttle 15
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-# Source utils.sh from parent directory
 source "$SCRIPT_DIR/../utils.sh"
 
 install_packages pipx gnome-shell-extensions
 
-# Install gnome-extensions-cli only if not already installed
 if ! command -v ~/.local/bin/gext &> /dev/null; then
   pipx install gnome-extensions-cli --system-site-packages
 fi

@@ -1,23 +1,19 @@
-# Editor/app backups that should never be committed
 *.bak
 *.orig
 *.pre-*
 *.prebnet
 
-# Runtime state some apps write next to their config
 .config/herdr/*.log
 .config/herdr/*.sock
 .config/herdr/session.json
 .config/herdr/.plugins.lock
 
-# Claude Code scratch worktrees
 .claude/worktrees/
 
-# Private ssh hosts belong in ~/.ssh/config.d, never here
+# Private ssh hosts; must never be committed
 .ssh/config.d/
 
-# Real secrets live in ~/.config/credstore*, and the 1Password references in
-# ~/.config/with-secrets; neither belongs here (see with-secrets)
+# Secrets and 1Password references; must never be committed
 .config/credstore/
 .config/credstore.encrypted/
 .config/with-secrets/
@@ -28,8 +24,8 @@
 /.agents/AGENTS.md
 /.agents/CLAUDE.md
 
-# Plannotator's installer writes its skills straight into $HOME and rewrites
-# them on every update (see step_plannotator in .local/bin/config/cachy/scripts/dev.sh)
+# Plannotator's installer writes these straight into $HOME and rewrites them
+# on every update
 .agents/skills/plannotator*/
 .claude/skills/plannotator*
 .pi/agent/skills/plannotator*

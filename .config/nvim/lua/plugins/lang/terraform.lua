@@ -1,9 +1,5 @@
--- Terraform and OpenTofu: terraform-ls for terraform/terraform-vars, tofu-ls
--- for .tofu files (filetype opentofu), tflint, fmt via whichever CLI is
--- installed (terraform fmt / tofu fmt).
 local util = require("util")
 
---- Prefer the project's own CLI; fall back to the other one
 local function fmt(primary, secondary)
   return function()
     if util.has(primary == "tofu_fmt" and "tofu" or "terraform") then
@@ -35,8 +31,7 @@ return {
     opts = {
       servers = {
         terraformls = {},
-        -- nvim-lspconfig also attaches tofu-ls to terraform files; keep one
-        -- server per filetype
+        -- nvim-lspconfig also attaches tofu-ls to terraform files; keep one server per filetype
         tofu_ls = { filetypes = { "opentofu", "opentofu-vars" } },
       },
     },

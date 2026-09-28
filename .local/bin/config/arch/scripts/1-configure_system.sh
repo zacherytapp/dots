@@ -12,7 +12,6 @@ FLATPAKS=(
   app.openbubbles.OpenBubbles
 )
 
-# Get the directory of the current script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "${SCRIPT_DIR}/../utils.sh" ]; then
@@ -61,7 +60,6 @@ function enable_services {
   sudo systemctl enable reflector.timer --now && sudo systemctl start reflector.timer
   sudo systemctl enable NetworkManager --now && sudo systemctl start NetworkManager
   sudo systemctl enable systemd-networkd --now && sudo systemctl start systemd-networkd
-  # sudo systemctl enable bluetooth.service --now && sudo systemctl start bluetooth.service
   sudo systemctl enable sshd --now && sudo systemctl start sshd
 }
 
@@ -75,9 +73,6 @@ function install_tpm {
     git clone https://github.com/tmux-plugins/tpm $TPM_DIR
   fi
 }
-
-# print_info "installing kvm"
-# install_kvm
 
 print_info "configuring multilib"
 enable_multilib

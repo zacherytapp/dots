@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# System steps: pacman, packages, AUR, services, hostname, flatpak.
 
 step_preflight() {
   local pacmanconf="/etc/pacman.conf"
 
-  # colored output and parallel downloads (CachyOS enables these already)
   sed -i -e 's/^#Color$/Color/' -e 's/^#\?ParallelDownloads.*/ParallelDownloads = 10/' "$pacmanconf"
 
   # full upgrade first, installing on a stale system is a partial upgrade
@@ -57,8 +55,8 @@ step_services() {
   enable_service tailscaled.service
   enable_service reflector.timer
 
-  # cachy-update's user timer (update checks + tray notifier). Linked by hand
-  # because systemctl --user needs the user's session bus, which sudo lacks.
+  # cachy-update's user timer, linked by hand: systemctl --user needs the user's
+  # session bus, which sudo lacks
   local wants="$ACTUAL_HOME/.config/systemd/user/timers.target.wants"
   as_user mkdir -p "$wants"
   as_user ln -sfn /usr/lib/systemd/user/arch-update.timer "$wants/arch-update.timer"
@@ -70,10 +68,8 @@ step_services() {
 }
 
 step_hooks() {
-  # pacman hook that dumps the installed packages into the repo after every
-  # transaction, so `git diff` shows drift from the curated packages.conf.
-  # Packages named in ~/.config/cachy/pkglist.ignore (one per line, not in
-  # dots) are left out, for things only this machine has.
+  # dumps installed packages into the repo after each transaction so git diff
+  # shows drift from packages.conf; ~/.config/cachy/pkglist.ignore lists exclusions
   local hook=/etc/pacman.d/hooks/96-paclist.hook
   install -d -m 755 /etc/pacman.d/hooks
   sed "s|@DIR@|$SCRIPT_DIR|g; s|@USER@|$ACTUAL_USER|g; s|@HOME@|$ACTUAL_HOME|g" \

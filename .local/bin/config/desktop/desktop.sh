@@ -1,31 +1,10 @@
 #!/usr/bin/env bash
-# Hyprland + Noctalia desktop installer, shared by .local/bin/config/{arch,cachy,fedora,ubuntu}.
-# Sourced by each distro's runner, which calls:
-#
-#   desktop_install   checks first, then installs the session for this distro
-#   desktop_greeter   opt-in: noctalia-greeter on greetd as the login screen
-#
-# Both run as root and need ACTUAL_USER (the sudo-ing user) set by the runner.
-# Only packages are installed here; the config itself comes from stowing the
-# repo (.config/hypr, .config/noctalia, .config/uwsm, ...).
-#
-# Where each piece comes from:
-#   cachyos  cachyos-hypr-noctalia (cachyos repo) pulls the whole stack
-#   arch     hyprland, noctalia, uwsm from [extra]; swash from the AUR
-#   fedora   hyprland/uwsm/xdph from the lionheartp/Hyprland copr (Fedora
-#            retired its hyprland package), noctalia from Fedora 44+
-#   ubuntu   noctalia from pkg.noctalia.dev, hyprland from the archive, which
-#            is only new enough (>= 0.55, for the lua config) from 26.10 on
-
+# Sourced by each distro runner for desktop_install and desktop_greeter (opt-in).
+# Both run as root and need ACTUAL_USER (the sudo-ing user) set.
 DESKTOP_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 # shellcheck source=checks.sh
 source "$DESKTOP_DIR/checks.sh"
 
-# What .config/hypr, .config/noctalia and .config/uwsm use: the session, the
-# portals, the apps bound in hypr/config/variables.lua (ghostty, dolphin,
-# gnome-text-editor, gnome-calculator, hyprpicker), grim/slurp/jq for
-# hypr/scripts/screenshot-window.sh, qt5ct/qt6ct and adw-gtk3 for the
-# noctalia qt and gtk templates, and xhost for the autostart.
 DESKTOP_PKGS_ARCH=(
   hyprland uwsm xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpicker hyprland-guiutils
   noctalia qt6ct qt5ct qt6-wayland adw-gtk-theme nwg-look
@@ -34,8 +13,7 @@ DESKTOP_PKGS_ARCH=(
 )
 DESKTOP_AUR_ARCH=(swash bibata-cursor-theme-bin)
 
-# cachyos-hypr-noctalia depends on hyprland, noctalia, uwsm, qt6ct, swash and
-# the rest of the list above; the extras are what it leaves out
+# only the extras cachyos-hypr-noctalia leaves out
 DESKTOP_PKGS_CACHY=(
   cachyos-hypr-noctalia hyprland noctalia uwsm
   xdg-desktop-portal-gtk qt5ct qt6-wayland ghostty jq xdg-user-dirs breeze-icons
@@ -48,7 +26,7 @@ DESKTOP_PKGS_FEDORA=(
   ghostty dolphin kde-cli-tools gnome-calculator gnome-text-editor gnome-keyring breeze-icon-theme
 )
 
-# adw-gtk3 and bibata aren't packaged for ubuntu; they're fetched below
+# adw-gtk3 and bibata aren't packaged for ubuntu
 DESKTOP_PKGS_UBUNTU=(
   hyprland uwsm xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpicker
   noctalia qt6ct qt5ct qt6-wayland nwg-look
@@ -56,8 +34,6 @@ DESKTOP_PKGS_UBUNTU=(
   ghostty dolphin kde-cli-tools gnome-calculator gnome-text-editor gnome-keyring breeze-icon-theme
 )
 
-# swash (the screenshot annotator noctalia pipes screenshots to) is built from
-# source where it isn't packaged
 SWASH_BUILD_FEDORA=(gcc meson ninja-build pkgconf-pkg-config gtk4-devel libadwaita-devel tesseract-devel curl tar)
 SWASH_BUILD_UBUNTU=(build-essential meson ninja-build pkgconf libgtk-4-dev libadwaita-1-dev libtesseract-dev curl)
 
@@ -81,8 +57,6 @@ _desk_aur() {
   return 1
 }
 
-# the hyprland version this machine would end up with: the installed one when
-# it's already new enough (e.g. built from source), else the package candidate
 _desk_hyprland_candidate() {
   local installed
   installed=$(hyprland_version)
@@ -124,7 +98,6 @@ _desk_install_adw_gtk3() {
   rm -rf "$tmp"
 }
 
-# builds the latest swash release into /usr/local
 _desk_build_swash() {
   if command -v swash &>/dev/null; then
     echo "swash already installed"
@@ -150,7 +123,6 @@ _desk_install_arch() {
 
 _desk_install_cachyos() {
   pacman -S --needed --noconfirm "${DESKTOP_PKGS_CACHY[@]}"
-  # bibata comes from the AUR (the uwsm env and gtk settings use it)
   if [ ! -d /usr/share/icons/Bibata-Modern-Ice ]; then
     _desk_aur bibata-cursor-theme-bin
   fi
@@ -159,13 +131,14 @@ _desk_install_cachyos() {
 _desk_fedora_repos() {
   command -v dnf &>/dev/null || return 1
   dnf install -y dnf-plugins-core
+  # fedora retired its hyprland package
   dnf copr enable -y lionheartp/Hyprland
   dnf copr enable -y scottames/ghostty
 }
 
 _desk_install_fedora() {
-  # the copr also carries noctalia-git and the old v4 noctalia-shell; ask for
-  # fedora's noctalia package by name so neither of those is picked
+  # the copr also ships noctalia-git and the old noctalia-shell; naming
+  # noctalia here gets fedora's own package
   dnf install -y "${DESKTOP_PKGS_FEDORA[@]}"
   dnf install -y "${SWASH_BUILD_FEDORA[@]}"
   _desk_build_swash
@@ -194,8 +167,8 @@ _desk_ubuntu_repo() {
 
 _desk_install_ubuntu() {
   local pkgs=("${DESKTOP_PKGS_UBUNTU[@]}") installed
-  # a new enough hyprland built from source (e.g. hyprbuntu) stays; the
-  # archive's older hyprland packages would shadow it
+  # keep a new enough source-built hyprland: the archive's older packages
+  # would shadow it
   installed=$(hyprland_version)
   if [ -n "$installed" ] && version_ge "$installed" "$DESKTOP_MIN_HYPRLAND" &&
     ! dpkg -S "$(command -v Hyprland)" &>/dev/null; then
@@ -216,12 +189,8 @@ _desk_install_ubuntu() {
   _desk_install_adw_gtk3
 }
 
-# noctalia owns idle, lock and sleep: its idle behaviors lock/suspend, it holds
-# logind's sleep delay inhibitor to lock before any suspend, and the power and
-# sleep keys are bound in .config/hypr/config/binds.lua to its session menu.
-# logind acts on those keys itself by default (power key = instant poweroff),
-# so it's told to leave them alone. The lid switch stays with logind; noctalia
-# still locks before that suspend.
+# noctalia binds the power/sleep keys and locks before suspend; logind would
+# otherwise act on them itself (power key = instant poweroff).
 _desk_power_keys() {
   local conf=/etc/systemd/logind.conf.d/10-noctalia.conf
   install -d -m 755 /etc/systemd/logind.conf.d
@@ -239,15 +208,13 @@ EOF
   [ -d /run/systemd/system ] && systemctl reload systemd-logind
 }
 
-# checks, then installs the hyprland + noctalia session for this distro
 desktop_install() {
   local distro candidate
   distro=$(desktop_distro)
 
-  # version/arch checks that need no repo changes
   desktop_preflight_os || return 1
 
-  # repos that decide which hyprland version is on offer
+  # repos first: they decide which hyprland version is on offer
   case "$distro" in
   fedora) _desk_fedora_repos ;;
   ubuntu) apt-get update -q ;;
@@ -274,8 +241,6 @@ desktop_install() {
   desktop_verify
 }
 
-# opt-in: noctalia-greeter (greetd) as the login screen, replacing any other
-# display manager, with passwordless appearance sync for ACTUAL_USER
 desktop_greeter() {
   local distro dm
   distro=$(desktop_distro)
@@ -307,8 +272,7 @@ user = "greeter"
 EOF
   fi
 
-  # lets noctalia's [shell.greeter_sync] auto_sync push the wallpaper and
-  # colors without an admin prompt each time
+  # lets greeter_sync push wallpaper and colors without an admin prompt
   noctalia-greeter passwordless-sync enable "$ACTUAL_USER"
 
   if [ ! -d /run/systemd/system ]; then

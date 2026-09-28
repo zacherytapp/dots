@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# gnome settings, keybindings and extensions (opt-in: sudo ./run.sh gnome)
 
 GNOME_EXTENSIONS=(
   "just-perfection-desktop@just-perfection"
@@ -18,7 +17,6 @@ user_gsettings() {
   as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=$(user_bus)" gsettings "$@"
 }
 
-# gext (pipx, ~/.local/bin) with the session bus
 user_gext() {
   as_user_sh "export DBUS_SESSION_BUS_ADDRESS='unix:path=$(user_bus)' XDG_RUNTIME_DIR='$(dirname "$(user_bus)")'; gext $*"
 }
@@ -41,7 +39,7 @@ configure_gnome() {
   user_gsettings set org.gnome.mutter dynamic-workspaces false
   user_gsettings set org.gnome.desktop.wm.preferences num-workspaces 10
 
-  # set some keybindings; ubuntu dock binds <Super>N to app launchers, free those first
+  # ubuntu dock binds <Super>N to app launchers; free those first
   local i key
   for i in $(seq 1 9); do
     user_gsettings set org.gnome.shell.keybindings "switch-to-application-$i" "[]"
@@ -53,19 +51,16 @@ configure_gnome() {
   done
   user_gsettings set org.gnome.desktop.wm.keybindings close "['<Super><Shift>Q']"
 
-  # usability settings
   user_gsettings set org.gnome.desktop.peripherals.mouse accel-profile 'adaptive'
   user_gsettings set org.gnome.desktop.sound allow-volume-above-100-percent true
   user_gsettings set org.gnome.desktop.calendar show-weekdate true
   user_gsettings set org.gnome.desktop.wm.preferences resize-with-right-button true
   user_gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
 
-  # file settings
   user_gsettings set org.gnome.nautilus.icon-view default-zoom-level 'medium'
   user_gsettings set org.gnome.nautilus.preferences executable-text-activation 'ask'
   user_gsettings set org.gtk.Settings.FileChooser sort-directories-first true
   user_gsettings set org.gnome.nautilus.list-view use-tree-view true
-  # localsearch (formerly tracker) indexing
   # captured first: `grep -q` closing the pipe early would fail it under pipefail
   local schemas
   schemas=$(user_gsettings list-schemas)
@@ -87,7 +82,6 @@ configure_gnome() {
     fi
   done
 
-  # extension settings
   as_user env DBUS_SESSION_BUS_ADDRESS="unix:path=$(user_bus)" \
     dconf load /org/gnome/shell/extensions/ <"${SCRIPT_DIR}/setup/gnome-settings.dconf"
 }

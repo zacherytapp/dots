@@ -1,7 +1,5 @@
 local util = require("util")
 
--- Formatters per filetype are contributed by lua/plugins/lang/*.lua.
--- Format on save honours <leader>uf (buffer) / <leader>uF (global).
 return {
   {
     "stevearc/conform.nvim",
@@ -17,7 +15,7 @@ return {
       formatters_by_ft = {
         sh = { "shfmt" },
         bash = { "shfmt" },
-        -- markdown intentionally excluded: prose isn't auto-formatted
+        -- markdown deliberately has no formatter: prose isn't auto-formatted
         ruby = { "rubocop" },
         php = { "pint" },
         nix = { "alejandra" },

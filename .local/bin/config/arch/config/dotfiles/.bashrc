@@ -1,5 +1,3 @@
-# .bashrc
-
 if [ -f /etc/bashrc ]; then
   . /etc/bashrc
 fi
@@ -18,7 +16,6 @@ if [ -d ~/.bashrc.d ]; then
 fi
 unset rc
 
-# rust
 . "$HOME/.cargo/env"
 
 # pnpm

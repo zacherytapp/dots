@@ -1,5 +1,3 @@
--- Look and feel configuration
-
 hl.config({
     general = {
         gaps_in = 3,
@@ -23,8 +21,8 @@ hl.config({
             border_locked_inactive = GM_BG5,
         },
         groupbar = {
-            text_color = GM_BG0,                     -- on light active tab
-            text_color_inactive = GM_FG1,            -- on dark inactive tab
+            text_color = GM_BG0,
+            text_color_inactive = GM_FG1,
             text_color_locked_active = GM_BG0,
             text_color_locked_inactive = GM_FG1,
             col = {

@@ -58,7 +58,6 @@ check)
     echo "preseed: existing user state untouched"
   else
     echo "preseed: existing user state CHANGED (diff above)"
-    # show what was written into the rc files
     for f in "${RC_FILES[@]}"; do
       diff -u "$STATE.rc/$f" "$HOME/$f"
     done

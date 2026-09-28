@@ -1,4 +1,3 @@
--- PEP 8: 4 spaces (ruff format)
 vim.bo.expandtab = true
 vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 4

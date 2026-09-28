@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# install some necessary stuff and dev toolchain stuff
-# this should be run outside of sudo as it will
-# populate in $HOME -- also internet scripts = unsafe
+# run without sudo: it installs into $HOME
 
-# Get the directory of the current script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "${SCRIPT_DIR}/../utils.sh" ]; then
@@ -17,7 +14,6 @@ source "${SCRIPT_DIR}/../utils.sh"
 sudo pacman -Syyu --noconfirm
 sudo pacman -S zsh git curl sed grep --noconfirm --needed
 
-# enable ssh
 print_info "enabling sshd"
 sudo systemctl enable --now sshd
 

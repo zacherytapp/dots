@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Herdr port of tmux-cht.sh: pick a language or command, ask a question,
-# and page the answer from cht.sh.
+# Pick a language or command, ask a question, and page the cht.sh answer.
 set -euo pipefail
 
 languages="golang lua nodejs typescript javascript rust python fish bash zsh sql html css"

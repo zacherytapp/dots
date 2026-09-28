@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# gpg key (for pass) and ssh key, generated as the real user
 
 configure_keys() {
   if [ -z "${USER_NAME}" ] || [ -z "${USER_EMAIL}" ]; then
@@ -7,7 +6,7 @@ configure_keys() {
     return 0
   fi
 
-  # generate gpg key (<email> is an exact match, a bare email matches substrings)
+  # <email> is an exact match, a bare email matches substrings
   if ! as_user gpg --list-secret-keys "<${USER_EMAIL}>" &>/dev/null; then
     as_user gpg --batch --full-generate-key <<KEY
 %no-protection
@@ -32,7 +31,6 @@ KEY
     as_user pass init "$gpg_key"
   fi
 
-  # ssh key generation
   if [ ! -f "${ACTUAL_HOME}/.ssh/id_ed25519" ]; then
     as_user mkdir -p "${ACTUAL_HOME}/.ssh"
     as_user chmod 700 "${ACTUAL_HOME}/.ssh"

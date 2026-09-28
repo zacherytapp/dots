@@ -1,6 +1,5 @@
 FROM fedora:44
 
-# bootstrap only: run.sh is responsible for everything else
 RUN dnf install -y sudo ncurses shadow-utils && dnf clean all \
   && useradd -m -s /bin/bash tester \
   && echo 'tester ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/tester \

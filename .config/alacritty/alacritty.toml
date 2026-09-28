@@ -27,9 +27,7 @@ italic = { family = "monospace", style = "Italic" }
 bold_italic = { family = "monospace", style = "Bold Italic" }
 size = 12.0
 
-# Colors come from themes/noctalia.toml (imported above), rendered by Noctalia
-# from the GruvboxMaterial palette. Keep [colors.*] tables out of this file:
-# they would override the import.
+# No [colors.*] tables here: they would override the imported Noctalia theme.
 [colors]
 draw_bold_text_with_bright_colors = true
 

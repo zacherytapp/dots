@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016,SC2317 # Literal shell syntax in policy messages; exit helpers are invoked indirectly.
-# Local safety hooks for Claude Code/Pi.
-#
-# This script intentionally contains the hook implementation locally instead of
-# delegating to upstream source files or Python modules. It handles:
+# Claude Code/Pi safety hook. Handles:
 #   - PreToolUse/Bash: rm, git add, git checkout, git commit, .env access
 #   - PreToolUse/Read: direct reads of .env files
 #   - PreToolUse/Edit|Write: source-file length speed bump
@@ -89,7 +86,6 @@ alias_value() {
     value="${line#*=}"
     [[ "$key" != "$name" ]] && continue
 
-    # Strip one pair of surrounding quotes from bash/zsh alias output.
     if [[ "${value:0:1}" == "'" && "${value: -1}" == "'" ]]; then
       value="${value:1:${#value}-2}"
     elif [[ "${value:0:1}" == '"' && "${value: -1}" == '"' ]]; then
@@ -134,8 +130,7 @@ split_top_level_commands() {
   local command="$1" token="" quote="" ch next
   local i=0 len=${#command}
 
-  # This is intentionally a small command recognizer, not a shell parser. It
-  # only treats separators outside quotes as command boundaries.
+  # Not a shell parser: only separators outside quotes split commands.
   while ((i < len)); do
     ch="${command:i:1}"
     next="${command:i:2}"
@@ -178,7 +173,6 @@ extract_subshell_commands() {
   local len=${#command}
   local i=0 j depth inner ch two start
 
-  # Balanced $(...) extraction, including nested command substitutions.
   while (( i < len - 1 )); do
     two="${command:i:2}"
     if [[ "$two" == '$(' ]]; then
@@ -208,7 +202,6 @@ extract_subshell_commands() {
     i=$((i + 1))
   done
 
-  # Backtick command substitution.
   printf '%s\n' "$command" |
     grep -oE '`[^`]+`' 2>/dev/null |
     sed -E 's/^`//; s/`$//' || true
@@ -289,9 +282,8 @@ check_env_command() {
     return 1
   fi
 
-  # Direct or indirect access to .env-like files. Keep the regexes in grep
-  # instead of [[ =~ ]] so shell metacharacters like ;, |, <, and > do not
-  # become parser tokens.
+  # Regexes stay in grep rather than [[ =~ ]] so ;, |, <, and > are not
+  # parsed as shell tokens.
   if grep -Eqi '(^|[[:space:];|&])(cat|less|more|head|tail|nano|vi|vim|emacs|code|subl|atom|gedit|grep|rg|ag|ack|tee|cp|mv|touch)[[:space:]][^;|&]*\.env([.A-Za-z0-9_-]*)($|[[:space:];|&])' <<<"$norm"; then
     env_block_reason
     return 0
@@ -313,7 +305,6 @@ check_env_command() {
     return 0
   fi
 
-  # Bare env file reads/writes, but only for obvious file-access commands.
   if grep -Eqi '(^|[[:space:];|&])(cat|less|more|head|tail)[[:space:]]+["'"'"']?env["'"'"']?($|[[:space:];|&])|(>|>>)[[:space:]]*["'"'"']?env["'"'"']?($|[[:space:];|&])' <<<"$norm"; then
     env_block_reason
     return 0
@@ -388,8 +379,7 @@ canonicalize_git_command() {
   read -r -a parts <<<"$(normalize_ws "$raw")"
   [[ "${parts[0]-}" == git ]] || { normalize_ws "$raw"; return 0; }
 
-  # Recognize common Git global options so policy checks still see the
-  # subcommand. Wrappers such as sudo/env/bash are intentionally unsupported.
+  # sudo/env/bash wrappers are deliberately not unwrapped.
   while ((i < ${#parts[@]})); do
     part="${parts[i]}"
     case "$part" in
@@ -462,7 +452,6 @@ check_git_add_single() {
 
   [[ "$norm" == git\ add\ * ]] || [[ "$norm" == git\ commit\ * ]] || return 1
 
-  # Always allow dry-run probes.
   if [[ "$norm" == *--dry-run* || "$norm" =~ (^|[[:space:]])-n($|[[:space:]]) ]]; then
     return 1
   fi
@@ -619,7 +608,7 @@ resulting_line_count() {
   fi
 
   if [[ "$replace_all" == "true" ]]; then
-    # Approximate literal occurrence count. Good enough for the speed bump.
+    # Approximate (non-overlapping) count; good enough for a speed bump.
     occurrences=$(grep -Fo -- "$old" "$file_path" 2>/dev/null | wc -l | tr -d ' ')
     (( occurrences < 1 )) && occurrences=1
   else

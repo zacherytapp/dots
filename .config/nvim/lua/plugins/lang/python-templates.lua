@@ -1,6 +1,3 @@
--- Python templating: Django templates (htmldjango) and Jinja2 (jinja; also
--- Ansible's .j2 files). HTML under templates/ is classified by project in
--- lua/config/filetypes.lua (manage.py -> htmldjango, {% / {{ -> jinja).
 local function djlint_config(dirname)
   return vim.fs.find({ ".djlintrc", "pyproject.toml", "djlint.toml" }, { upward = true, path = dirname })[1]
 end

@@ -1,9 +1,4 @@
--- Salesforce language servers that ship only inside the Salesforce VS Code
--- extensions (not on Mason or npm): the Apex jorje jar, the Visualforce server
--- and the Aura server. `:SalesforceLspInstall [apex|visualforce|aura]`
--- downloads the latest extension from Open VSX and unpacks the server into
--- stdpath("data")/salesforce-lsp. The LWC server comes from npm
--- (`npm i -g @salesforce/lwc-language-server`).
+-- These servers ship only inside the Salesforce VS Code extensions (not Mason/npm), so they are unpacked from Open VSX
 local M = {}
 
 M.root = vim.fn.stdpath("data") .. "/salesforce-lsp"
@@ -38,7 +33,6 @@ function M.entry(name)
   return vim.uv.fs_stat(path) and path or nil
 end
 
---- Apex jar: the installed one, else the jar bundled in this config
 function M.apex_jar()
   local bundled = vim.fn.stdpath("config") .. "/lspserver/apex-jorje-lsp.jar"
   return M.entry("apex") or (vim.uv.fs_stat(bundled) and bundled or nil)
@@ -74,8 +68,7 @@ local function notify(msg, level)
   end)
 end
 
---- Run a command asynchronously; `cb` runs on the main loop (vim.fn is not
---- allowed in vim.system's fast-event callback)
+--- `cb` runs on the main loop: vim.fn is not allowed in vim.system's fast-event callback
 ---@param cmd string[]
 ---@param cb fun(out: vim.SystemCompleted)
 local function run(cmd, cb)
@@ -127,7 +120,6 @@ local function install_one(name, done)
   end)
 end
 
---- Point the LSP config at the freshly installed server and start it
 ---@param name string
 function M.enable(name)
   local cmd = M.cmd(name)
@@ -161,7 +153,6 @@ function M.install(names)
   end
 end
 
---- Installed versions, for :SalesforceLspInstall with no servers missing
 function M.status()
   local lines = {}
   for name in pairs(M.servers) do
@@ -190,7 +181,6 @@ function M.setup()
     notify(table.concat(M.status(), "\n"))
   end, { desc = "Show installed Salesforce language servers" })
 
-  -- One hint per session when a Salesforce file opens without its server
   local hinted = {}
   vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("user_salesforce_lsp_hint", { clear = true }),

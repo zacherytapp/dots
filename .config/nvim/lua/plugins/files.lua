@@ -30,7 +30,6 @@ return {
     },
   },
   {
-    -- File explorer plugin
     "nvim-neo-tree/neo-tree.nvim",
     branch = "v3.x",
     lazy = true,
@@ -41,7 +40,6 @@ return {
       "MunifTanjim/nui.nvim",
       {
         "s1n7ax/nvim-window-picker",
-        -- tag = "v1.*",
         config = function()
           require("window-picker").setup({
             autoselect_one = true,
@@ -59,7 +57,6 @@ return {
       },
     },
     commander = {
-      -- Toggle / Navigation
       {
         keys = { "n", "<leader>fe" },
         cmd = function()
@@ -98,7 +95,6 @@ return {
         cmd = [[<cmd>Neotree float buffers<cr>]],
         desc = "Buffer explorer",
       },
-      -- File operations (reveal tree then act)
       {
         desc = "NeoTree: Create file (a)",
         cmd = function()
@@ -153,7 +149,6 @@ return {
           end, 100)
         end,
       },
-      -- Clipboard operations
       {
         desc = "NeoTree: Copy to clipboard (y)",
         cmd = function()
@@ -181,7 +176,6 @@ return {
           end, 100)
         end,
       },
-      -- Navigation & display
       {
         desc = "NeoTree: Toggle hidden files (H)",
         cmd = function()
@@ -218,7 +212,6 @@ return {
           end, 100)
         end,
       },
-      -- Split/tab operations
       {
         desc = "NeoTree: Open in split (S)",
         cmd = function()
@@ -255,7 +248,6 @@ return {
           end, 100)
         end,
       },
-      -- Oil bridge
       {
         desc = "NeoTree: Open directory in Oil (o)",
         cmd = function()
@@ -267,29 +259,26 @@ return {
       },
     },
     opts = {
-      -- don't reset the cursor position when opening a file
-      -- Let Oil handle directory buffers; Neo-tree stays as sidebar only
+      -- Oil owns directory buffers; Neo-tree is only a sidebar
       disable_netrw = false,
       hijack_netrw = false,
       close_if_last_window = false,
       enable_git_status = true,
       enable_diagnostics = true,
-      sort_case_insensitive = false, -- used when sorting files and directories in the tree
+      sort_case_insensitive = false,
       use_default_mappings = false,
-      sort_function = nil, -- use a custom function for sorting files and directories in the tree
+      sort_function = nil,
       source_selector = { winbar = true, statusline = false },
       default_component_configs = {
         container = { enable_character_fade = true },
         indent = {
           indent_size = 2,
-          padding = 1, -- extra padding on left hand side
-          -- indent guides
+          padding = 1,
           with_markers = true,
           indent_marker = "│",
           last_indent_marker = "└",
           highlight = "NeoTreeIndentMarker",
-          -- expander config, needed for nesting files
-          with_expanders = nil, -- if nil and file nesting is enabled, will enable expanders
+          with_expanders = nil,
           expander_collapsed = icons.arrow_closed,
           expander_expanded = icons.arrow_open,
           expander_highlight = "NeoTreeExpander",
@@ -298,8 +287,6 @@ return {
           folder_closed = icons.default,
           folder_open = icons.open,
           folder_empty = icons.empty,
-          -- The next two settings are only a fallback, if you use nvim-web-devicons and configure default icons there
-          -- then these will never be used.
           default = "*",
           highlight = "NeoTreeFileIcon",
         },
@@ -307,12 +294,10 @@ return {
         name = { trailing_slash = false, use_git_status_colors = true, highlight = "NeoTreeFileName" },
         git_status = {
           symbols = {
-            -- Change type
             added = icons.added,
             modified = "",
             deleted = icons.deleted,
             renamed = icons.renamed,
-            -- Status type
             untracked = icons.untracked,
             ignored = icons.ignored,
             unstaged = icons.unstaged,
@@ -328,7 +313,7 @@ return {
         mappings = {
           ["<space>"] = {
             "toggle_node",
-            nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use
+            nowait = false,
           },
           ["<2-LeftMouse>"] = "open",
           ["<cr>"] = "open",
@@ -337,38 +322,24 @@ return {
           ["l"] = "focus_preview",
           ["S"] = "open_split",
           ["s"] = "open_vsplit",
-          -- ["S"] = "split_with_window_picker",
-          -- ["s"] = "vsplit_with_window_picker",
           ["t"] = "open_tabnew",
-          -- ["<cr>"] = "open_drop",
-          -- ["t"] = "open_tab_drop",
           ["w"] = "open_with_window_picker",
-          -- ["P"] = "toggle_preview", -- enter preview mode, which shows the current node without focusing
           ["C"] = "close_node",
           ["z"] = "close_all_nodes",
-          -- ["Z"] = "expand_all_nodes",
           ["a"] = {
             "add",
-            -- this command supports BASH style brace expansion ("x{a,b,c}" -> xa,xb,xc). see `:h neo-tree-file-actions` for details
-            -- some commands may take optional config options, see `:h neo-tree-mappings` for details
             config = {
-              show_path = "none", -- "none", "relative", "absolute"
+              show_path = "none",
             },
           },
-          ["A"] = "add_directory", -- also accepts the optional config.show_path option like "add". this also supports BASH style brace expansion.
+          ["A"] = "add_directory",
           ["d"] = "delete",
           ["r"] = "rename",
           ["y"] = "copy_to_clipboard",
           ["x"] = "cut_to_clipboard",
           ["p"] = "paste_from_clipboard",
-          ["c"] = "copy", -- takes text input for destination, also accepts the optional config.show_path option like "add":
-          -- ["c"] = {
-          --  "copy",
-          --  config = {
-          --    show_path = "none" -- "none", "relative", "absolute"
-          --  }
-          -- }
-          ["m"] = "move", -- takes text input for destination, also accepts the optional config.show_path option like "add".
+          ["c"] = "copy",
+          ["m"] = "move",
           ["q"] = "close_window",
           ["R"] = "refresh",
           ["?"] = "show_help",
@@ -378,7 +349,6 @@ return {
             function(state)
               local node = state.tree:get_node()
               local path = node.type == "directory" and node:get_id() or vim.fn.fnamemodify(node:get_id(), ":h")
-              -- Close Neo-tree sidebar, then open Oil in that directory
               vim.cmd("Neotree close")
               require("oil").open(path)
             end,
@@ -394,40 +364,32 @@ return {
       },
       filesystem = {
         filtered_items = {
-          visible = true, -- when true, they will just be displayed differently than normal items
+          visible = true,
           hide_dotfiles = false,
           hide_gitignored = true,
-          hide_hidden = true, -- only works on Windows for hidden files/directories
+          hide_hidden = true,
           hide_by_name = {
-            -- "node_modules"
           },
-          hide_by_pattern = { -- uses glob style patterns
-            -- "*.meta",
-            -- "*/src/*/tsconfig.json",
+          hide_by_pattern = {
           },
-          always_show = { -- remains visible even if other settings would normally hide it
-            -- ".gitignored",
+          always_show = {
           },
-          never_show = { -- remains hidden even if visible is toggled to true, this overrides always_show
+          never_show = {
             ".DS_Store",
             "thumbs.db",
           },
-          never_show_by_pattern = { -- uses glob style patterns
-            -- ".null-ls_*",
+          never_show_by_pattern = {
           },
         },
         bind_to_cwd = true,
         cwd_target = { sidebar = "tab", current = "window" },
-        follow_current_file = { enabled = true }, -- This will find and focus the file in the active buffer every
-        -- time the current file is changed while the tree is open.
-        group_empty_dirs = false, -- when true, empty folders will be grouped together
-        hijack_netrw_behavior = "disabled", -- let Oil handle directory opens
-        use_libuv_file_watcher = false, -- This will use the OS level file watchers to detect changes
-        -- instead of relying on nvim autocmd events.
+        follow_current_file = { enabled = true },
+        group_empty_dirs = false,
+        hijack_netrw_behavior = "disabled",
+        use_libuv_file_watcher = false,
         window = {
           mappings = {
             ["<bs>"] = "navigate_up",
-            -- ["<c-.>"] = "set_root",
             ["H"] = "toggle_hidden",
             ["/"] = "fuzzy_finder",
             ["D"] = "fuzzy_finder_directory",
@@ -439,15 +401,13 @@ return {
         },
       },
       buffers = {
-        follow_current_file = { enabled = true }, -- This will find and focus the file in the active buffer every
-        -- time the current file is changed while the tree is open.
-        group_empty_dirs = true, -- when true, empty folders will be grouped together
+        follow_current_file = { enabled = true },
+        group_empty_dirs = true,
         show_unloaded = true,
         window = {
           mappings = {
             ["bd"] = "buffer_delete",
             ["<bs>"] = "navigate_up",
-            -- ["<c-.>"] = "set_root",
           },
         },
       },

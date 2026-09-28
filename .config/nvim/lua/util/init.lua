@@ -1,5 +1,3 @@
--- Small helpers shared by the plugin specs (LazyVim-style root detection and
--- format toggles, without depending on LazyVim itself).
 local M = {}
 
 M.root_markers = {
@@ -13,8 +11,6 @@ M.root_markers = {
   "lua",
 }
 
---- Project root for the current buffer: the attached LSP's workspace folder,
---- then the nearest root marker, then the cwd.
 ---@param buf? integer
 ---@return string
 function M.root(buf)
@@ -40,7 +36,6 @@ function M.root(buf)
   return vim.uv.cwd() or "."
 end
 
---- Is format-on-save enabled for this buffer? (buffer setting wins over global)
 ---@param buf? integer
 function M.autoformat_enabled(buf)
   buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
@@ -51,7 +46,6 @@ function M.autoformat_enabled(buf)
   return vim.g.autoformat ~= false
 end
 
---- Snacks toggle for format-on-save (buffer or global)
 ---@param buffer? boolean
 function M.format_toggle(buffer)
   return Snacks.toggle({
@@ -73,7 +67,6 @@ function M.format_toggle(buffer)
   })
 end
 
---- Run `fn(client, buf)` whenever an LSP client (optionally by name) attaches
 ---@param fn fun(client: vim.lsp.Client, buf: integer)
 ---@param name? string
 function M.on_attach(fn, name)
@@ -87,7 +80,6 @@ function M.on_attach(fn, name)
   })
 end
 
---- Is `cmd` runnable (on PATH or an absolute executable path)?
 ---@param cmd string
 function M.has(cmd)
   return vim.fn.executable(cmd) == 1

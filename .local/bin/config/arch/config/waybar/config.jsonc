@@ -30,7 +30,6 @@
         "disable-scroll": true,
         "all-outputs": true,
         "on-click": "activate"
-        //"format": "{icon}",
     },
 
     "tray": {
@@ -110,9 +109,9 @@
 
     "memory": {
         "states": {
-            "c": 90, // critical
-            "h": 60, // high
-            "m": 30 // medium
+            "c": 90,
+            "h": 60,
+            "m": 30
         },
         "interval": 10,
         "format": "󰾆 {used}GB",

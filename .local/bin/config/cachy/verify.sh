@@ -3,7 +3,6 @@
 
 set -uo pipefail
 
-# the same tool dirs .zshrc puts on PATH
 export NVM_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nvm"
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$HOME/.local/bin:$PNPM_HOME/bin:$PNPM_HOME:$HOME/.cargo/bin:$HOME/go/bin:/opt/pmd/bin:$PATH"

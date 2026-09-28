@@ -1,27 +1,5 @@
---[[
-Keymap convention
-=================
-Layout follows LazyVim (https://www.lazyvim.org/keymaps): <leader>f file/find,
-<leader>s search, <leader>c code, <leader>g git (<leader>gh hunks), <leader>d
-debug, <leader>t test, <leader>u ui toggles, <leader>x diagnostics/quickfix,
-<leader>b buffers, <leader>w windows, <leader>q quit/session, <leader>a AI,
-<leader>o overseer, <leader>n notes, <leader>m Salesforce; g goto; [ / ] prev/next.
-
-Every user-facing global keymap is registered with commander so it shows up in
-the <leader>k palette (and which-key, via its `desc`):
-  * global, non-plugin keys  -> this file
-  * plugin keys              -> a `commander = { ... }` block on the plugin's lazy spec
-Commander does not drive lazy-loading: a plugin reached only through a
-commander binding still needs a `cmd`/`event`/`ft` trigger on its spec.
-
-Exceptions (not in commander; lazy `keys` are still listed in the palette):
-  1. Filetype-scoped keys  -> lazy `keys = { ..., ft = "..." }` in plugins/lang/*.lua
-  2. Completion-menu keys  -> blink.cmp / minuet / LuaSnip configs
-  3. UI toggles            -> Snacks.toggle():map("<leader>u*") in plugins/snacks.lua
-  4. Textobjects / motions -> treesitter-textobjects, mini.ai, flash configs
-which-key group names and icons live in plugins/editor.lua.
-]]
-
+-- commander does not drive lazy-loading: a plugin reached only through a commander
+-- binding still needs a `cmd`/`event`/`ft` trigger on its spec
 local commander = require("commander")
 local util = require("util")
 
@@ -47,7 +25,6 @@ end
 commander.add({
   { keys = { "n", "<leader>k" }, cmd = commander.show, desc = "Commander: Command palette" },
 
-  -- Movement ------------------------------------------------------------
   {
     keys = { { "n", "x" }, "j", { expr = true, silent = true } },
     cmd = "v:count == 0 ? 'gj' : 'j'",
@@ -68,7 +45,7 @@ commander.add({
   { keys = { "n", "<C-Down>" }, cmd = "<cmd>resize -2<cr>", desc = "Decrease window height" },
   { keys = { "n", "<C-Left>" }, cmd = "<cmd>vertical resize -2<cr>", desc = "Decrease window width" },
   { keys = { "n", "<C-Right>" }, cmd = "<cmd>vertical resize +2<cr>", desc = "Increase window width" },
-  -- Saner n/N: always forward/backward, and open folds
+  -- n/N always go forward/backward whether the search was / or ?, and open folds
   {
     keys = { "n", "n", { expr = true } },
     cmd = "'Nn'[v:searchforward].'zv'",
@@ -94,7 +71,6 @@ commander.add({
     show = false,
   },
 
-  -- Editing -------------------------------------------------------------
   { keys = { { "i", "x", "n", "s" }, "<C-s>" }, cmd = "<cmd>w<cr><esc>", desc = "Save file" },
   { keys = { "n", "<Esc>" }, cmd = "<cmd>nohlsearch<cr><esc>", desc = "Clear search highlight" },
   { keys = { "i", "," }, cmd = ",<c-g>u", desc = "Undo break-point", show = false },
@@ -109,7 +85,6 @@ commander.add({
   { keys = { "n", "<leader>Y" }, cmd = '"+Y', desc = "Yank line to system clipboard" },
   { keys = { "n", "<leader>K" }, cmd = "<cmd>norm! K<cr>", desc = "Keywordprg" },
 
-  -- Files / buffers -----------------------------------------------------
   { keys = { "n", "<leader>fn" }, cmd = "<cmd>enew<cr>", desc = "New file" },
   { keys = { "n", "<leader>bb" }, cmd = "<cmd>e #<cr>", desc = "Switch to other buffer" },
   { keys = { "n", "<leader>`" }, cmd = "<cmd>e #<cr>", desc = "Switch to other buffer" },
@@ -130,7 +105,6 @@ commander.add({
   { keys = { "n", "<leader>bD" }, cmd = "<cmd>bd<cr>", desc = "Delete buffer and window" },
   { keys = { "n", "-" }, cmd = "<cmd>Oil<cr>", desc = "Oil: Open parent directory" },
 
-  -- Windows / tabs ------------------------------------------------------
   { keys = { "n", "<leader>-", { remap = true } }, cmd = "<C-w>s", desc = "Split window below" },
   { keys = { "n", "<leader>|", { remap = true } }, cmd = "<C-w>v", desc = "Split window right" },
   { keys = { "n", "<leader>wd", { remap = true } }, cmd = "<C-w>c", desc = "Delete window" },
@@ -143,7 +117,6 @@ commander.add({
   { keys = { "n", "<leader><tab>[" }, cmd = "<cmd>tabprevious<cr>", desc = "Previous tab" },
   { keys = { "n", "<leader>qq" }, cmd = "<cmd>qa<cr>", desc = "Quit all" },
 
-  -- Code / LSP ----------------------------------------------------------
   { keys = { "n", "gD" }, cmd = vim.lsp.buf.declaration, desc = "LSP: Goto declaration" },
   {
     keys = { "n", "K" },
@@ -207,7 +180,6 @@ commander.add({
     desc = "Format buffer as JSON (jq)",
   },
 
-  -- Diagnostics / quickfix ----------------------------------------------
   {
     keys = { "n", "<leader>cd" },
     cmd = function()
@@ -238,7 +210,6 @@ commander.add({
   { keys = { "n", "[q" }, cmd = vim.cmd.cprev, desc = "Previous quickfix" },
   { keys = { "n", "]q" }, cmd = vim.cmd.cnext, desc = "Next quickfix" },
 
-  -- UI ------------------------------------------------------------------
   { keys = { "n", "<leader>ui" }, cmd = vim.show_pos, desc = "Inspect position" },
   {
     keys = { "n", "<leader>uI" },

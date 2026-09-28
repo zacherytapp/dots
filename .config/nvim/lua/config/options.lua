@@ -1,6 +1,5 @@
 local opt = vim.opt
 
--- abbreviations / common spelling fixes
 for typo, fix in pairs({
   funciton = "function",
   teh = "the",
@@ -13,14 +12,12 @@ for typo, fix in pairs({
   vim.cmd.abbreviate(typo, fix)
 end
 
--- General
------------------------------------------------------------------
 if not vim.env.SSH_TTY then
-  -- don't set the clipboard when in SSH (OSC 52 handles it there)
+  -- over SSH, OSC 52 handles the clipboard
   opt.clipboard = "unnamedplus"
 end
 
-opt.confirm = true -- confirm changes before exiting a buffer
+opt.confirm = true
 opt.autowrite = true
 opt.writebackup = false
 opt.swapfile = false
@@ -31,44 +28,40 @@ opt.mouse = "a"
 opt.sessionoptions = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "skiprtp", "folds" }
 opt.jumpoptions = "view"
 opt.updatetime = 200
-opt.timeoutlen = vim.g.vscode and 1000 or 300 -- lower than default to quickly trigger which-key
+opt.timeoutlen = vim.g.vscode and 1000 or 300 -- short so which-key pops up quickly
 opt.visualbell = true
 opt.virtualedit = "block"
-opt.inccommand = "nosplit" -- preview incremental substitute
+opt.inccommand = "nosplit"
 opt.formatexpr = "v:lua.require'conform'.formatexpr()"
 opt.formatoptions = "jcroqlnt"
 opt.spelllang = { "en" }
 opt.spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" -- zg/zw words live in the dots repo
 
--- Searching
 opt.ignorecase = true
 opt.smartcase = true
 if vim.fn.executable("rg") == 1 then
-  -- ripgrep, respecting .gitignore (the default grepprg passes -uu)
+  -- the default grepprg passes -uu, which ignores .gitignore
   opt.grepprg = "rg --vimgrep --no-heading"
   opt.grepformat = "%f:%l:%c:%m"
 end
 
--- Completion / command line
 opt.completeopt = "menu,menuone,noselect"
 opt.wildmode = "longest:full,full"
 opt.pumblend = 0
 opt.pumheight = 10
 
--- Appearance
------------------------------------------------------------------
 opt.termguicolors = true
 opt.number = true
 opt.relativenumber = true
 opt.guicursor = ""
 opt.cursorline = true
-opt.cursorlineopt = "number" -- highlight only the line number
+opt.cursorlineopt = "number"
 opt.signcolumn = "yes"
 opt.winborder = "rounded"
 opt.conceallevel = 2
-opt.laststatus = 3 -- global statusline
+opt.laststatus = 3
 opt.cmdheight = vim.g.vscode and 1 or 0
-opt.showmode = false -- lualine shows the mode
+opt.showmode = false
 opt.ruler = false
 opt.title = true
 opt.showmatch = true
@@ -81,7 +74,7 @@ opt.splitright = true
 opt.splitkeep = "screen"
 opt.winminwidth = 5
 opt.textwidth = 120
-opt.linebreak = true -- soft wrap at word boundaries
+opt.linebreak = true
 opt.showbreak = "↪"
 opt.wrap = false
 opt.shell = vim.env.SHELL or opt.shell:get()
@@ -104,8 +97,6 @@ opt.fillchars = {
   eob = " ",
 }
 
--- Indentation: 2 spaces by default. Per-language overrides live in
--- after/ftplugin/*.lua; vim-sleuth and .editorconfig adapt to existing files.
 opt.expandtab = true
 opt.tabstop = 2
 opt.softtabstop = 2
@@ -113,7 +104,6 @@ opt.shiftwidth = 2
 opt.shiftround = true
 opt.smartindent = true
 
--- Folding (treesitter; open by default)
 opt.foldmethod = "expr"
 opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 opt.foldlevel = 99
@@ -129,5 +119,5 @@ function _G.custom_foldtext()
 end
 opt.foldtext = "v:lua.custom_foldtext()"
 
--- Markdown code blocks keep their own indentation
+-- stop the markdown ftplugin forcing 4-space indentation
 vim.g.markdown_recommended_style = 0

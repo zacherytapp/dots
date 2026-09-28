@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# language toolchains; everything under $HOME is installed as the real user
 
 JDK_PACKAGE="zulu25-jdk"
 PNPM_GLOBALS=(@salesforce/cli neovim sql-formatter @fsouza/prettierd markdownlint-cli)
@@ -10,15 +9,12 @@ GO_TOOLS=(
   github.com/a-h/templ/cmd/templ@latest
 )
 
-# azul zulu jdk (current LTS)
 install_java() {
   add_apt_repo zulu https://repos.azul.com/azul-repo.key https://repos.azul.com/zulu/deb stable main
   apt_update
   install_packages "${JDK_PACKAGE}"
 }
 
-# re-runs only install what's missing; upgrading is left to the tools
-# themselves (rustup update, pnpm update -g, ...)
 install_rust() {
   if [ ! -x "${ACTUAL_HOME}/.cargo/bin/rustup" ]; then
     as_user bash -c 'curl --proto "=https" --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path'
@@ -26,7 +22,6 @@ install_rust() {
   as_user_sh "cargo install --list | grep -q '^viu ' || cargo install --locked viu"
 }
 
-# nvm + node lts, then pnpm for global packages
 install_node() {
   local nvm_tag
   if [ ! -s "${ACTUAL_HOME}/.nvm/nvm.sh" ]; then
@@ -83,7 +78,7 @@ install_go() {
   done
 }
 
-# latest luarocks built against lua 5.1 (the version neovim embeds)
+# lua 5.1 to match the luajit neovim embeds
 install_lua() {
   local tag version build_dir
 
@@ -118,7 +113,7 @@ install_brew() {
   local prefix="/home/linuxbrew/.linuxbrew"
   install_packages build-essential procps curl file git
   if [ ! -x "${prefix}/bin/brew" ]; then
-    # homebrew's documented git-clone install; we're already root, so no inner sudo prompt
+    # homebrew's documented git-clone install; as root there's no inner sudo prompt
     install -d -o "$ACTUAL_USER" -g "$(id -gn "$ACTUAL_USER")" /home/linuxbrew "${prefix}" "${prefix}/bin"
     if [ ! -d "${prefix}/Homebrew/.git" ]; then
       as_user git clone --depth 1 https://github.com/Homebrew/brew "${prefix}/Homebrew"

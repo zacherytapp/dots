@@ -1,4 +1,3 @@
--- Lua: lua_ls + lazydev (Neovim API), stylua
 return {
   {
     "nvim-treesitter/nvim-treesitter",

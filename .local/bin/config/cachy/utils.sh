@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Shared helpers for the CachyOS setup. Sourced by run.sh.
 
 LOG_FILE="/var/log/dots-setup.log"
 
@@ -34,7 +33,6 @@ log_message() {
   echo "$(date +"%Y-%m-%d %H:%M:%S") - $1" >>"$LOG_FILE"
 }
 
-# docker/podman/systemd-nspawn: no init system, no kernel modules
 is_container() {
   if command -v systemd-detect-virt &>/dev/null && systemd-detect-virt --container --quiet; then
     return 0
@@ -42,8 +40,6 @@ is_container() {
   [ -f /.dockerenv ] || [ -f /run/.containerenv ]
 }
 
-# prints the skip notice and returns 0 when in a container, so callers can do
-#   skip_in_container "what" && return 0
 skip_in_container() {
   if is_container; then
     print_warning "skipped: container ($1)"
@@ -64,12 +60,10 @@ check_root() {
   fi
 }
 
-# run a command as the invoking (non-root) user with their HOME
 as_user() {
   sudo -u "$ACTUAL_USER" -H "$@"
 }
 
-# run a bash snippet as the invoking user with their tool dirs on PATH
 as_user_sh() {
   sudo -u "$ACTUAL_USER" -H \
     NVM_DIR="$NVM_DIR" PNPM_HOME="$PNPM_HOME" \
@@ -77,7 +71,6 @@ as_user_sh() {
     bash -c "$1"
 }
 
-# ask for a value when unset and a person is at the keyboard, else use the default
 prompt_var() {
   local var="$1"
   local question="$2"
@@ -95,8 +88,8 @@ pacman_install() {
   pacman -S --needed --noconfirm "$@"
 }
 
-# paru refuses to run as root; it escalates with sudo itself. only missing
-# packages: --needed still rebuilds an installed AUR package when upstream moves
+# paru refuses to run as root (it sudoes itself), and --needed still rebuilds
+# an installed AUR package when upstream moves, so only pass the missing ones
 aur_install() {
   local pkg missing=()
   for pkg in "$@"; do
@@ -119,8 +112,6 @@ latest_github_tag() {
   curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$1/releases/latest" | sed 's#.*/tag/##'
 }
 
-# run_step <name> <function>: runs the function in a subshell with errexit so
-# the first failing command ends the step; failures are recorded, not fatal
 run_step() {
   local name="$1"
   local func="$2"

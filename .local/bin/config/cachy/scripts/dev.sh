@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# User-level dev tooling: shell, git, rust, node, go, pmd, tmux, herdr, task,
-# plannotator.
 
 step_shell() {
   # oh-my-zsh, powerlevel10k and the zsh plugins come from cachyos-zsh-config
@@ -26,20 +24,16 @@ step_git() {
   fi
 }
 
-# re-runs only install what's missing; upgrading is left to the tools
-# themselves (rustup update, nvm install node, pnpm update -g, ...)
 step_rust() {
   # .zshrc sources ~/.cargo/env, which only the rustup.rs installer creates
   if [ ! -x "$ACTUAL_HOME/.cargo/bin/rustup" ]; then
     as_user_sh "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path"
   fi
-  # no-op once they're installed
   as_user_sh "rustup component add --toolchain stable ${RUSTUP_COMPONENTS[*]}"
 }
 
 # shellcheck disable=SC2016 # snippets expand in the user shell
 step_node() {
-  # .zshrc looks in \$XDG_CONFIG_HOME/nvm, falling back to ~/.nvm
   as_user mkdir -p "$NVM_DIR"
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
     local tag
@@ -99,7 +93,6 @@ step_pmd() {
 }
 
 step_tmux() {
-  # tmux.conf runs ~/.tmux/plugins/tpm/tpm; install plugins with prefix + I
   local tpm_dir="$ACTUAL_HOME/.tmux/plugins/tpm"
   if [ -d "$tpm_dir" ]; then
     echo "tpm already installed in $tpm_dir"
@@ -109,7 +102,6 @@ step_tmux() {
 }
 
 step_herdr() {
-  # installs to ~/.local/bin, which .zshrc already puts on PATH
   if [ -x "$ACTUAL_HOME/.local/bin/herdr" ]; then
     echo "herdr already installed: $(as_user "$ACTUAL_HOME/.local/bin/herdr" --version)"
     return 0
@@ -134,7 +126,7 @@ step_go() {
 }
 
 step_task() {
-  # go-task, as `task` in ~/.local/bin (Arch's go-task package names it go-task)
+  # Arch's go-task package names the binary go-task, not task
   if [ -x "$ACTUAL_HOME/.local/bin/task" ]; then
     echo "task already installed: $(as_user "$ACTUAL_HOME/.local/bin/task" --version)"
     return 0
@@ -144,7 +136,6 @@ step_task() {
 }
 
 step_plannotator() {
-  # binary into ~/.local/bin, plus its skills for claude, opencode and pi
   if [ -x "$ACTUAL_HOME/.local/bin/plannotator" ]; then
     echo "plannotator already installed: $(as_user "$ACTUAL_HOME/.local/bin/plannotator" --version)"
     return 0

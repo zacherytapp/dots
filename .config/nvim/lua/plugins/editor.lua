@@ -67,7 +67,6 @@ return {
               return require("which-key.extras").expand.win()
             end,
           },
-          -- better descriptions
           { "gx", desc = "Open with system app" },
         },
       },

@@ -1,5 +1,3 @@
--- HTML / CSS / Tailwind / Emmet: shared by plain HTML, React/Next.js, Svelte,
--- templ, Go templates, Django/Jinja and Visualforce.
 local markup_ft = { "html", "templ", "gotmpl", "htmldjango", "jinja" }
 
 local function stylelint_config(dirname)
@@ -47,10 +45,8 @@ return {
           },
         },
         cssls = {},
-        -- CSS modules (Next.js components): goto-definition for styles.foo
         cssmodules_ls = { filetypes = { "javascriptreact", "typescriptreact" } },
         tailwindcss = {
-          -- nvim-lspconfig's filetypes plus Go templates
           filetypes_include = { "gotmpl", "templ" },
           settings = {
             tailwindCSS = {

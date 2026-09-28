@@ -1,8 +1,3 @@
--- Python: basedpyright (Pylance-like types, inlay hints) + ruff (lint, fixes,
--- import sorting, formatting), pytest via neotest, debugpy via nvim-dap-python.
--- Project virtualenvs (.venv / venv) are activated by lua/config/python_venv.lua;
--- <leader>cv picks one manually.
-
 -- basedpyright answers hover; ruff's is terse
 require("util").on_attach(function(client)
   client.server_capabilities.hoverProvider = false
@@ -81,8 +76,7 @@ return {
       {
         "mfussenegger/nvim-dap-python",
         config = function()
-          -- The adapter runs from Mason's debugpy venv; the debuggee python is
-          -- resolved by dap-python at launch ($VIRTUAL_ENV, .venv, ...)
+          -- the adapter runs from Mason's debugpy venv; dap-python resolves the debuggee's python at launch
           local mason_debugpy = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python"
           local python = vim.fn.executable(mason_debugpy) == 1 and mason_debugpy or vim.fn.exepath("python3")
           require("dap-python").setup(python)

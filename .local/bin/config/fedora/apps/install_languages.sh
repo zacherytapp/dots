@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # snippets expand in the user's shell
-# language toolchains; sourced by run.sh. user-level tools install as $ACTUAL_USER
 
 install_lang_packages() {
   install_packages "${LANG_TOOLS[@]}"
@@ -102,7 +101,6 @@ install_python() {
     as_user_sh "pipx list --short 2>/dev/null | grep -q '^${tool} ' || pipx install ${tool}"
   done
 
-  # pyenv
   as_user_sh '[ -d "$HOME/.pyenv" ] || curl -fsSL https://pyenv.run | bash'
 }
 

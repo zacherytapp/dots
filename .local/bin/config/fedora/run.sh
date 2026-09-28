@@ -11,13 +11,11 @@
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
-# Check if the script is run with sudo
 if [ "$EUID" -ne 0 ] || [ -z "${SUDO_USER:-}" ] || [ "${SUDO_USER}" = "root" ]; then
   echo "Please run this script with sudo as your normal user"
   exit 1
 fi
 
-# Source utility functions and the package list
 for file in utils.sh packages.conf; do
   if [ ! -f "${SCRIPT_DIR}/${file}" ]; then
     echo "Error: ${file} not found!"
@@ -71,19 +69,14 @@ configure_theme() {
   run_in_session bash "${SCRIPT_DIR}/setup/theme.sh"
 }
 
-# Hyprland + Noctalia next to gnome: checks fedora >= 44, x86_64/aarch64 and
-# that the lionheartp/Hyprland copr offers hyprland >= 0.55 (the dots config
-# is lua), then installs; the config comes from stowing the repo
 install_desktop() {
   desktop_install
 }
 
-# noctalia-greeter (copr noctalia-greeter-git) on greetd, replacing gdm
 install_greeter() {
   desktop_greeter
 }
 
-# name:function, in run order
 STEPS=(
   dnf:configure_dnf
   repos:enable_repos
@@ -115,7 +108,6 @@ STEPS=(
   security:configure_security
 )
 
-# only run when named explicitly
 EXTRA_STEPS=(
   docker:install_docker
   auto_cpufreq:install_auto_cpufreq
@@ -137,7 +129,6 @@ find_step() {
   return 1
 }
 
-# validate requested steps before doing anything
 selected=()
 if [ $# -eq 0 ]; then
   selected=("${STEPS[@]}")

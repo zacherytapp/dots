@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Get the directory of the current script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "${SCRIPT_DIR}/../utils.sh" ]; then
@@ -44,8 +43,6 @@ function configure_grub_theme {
   sudo grub-mkconfig -o /boot/grub/grub.cfg
 }
 
-# noctalia-greeter on greetd (replaces the old rose-pine sddm theme); it
-# picks up the gruvbox wallpaper and palette through noctalia's greeter sync
 function configure_greeter {
   local desktop_sh
   desktop_sh="$(cd "${SCRIPT_DIR}/../.." && pwd)/desktop/desktop.sh"

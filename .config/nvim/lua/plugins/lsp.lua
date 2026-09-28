@@ -12,11 +12,7 @@ return {
     opts = {
       inlay_hints = { enabled = true, exclude = {} },
       codelens = { enabled = true },
-      -- Per-language servers are added by lua/plugins/lang/*.lua. Each entry is a
-      -- vim.lsp.Config merged over nvim-lspconfig's defaults, plus:
-      --   enabled = false          skip the server
-      --   filetypes_include = {..} add filetypes to the server's default list
-      -- Servers whose command is missing are skipped until Mason installs them.
+      -- extra keys: `enabled = false` skips a server; `filetypes_include` extends its default filetypes
       ---@type table<string, vim.lsp.Config|{enabled?: boolean, filetypes_include?: string[]}>
       servers = {},
     },
@@ -59,8 +55,7 @@ return {
       end
       table.sort(names)
 
-      -- Enabling a server whose binary is missing makes Neovim spawn-and-fail
-      -- on every matching buffer, so only enable servers that can start.
+      -- a server whose binary is missing would spawn-and-fail on every matching buffer
       local function available(name)
         local cmd = (vim.lsp.config[name] or {}).cmd
         if type(cmd) == "function" then
@@ -84,8 +79,7 @@ return {
       end
       enable_available()
 
-      -- Mason installs run asynchronously on first start: enable servers as
-      -- their binaries appear instead of requiring a restart.
+      -- Mason installs run async on first start: enable servers as their binaries appear
       local ok, registry = pcall(require, "mason-registry")
       if ok then
         registry:on("package:install:success", vim.schedule_wrap(enable_available))
@@ -103,7 +97,6 @@ return {
         )
       end, { desc = "List configured LSP servers whose command is missing" })
 
-      -- Inlay hints on by default (<leader>uh toggles), codelens (<leader>cC)
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("user_lsp_attach", { clear = true }),
         callback = function(args)
@@ -137,7 +130,6 @@ return {
         border = "rounded",
         icons = { package_installed = "✓", package_pending = "➜", package_uninstalled = "✗" },
       },
-      -- Tools not tied to one language; each lang/*.lua file adds its own
       ensure_installed = { "shfmt", "shellcheck", "tree-sitter-cli" },
     },
     config = function(_, opts)
@@ -163,9 +155,7 @@ return {
     dependencies = { "rafamadriz/friendly-snippets" },
     config = function()
       require("luasnip").setup({ enable_autosnippets = true })
-      -- friendly-snippets and any other VSCode-style packs on the rtp
       require("luasnip.loaders.from_vscode").lazy_load()
-      -- this config's own VSCode-style pack (snippets/package.json)
       require("luasnip.loaders.from_vscode").lazy_load({
         paths = { vim.fn.stdpath("config") .. "/snippets" },
       })

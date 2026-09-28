@@ -1,6 +1,5 @@
 local util = require("util")
 
---- fzf-lua picker rooted at the project root (LazyVim's "root dir")
 ---@param picker string
 ---@param opts? table|fun():table
 local function pick(picker, opts)
@@ -13,7 +12,6 @@ local function pick(picker, opts)
   end
 end
 
---- Same picker in Neovim's cwd
 local function pick_cwd(picker, opts)
   return function()
     require("fzf-lua")[picker](opts or {})
@@ -25,7 +23,7 @@ return {
     "ibhagwan/fzf-lua",
     cmd = "FzfLua",
     init = function()
-      -- fzf-lua owns vim.ui.select (commander's palette uses it too)
+      -- load fzf-lua on the first vim.ui.select call; it takes over vim.ui.select once set up
       ---@diagnostic disable-next-line: duplicate-set-field
       vim.ui.select = function(...)
         require("lazy").load({ plugins = { "fzf-lua" } })
@@ -68,7 +66,6 @@ return {
           code_actions = { previewer = vim.fn.executable("delta") == 1 and "codeaction_native" or nil },
         },
         ui_select = function(fzf_opts, items)
-          -- Wider prompt for commander's palette and code actions
           return vim.tbl_deep_extend("force", fzf_opts, {
             prompt = " ",
             winopts = {
@@ -94,7 +91,6 @@ return {
       require("fzf-lua").register_ui_select(ui_select)
     end,
     commander = {
-      -- Top level
       { keys = { "n", "<leader><space>" }, cmd = pick("files"), desc = "Find files (root dir)" },
       { keys = { "n", "<leader>/" }, cmd = pick("live_grep"), desc = "Grep (root dir)" },
       {
@@ -103,7 +99,6 @@ return {
         desc = "Switch buffer",
       },
       { keys = { "n", "<leader>:" }, cmd = "<cmd>FzfLua command_history<cr>", desc = "Command history" },
-      -- Find
       {
         keys = { "n", "<leader>fb" },
         cmd = pick_cwd("buffers", { sort_mru = true, sort_lastused = true }),
@@ -124,13 +119,11 @@ return {
         cmd = pick("files", { cwd = vim.fn.expand("~/Projects") }),
         desc = "Find in ~/Projects",
       },
-      -- Git
       { keys = { "n", "<leader>gc" }, cmd = pick("git_commits"), desc = "Git commits" },
       { keys = { "n", "<leader>gC" }, cmd = pick("git_bcommits"), desc = "Git commits (buffer)" },
       { keys = { "n", "<leader>gs" }, cmd = pick("git_status"), desc = "Git status" },
       { keys = { "n", "<leader>gS" }, cmd = pick("git_stash"), desc = "Git stash" },
       { keys = { "n", "<leader>gr" }, cmd = pick("git_branches"), desc = "Git branches" },
-      -- Search
       { keys = { "n", '<leader>s"' }, cmd = "<cmd>FzfLua registers<cr>", desc = "Registers" },
       { keys = { "n", "<leader>sa" }, cmd = "<cmd>FzfLua autocmds<cr>", desc = "Auto commands" },
       { keys = { "n", "<leader>sb" }, cmd = "<cmd>FzfLua lgrep_curbuf<cr>", desc = "Buffer lines" },
@@ -160,7 +153,6 @@ return {
         cmd = "<cmd>FzfLua lsp_live_workspace_symbols<cr>",
         desc = "LSP symbols (workspace)",
       },
-      -- LSP goto
       {
         keys = { "n", "gd" },
         cmd = "<cmd>FzfLua lsp_definitions jump1=true ignore_current_line=true<cr>",

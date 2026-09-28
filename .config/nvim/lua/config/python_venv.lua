@@ -1,8 +1,3 @@
--- Python virtual environment detection
--- Activates the project's venv (.venv, venv, .virtualenv) when a Python buffer
--- opens, and points basedpyright at that interpreter.
-
---- Find the project root by looking for common Python project markers
 ---@param start_path string Starting directory for the search
 ---@return string|nil root Project root path or nil if not found
 local function find_project_root(start_path)
@@ -20,11 +15,9 @@ local function find_project_root(start_path)
   return nil
 end
 
---- Find the virtual environment path for a project
 ---@param root string Project root path
 ---@return string|nil venv_path Path to the virtual environment or nil if not found
 local function find_venv(root)
-  -- Common venv locations in order of preference
   local venv_paths = {
     root .. "/.venv",
     root .. "/venv",
@@ -41,7 +34,6 @@ local function find_venv(root)
   return nil
 end
 
---- Activate the virtual environment for the current buffer
 local function activate_venv()
   local bufpath = vim.fn.expand("%:p:h")
   if bufpath == "" then
@@ -58,8 +50,7 @@ local function activate_venv()
     return
   end
 
-  -- Set environment variables. Guard against re-prepending: this runs on every
-  -- python FileType event, which would otherwise grow $PATH without bound.
+  -- this runs on every python FileType event, so avoid prepending to $PATH again
   local venv_bin = venv .. "/bin"
   if vim.env.VIRTUAL_ENV ~= venv or not vim.startswith(vim.env.PATH or "", venv_bin .. ":") then
     vim.env.VIRTUAL_ENV = venv
@@ -71,7 +62,6 @@ local function activate_venv()
     vim.env.PATH = table.concat(entries, ":")
   end
 
-  -- Notify LSP clients about the Python path change
   local python_path = venv .. "/bin/python"
   for _, client in ipairs(vim.lsp.get_clients()) do
     if client.name == "basedpyright" or client.name == "pyright" then

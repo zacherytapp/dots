@@ -1,4 +1,3 @@
-# Test image for .local/bin/config/cachy: a fresh CachyOS userland with a sudo-capable user.
 FROM cachyos/cachyos:latest
 
 # docker can't unshare the network, so pacman's hook sandbox refuses to run

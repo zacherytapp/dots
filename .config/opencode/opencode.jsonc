@@ -13,7 +13,7 @@
       "type": "local",
       "command": ["{env:HOME}/.local/bin/forgejo-mcp-claude"]
     },
-    // Authorization for context7 and github comes from plugins/mcp-headers-helper.js.
+    // Auth headers for these come from plugins/mcp-headers-helper.js.
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code and its statusline. ~/.claude isn't stowed, so it's built here.
+# ~/.claude isn't stowed, so its statusline setup is done here
 
 CLAUDE_STATUSLINE_REPO="https://github.com/daniel3303/ClaudeCodeStatusLine"
 # shellcheck disable=SC2088 # claude code expands the ~ itself
@@ -8,8 +8,6 @@ CLAUDE_STATUSLINE_CMD="~/.claude/statusline/statusline.sh"
 step_claude() {
   pacman_install "${CLAUDE_DEPS[@]}"
 
-  # native installer: ~/.local/bin/claude -> ~/.local/share/claude/versions/<v>,
-  # updated by claude itself afterwards
   if [ -x "$ACTUAL_HOME/.local/bin/claude" ]; then
     echo "claude already installed: $(as_user "$ACTUAL_HOME/.local/bin/claude" --version)"
   else

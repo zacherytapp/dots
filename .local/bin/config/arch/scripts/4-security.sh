@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Get the directory of the current script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "${SCRIPT_DIR}/../utils.sh" ]; then
@@ -23,7 +22,6 @@ Expire-Date: 0
 %commit
 EOF
 
-  # list keys
   GPG_KEY=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | head -n 1)
   if [ -z "$GPG_KEY" ]; then
     echo "Error: Could not find the GPG key ID."
@@ -31,7 +29,6 @@ EOF
   fi
   pass init "$GPG_KEY"
 
-  # ssh key generation
   ssh-keygen -t ed25519 -b 4096 -C "${USER_NAME} <${USER_EMAIL}>" -f ~/.ssh/id_ed25519 -q
 
 }

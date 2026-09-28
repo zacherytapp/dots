@@ -1,6 +1,3 @@
--- Gruvbox Material (dark, medium contrast, "material" foreground): the same
--- palette as .config/hypr/config/colors.lua and the Noctalia GruvboxMaterial
--- palette, so the editor matches the rest of the desktop.
 local p = {
   bg1 = "#32302f",
   bg3 = "#45403d",
@@ -17,13 +14,11 @@ local p = {
 }
 
 local overrides = {
-  -- Floats & popups (transparent)
   NormalFloat = { bg = "none" },
   FloatBorder = { bg = "none", fg = p.grey1 },
   FloatTitle = { bg = "none", fg = p.blue },
   WhichKeyFloat = { bg = "none" },
 
-  -- Noice cmdline & popups (transparent)
   NoiceCmdline = { bg = "none" },
   NoiceCmdlinePopup = { bg = "none" },
   NoiceCmdlinePopupBorder = { bg = "none", fg = p.grey1 },
@@ -40,34 +35,28 @@ local overrides = {
   NoiceConfirmBorder = { bg = "none", fg = p.grey1 },
   NoiceMini = { bg = "none" },
 
-  -- Pmenu (native popup menu - transparent)
   Pmenu = { bg = "none", fg = p.fg0 },
   PmenuSel = { bg = p.bg3 },
   PmenuSbar = { bg = "none" },
   PmenuThumb = { bg = p.grey0 },
 
-  -- Window elements (transparent)
   Folded = { bg = "none" },
   WinSeparator = { bg = "none", fg = p.bg5 },
   WinBar = { bg = "none" },
   WinBarNC = { bg = "none" },
 
-  -- Inlay hints: dim, no background
   LspInlayHint = { bg = "none", fg = p.grey0, italic = true },
 
-  -- Diagnostic virtual text (italic)
   DiagnosticVirtualTextError = { fg = p.red, italic = true },
   DiagnosticVirtualTextWarn = { fg = p.yellow, italic = true },
   DiagnosticVirtualTextInfo = { fg = p.blue, italic = true },
   DiagnosticVirtualTextHint = { fg = p.aqua, italic = true },
 
-  -- Diagnostic underlines (undercurl in the severity colors)
   DiagnosticUnderlineError = { undercurl = true, sp = p.red },
   DiagnosticUnderlineWarn = { undercurl = true, sp = p.yellow },
   DiagnosticUnderlineInfo = { undercurl = true, sp = p.blue },
   DiagnosticUnderlineHint = { undercurl = true, sp = p.aqua },
 
-  -- Blink completion
   BlinkCmpMenu = { bg = p.bg1, fg = p.fg0 },
   BlinkCmpMenuBorder = { bg = "none", fg = p.grey1 },
   BlinkCmpMenuSelection = { bg = p.bg3, fg = p.fg0, bold = true },
@@ -81,7 +70,6 @@ local overrides = {
   BlinkCmpSignatureHelp = { bg = p.bg1, fg = p.fg0 },
   BlinkCmpSignatureHelpBorder = { bg = "none", fg = p.grey1 },
 
-  -- fzf-lua (fully transparent)
   FzfLuaNormal = { bg = "none" },
   FzfLuaBorder = { bg = "none", fg = p.grey1 },
   FzfLuaTitle = { bg = "none", fg = p.blue, bold = true },
@@ -91,7 +79,6 @@ local overrides = {
   FzfLuaCursorLine = { bg = p.bg3 },
   FzfLuaHeaderText = { fg = p.orange },
 
-  -- which-key / snacks / lazy / mason floats (transparent)
   WhichKeyNormal = { bg = "none" },
   WhichKeyBorder = { bg = "none", fg = p.grey1 },
   SnacksNormal = { bg = "none" },
@@ -103,16 +90,14 @@ local overrides = {
   LazyNormal = { bg = "none" },
   MasonNormal = { bg = "none" },
 
-  -- Git signs
   GitSignsAdd = { fg = p.green },
   GitSignsChange = { fg = p.yellow },
   GitSignsDelete = { fg = p.red },
 
-  -- Treesitter context (transparent)
   TreesitterContext = { bg = "none" },
   TreesitterContextLineNumber = { bg = "none" },
 
-  -- Prevent gopls semantic tokens from overriding treesitter highlights
+  -- keep gopls semantic tokens from overriding treesitter highlights
   ["@lsp.type.variable.go"] = {},
   ["@lsp.type.parameter.go"] = {},
   ["@lsp.type.property.go"] = {},
@@ -137,7 +122,6 @@ return {
       vim.g.gruvbox_material_diagnostic_virtual_text = "colored"
       vim.g.gruvbox_material_better_performance = 1
 
-      -- Re-applied on every :colorscheme so the overrides survive a reload
       vim.api.nvim_create_autocmd("ColorScheme", {
         group = vim.api.nvim_create_augroup("gruvbox_material_overrides", { clear = true }),
         pattern = "gruvbox-material",

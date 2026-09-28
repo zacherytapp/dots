@@ -12,7 +12,6 @@
 # shellcheck disable=SC2329 # step functions are called indirectly through STEPS
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
-# Source utility functions and the package list
 source "${SCRIPT_DIR}/utils.sh"
 
 if [ ! -f "${SCRIPT_DIR}/packages.conf" ]; then
@@ -34,15 +33,10 @@ source "${SCRIPT_DIR}/setup/theme.sh"
 source "${SCRIPT_DIR}/setup/post_install_extras.sh"
 source "${SCRIPT_DIR}/../desktop/desktop.sh"
 
-# Hyprland + Noctalia next to gnome: checks ubuntu >= 26.04 on amd64 and that
-# the archive offers hyprland >= 0.55 (the dots config is lua; 26.04 ships
-# 0.53, so this refuses there unless a newer hyprland is already installed,
-# e.g. built from source), then adds pkg.noctalia.dev and installs
 install_desktop() {
   desktop_install
 }
 
-# noctalia-greeter on greetd, replacing gdm
 install_greeter() {
   desktop_greeter
 }
@@ -61,13 +55,11 @@ install_base_packages() {
 install_apps() {
   color_echo "green" "Installing apps..."
   install_packages "${APPS[@]}"
-  # steam's license prompt
   echo "steam steam/question select I AGREE" | debconf-set-selections
   echo "steam steam/license note ''" | debconf-set-selections
   install_packages steam-installer
 }
 
-# step name -> function, in run order
 STEPS=(
   apt:configure_apt
   packages:install_base_packages
@@ -95,7 +87,6 @@ STEPS=(
   flatpaks:install_flatpaks
 )
 
-# only run when named explicitly
 OPTIONAL_STEPS=(
   gnome:configure_gnome
   theme:configure_theme
@@ -112,7 +103,6 @@ if [ "${1:-}" = "--list" ] || [ "${1:-}" = "-l" ]; then
   exit 0
 fi
 
-# Check if the script is run with sudo
 if [ "$EUID" -ne 0 ] || [ -z "${SUDO_USER:-}" ] || [ "$SUDO_USER" = "root" ]; then
   echo "Please run this script with sudo as your normal user"
   exit 1

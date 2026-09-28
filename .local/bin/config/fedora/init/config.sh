@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# base system configuration; sourced by run.sh
 
 configure_dnf() {
   color_echo "yellow" "Configuring DNF Package Manager..."

@@ -1,12 +1,5 @@
-# Noctalia v5 config.
-#
-# Noctalia merges every *.toml in this directory, then applies
-# ~/.local/state/noctalia/settings.toml on top. The settings window writes
-# there, not here, so changes made in the GUI never reach this repo on their
-# own: run `noctalia-sync` (in .local/bin) to fold them back into this file.
-#
-# Machine-specific entries are left out on purpose: the lockscreen widget
-# layout (keyed by output name) and the per-monitor / last-used wallpaper.
+# The settings GUI writes ~/.local/state/noctalia/settings.toml, which is
+# applied over this file; run `noctalia-sync` to fold GUI changes back in.
 
 [accessibility]
 ui_scale = 1.20
@@ -42,20 +35,8 @@ thickness = 22
 [hot_corners]
 enabled = true
 
-# Noctalia owns idle, lock, suspend and wake; there is no hypridle/hyprlock.
-#   - idle: the behaviors below (screens come back on with any input)
-#   - lock: [lockscreen], also bound to SUPER+SHIFT+L in hypr/config/binds.lua
-#   - suspend: lock_and_suspend here and in the session menu; lock_before_suspend
-#     makes noctalia lock ahead of any suspend, whoever triggers it
-#   - power/sleep keys: bound to noctalia in binds.lua, and logind is told to
-#     ignore them by .local/bin/config/desktop/desktop.sh (10-noctalia.conf)
-#
-# Ported from the old hypridle.conf: lock at 20 min, screens off at 50 min,
-# suspend at 2.5 h. hypridle's 15 min dim step has no noctalia equivalent.
-#
-# None of these fire by default: caffeine (idle inhibitor) is switched on at
-# login by hypr/config/autostart.lua, since noctalia has no config key for it.
-# Toggle it off with the bar's caffeine widget to get the timeouts back.
+# Caffeine is switched on at login (Hyprland autostart), so these only fire
+# after it is toggled off in the bar.
 [idle]
 behavior_order = [ "lock", "screen-off", "lock-and-suspend" ]
 
@@ -161,11 +142,7 @@ settings_show_advanced = true
 [system.monitor]
 gpu_poll_seconds = 2
 
-# Gruvbox Material everywhere: the shell uses palettes/GruvboxMaterial.json and
-# the templates below render the same palette into each app's theme file. The
-# repo also carries those rendered files, so apps are themed before noctalia's
-# first run (and on machines without it). hyprland is left out on purpose:
-# .config/hypr/config/colors.lua sets the same colors by hand.
+# No hyprland template: hypr/config/colors.lua sets the same palette by hand.
 [theme]
 mode = "dark"
 source = "custom"
@@ -175,7 +152,6 @@ wallpaper_scheme = "m3-rainbow"
     [theme.templates]
     builtin_ids = [ "alacritty", "btop", "ghostty", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt" ]
 
-# The wallpapers live in the repo (.config/walls) and are stowed into place.
 [wallpaper]
 directory = "~/.config/walls"
 

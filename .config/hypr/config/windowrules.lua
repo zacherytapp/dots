@@ -1,9 +1,5 @@
--- Window rules wiki https://wiki.hypr.land/Configuring/Basics/Window-Rules/
-
--- Generic floating position
 hl.window_rule({ match = { float = true }, persistent_size = true })
 
--- Picture-in-Picture
 hl.window_rule({
     match             = { title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$" },
     float             = true,
@@ -12,7 +8,6 @@ hl.window_rule({
     pin               = true,
 })
 
--- Gaming
 local gamingApps = "^(steam_app.*|gamescope)$"
 local gamingWorkspace = "name:gaming"
 
@@ -25,9 +20,8 @@ hl.window_rule({
     match = {
         class         = gamingApps,
         title         = "^(.+)$",
-        -- Battle.net's launcher/installer windows are plain dialogs, not games.
-        -- Without this exclusion they match the rule below and get force-fullscreened
-        -- and stretched to monitor_w/monitor_h, leaving the unpainted area black.
+        -- Battle.net launcher/installer dialogs share the class; without this they
+        -- get force-fullscreened and stretched, leaving the unpainted area black.
         initial_title = "negative:^(.*\\\\home\\\\.*|[Bb]attle\\.net.*|Blizzard.*|Agent.*|World of Warcraft Launcher.*)$",
     },
     content          = "game",
@@ -48,10 +42,8 @@ hl.window_rule({
     workspace        = gamingWorkspace,
 })
 
--- WoW shares the steam_app_* class with the Battle.net launcher, so it is
--- singled out by its exact window title. Note this keys off initial_title, not
--- title: fullscreen_state is applied once when the window maps and is NOT
--- re-evaluated if the title changes afterwards.
+-- WoW shares its steam_app_* class with the Battle.net launcher. Matches on
+-- initial_title because fullscreen_state is only applied when the window maps.
 hl.window_rule({
     name  = "wow-fullscreen",
     match = { class = gamingApps, initial_title = "^(World of Warcraft)$" },
@@ -64,7 +56,6 @@ hl.window_rule({
     workspace        = gamingWorkspace,
 })
 
--- Apps
 hl.window_rule({ match = { class = "^(.*\\.exe)$", float = true }, monitor = PRIMARY_MONITOR, center = true, fullscreen_state = 0 })
 hl.window_rule({ match = { class = "^(.*[Ll]auncher.*)$" }, float = true, monitor = PRIMARY_MONITOR })
 hl.window_rule({ match = { class = "^(vesktop|discord)$" }, monitor = PRIMARY_MONITOR })
@@ -81,19 +72,17 @@ hl.window_rule({
     float = true,
     size = { "max(monitor_w, monitor_h)*0.50", "min(monitor_w, monitor_h)*0.55" },
     move = {
-        "max(20, min(cursor_x - (window_w*0.50), monitor_w - window_w + 20))", -- X axis clamping
-        "max(20, min(cursor_y - 50, monitor_h - window_h + 20))" -- Y axis clamping
+        "max(20, min(cursor_x - (window_w*0.50), monitor_w - window_w + 20))",
+        "max(20, min(cursor_y - 50, monitor_h - window_h + 20))"
     },
 })
 
--- Opacity Overrides
 local terminals = "^(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)$"
 
 hl.window_rule({ match = { class = "^(firefox|zen)$" }, opacity = "1.0 override" })
-hl.window_rule({ match = { class = terminals }, opacity = "1.0 override" }) -- Override opacity in favor of terminal settings for opacity. If your terminal doesn't support transparency, you can remove this rule.
+hl.window_rule({ match = { class = terminals }, opacity = "1.0 override" })
 hl.window_rule({ match = { class = "^(mpv|org.kde.haruna|.*plex.*|org\\.kde\\.gwenview|.*vlc.*)$" }, opacity = "1.0 override" })
 
--- Float Utility Windows
 local floatApps = {
     { class = "^(kvantummanager|qt[56]ct|nwg-look)$" },
     { class = "^(org.pulseaudio.pavucontrol|blueman-manager|nm-applet|nm-connection-editor)$" },
@@ -101,7 +90,6 @@ local floatApps = {
 }
 for _, m in ipairs(floatApps) do hl.window_rule({ match = m, float = true }) end
 
--- Float Common Modals
 local modalMatches = {
     { title = "^(Open|Authentication Required|Add Folder to Workspace|Choose Files|Save As|Confirm to replace files|File Operation Progress)$" },
     { initial_title = "^(Open File)$" },
@@ -113,14 +101,12 @@ local modalMatches = {
 }
 for _, m in ipairs(modalMatches) do hl.window_rule({ match = m, float = true }) end
 
--- Ignore maximize requests from all apps. You'll probably like this.
 hl.window_rule({
     name  = "suppress-maximize-events",
     match = { class = ".*" },
     suppress_event = "maximize",
 })
 
--- Fix some dragging issues with XWayland
 hl.window_rule({
     name  = "fix-xwayland-drags",
     match = {
@@ -134,7 +120,6 @@ hl.window_rule({
     no_focus = true,
 })
 
--- Noctalia layer rule
 hl.layer_rule({
   name = "noctalia",
   match = {

@@ -1,6 +1,3 @@
--- Adapters are contributed by lua/plugins/lang/*.lua as
---   opts.adapters = { ["neotest-foo"] = { ...adapter config } }
--- (Apex tests run through sf.nvim on <leader>mt*.)
 return {
   {
     "nvim-neotest/neotest",
@@ -25,7 +22,6 @@ return {
       vim.diagnostic.config({
         virtual_text = {
           format = function(diagnostic)
-            -- Replace newline and tab characters with space for more compact diagnostics
             return diagnostic.message:gsub("\n", " "):gsub("\t", " "):gsub("%s+", " "):gsub("^%s+", "")
           end,
         },

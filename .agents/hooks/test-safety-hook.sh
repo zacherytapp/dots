@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Behavioral tests for hooks/safety-hook.sh.
 
 set -euo pipefail
 
@@ -60,7 +59,6 @@ assert_clean_execution() {
   printf 'ok - %s\n' "$name"
 }
 
-# Command recognition: separators outside quotes, substitutions, and aliases.
 assert_bash "blocks rm in chained command" deny "echo ok && rm scratch.txt"
 assert_bash "blocks rm in multiline command" deny $'echo ok\nrm scratch.txt'
 # shellcheck disable=SC2016 # Literal command substitution is the test fixture.
@@ -70,14 +68,13 @@ assert_bash "allows escaped separators" approve 'echo safe\; rm scratch.txt'
 printf "alias del='rm'\n" >"$TEST_HOME/.bashrc"
 assert_bash "expands a first-token alias" deny "del scratch.txt"
 
-# Wrappers and nested shells are outside the recognizer's supported forms.
+# Wrappers and nested shells are known, accepted bypasses.
 assert_bash "documents command wrapper bypass" approve "command rm scratch.txt"
 assert_bash "documents nested shell bypass" approve 'bash -c "rm scratch.txt"'
 assert_bash "documents xargs bypass" approve "printf scratch.txt | xargs rm"
 assert_bash "documents sudo bypass" approve "sudo git add ."
 assert_bash "documents env wrapper bypass" approve "env git add ."
 
-# Environment-file policy.
 assert_bash "blocks Bash .env reads" deny "cat .env.local"
 assert_bash "blocks .env redirection" deny "printf value > .env"
 assert_bash "documents source bypass" approve "source .env"
@@ -85,7 +82,6 @@ assert_decision \
   "blocks Read of .env files" deny \
   '{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/project/.env"}}'
 
-# Git global options are recognized; broad staging and destructive restore are blocked.
 assert_bash "blocks git add dot" deny "git add ."
 assert_bash "blocks git -C add dot" deny "git -C /tmp add ."
 assert_bash "blocks git global option before add" deny "git --no-pager add ."
@@ -101,7 +97,6 @@ assert_decision \
   "allow-git commit suppresses commit prompt" approve \
   "$(bash_json "git commit -m test")"
 
-# Repository-state behavior.
 (
   cd "$TMP_REPO"
   git init -q
@@ -130,7 +125,6 @@ assert_decision \
     "$(bash_json "git checkout main" git-session)"
 )
 
-# Edit/Write line-count behavior.
 assert_decision \
   "allows a short source write" approve \
   "$(jq -cn '{hook_event_name:"PreToolUse",tool_name:"Write",session_id:"short",tool_input:{file_path:"short.py",content:"one"}}')"
@@ -144,11 +138,10 @@ edit_json="$(jq -cn --arg path "$TEST_ROOT/long.py" '{
 MAX_FILE_LINES=2 assert_decision "adds Edit file-length speed bump" deny "$edit_json"
 MAX_FILE_LINES=2 assert_decision "allows approved Edit retry" approve "$edit_json"
 
-# Invalid/incomplete input fails open rather than crashing.
 assert_decision "allows invalid JSON" approve '{'
 assert_decision "allows incomplete hook JSON" approve '{}'
 
-# Regression: policy messages must never evaluate backticks or substitutions.
+# The fake git touches $marker if a policy message gets evaluated.
 marker="$TEST_ROOT/commit-executed"
 mkdir -p "$TEST_ROOT/bin"
 printf '#!/usr/bin/env bash\ntouch %q\n' "$marker" >"$TEST_ROOT/bin/git"
@@ -170,7 +163,6 @@ MAX_FILE_LINES=1 assert_clean_execution \
   "$write_json" \
   "$marker"
 
-# Host wiring is checked separately from entrypoint behavior.
 jq -e '
   [.hooks[][] | .hooks[] | select(.command == "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"")] | length == 5
 ' "$SCRIPT_DIR/hooks.json" >/dev/null

@@ -1,23 +1,20 @@
 return {
   {
-    -- Inline ghost-text completion from the local LM Studio server (raw FIM, no chat template)
     "milanglacier/minuet-ai.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
     cmd = "Minuet",
-    -- Auto-trigger is enabled per buffer on FileType, so load before the first one fires
+    -- auto-trigger is enabled per buffer on FileType, so load before the first one fires
     event = { "BufReadPre", "BufNewFile" },
     opts = {
       provider = "openai_fim_compatible",
-      -- One request per trigger: every completion costs a pass through a 27B model
+      -- every completion costs a pass through a 27B model
       n_completions = 1,
-      -- ~2k tokens of surrounding code; raise if latency stays low
       context_window = 8000,
       throttle = 1000,
       debounce = 300,
       -- Streaming, so a timeout still yields whatever has been generated so far
       request_timeout = 3,
       notify = "warn",
-      -- Only real file buffers (not pickers, prompts, terminals, ...)
       enable_predicates = {
         function()
           return vim.bo.buftype == ""
@@ -37,7 +34,6 @@ return {
         keymap = {
           accept = "<C-l>",
           accept_line = "<M-l>",
-          -- Cycle suggestions, or request one manually when none is shown
           next = "<M-]>",
           prev = "<M-[>",
           dismiss = "<C-u>",
@@ -82,8 +78,6 @@ return {
   {
     "NickvanDyke/opencode.nvim",
     dependencies = {
-      -- Recommended for `ask()` and `select()`.
-      -- Required for `toggle()`.
       { "folke/snacks.nvim", opts = { input = {}, picker = {} } },
     },
     config = function()

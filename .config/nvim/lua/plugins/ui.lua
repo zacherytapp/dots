@@ -31,7 +31,7 @@ return {
     },
     config = function(_, opts)
       require("bufferline").setup(opts)
-      -- Fix bufferline when restoring a session
+      -- Session restore adds buffers without redrawing the bufferline.
       vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete" }, {
         callback = function()
           vim.schedule(function()

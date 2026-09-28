@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
-# firewall, fail2ban and spoofing protection; sourced by run.sh
-#--Required Packages-
-#-ufw
-#-fail2ban
 
 configure_security() {
   install_packages ufw fail2ban iproute
 
-  # --- Setup UFW rules (ufw replaces firewalld)
   if skip_if_container "ufw rules and enable (needs netfilter)"; then
     :
   else
@@ -24,13 +19,11 @@ configure_security() {
     systemctl enable --now ufw
   fi
 
-  # --- PREVENT IP SPOOFS
   cat <<EOC >/etc/host.conf
 order bind,hosts
 multi on
 EOC
 
-  # --- Enable fail2ban
   # `enable --now` leaves a running fail2ban alone, so restart it when jail.local changes
   local changed=0
   if ! cmp -s "${SCRIPT_DIR}/init/jail.local" /etc/fail2ban/jail.local; then

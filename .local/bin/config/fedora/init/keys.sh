@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# gpg, pass and ssh keys for the real user; sourced by run.sh
 
 configure_keys() {
   install_packages gnupg2 pass openssh-clients
@@ -9,7 +8,7 @@ configure_keys() {
     return 0
   fi
 
-  # generate gpg key (<email> is an exact match, a bare email matches substrings)
+  # <email> is an exact match, a bare email matches substrings
   if ! as_user gpg --list-secret-keys "<${USER_EMAIL}>" &>/dev/null; then
     as_user gpg --batch --full-generate-key <<EOK
 %no-protection
@@ -24,7 +23,6 @@ Expire-Date: 0
 EOK
   fi
 
-  # initialise pass with the key
   local gpg_key
   gpg_key=$(as_user gpg --list-secret-keys --with-colons "<${USER_EMAIL}>" | awk -F: '/^sec/ {print $5; exit}')
   if [ -z "$gpg_key" ]; then
@@ -35,7 +33,6 @@ EOK
     as_user pass init "$gpg_key"
   fi
 
-  # ssh key generation
   if [ ! -f "${ACTUAL_HOME}/.ssh/id_ed25519" ]; then
     as_user mkdir -p "${ACTUAL_HOME}/.ssh"
     chmod 700 "${ACTUAL_HOME}/.ssh"

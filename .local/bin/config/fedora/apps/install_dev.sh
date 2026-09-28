@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # snippets expand in the user's shell
-# editor, terminal, shell and dev tooling; sourced by run.sh
 
 install_nerd_fonts() {
   install_packages fontconfig curl tar xz
@@ -29,7 +28,6 @@ install_nerd_fonts() {
   fi
 }
 
-# neovim from source; NVIM_REF picks the tag/branch, NVIM_REBUILD=1 forces a rebuild
 install_neovim() {
   install_packages "${NEOVIM_PRE[@]}"
   local nvim_dir="${TEMP_DIR}/neovim"
@@ -73,11 +71,10 @@ EOF
 }
 
 install_terminal_tools() {
-  # lazygit (atim/lazygit stopped updating; dejan/lazygit tracks releases)
+  # dejan's copr tracks lazygit releases; atim's stopped updating
   dnf copr enable -y dejan/lazygit
   install_packages lazygit
 
-  # ghostty
   dnf copr enable -y scottames/ghostty
   install_packages ghostty
 
@@ -99,7 +96,6 @@ configure_shell() {
   install_packages zsh git curl
   local zsh_custom="${ACTUAL_HOME}/.oh-my-zsh/custom"
 
-  # install oh-my-zsh, keeping any existing (stowed) .zshrc
   if [ ! -d "${ACTUAL_HOME}/.oh-my-zsh" ]; then
     as_user_sh 'RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
   fi

@@ -6,7 +6,6 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 source "${SCRIPT_DIR}/utils.sh"
 
-# run pre-config
 print_info "run some pre-config"
 sh ${SCRIPT_DIR}/scripts/0-preconfigure.sh
 
@@ -58,7 +57,3 @@ sh ${SCRIPT_DIR}/scripts/3-configure-desktop-extras.sh
 
 print_info "configuring security stuff"
 sh ${SCRIPT_DIR}/scripts/4-security.sh
-
-# enter root
-# [ "$(whoami)" != "root" ] && exec sudo -- "$0" "$@"
-# check_root

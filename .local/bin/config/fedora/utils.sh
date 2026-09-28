@@ -6,7 +6,6 @@ ACTUAL_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
 TEMP_DIR="${ACTUAL_HOME}/temp"
 LOG_FILE="${LOG_FILE:-/var/log/dots-fedora-setup.log}"
 
-# PATH/env for user-level tools, used by as_user_sh
 USER_ENV='
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export NVM_DIR="$HOME/.nvm"
@@ -37,8 +36,6 @@ log_message() {
   echo "$(get_timestamp) - $1" >>"$LOG_FILE"
 }
 
-# prompt_var VAR "question" [default]
-# only prompts when VAR is unset, stdin is a tty and NONINTERACTIVE isn't set
 prompt_var() {
   local var="$1" question="$2" default="${3:-}"
   if [ -n "${!var:-}" ]; then
@@ -60,7 +57,6 @@ is_container() {
   [ -f /.dockerenv ] || [ -f /run/.containerenv ]
 }
 
-# skip_if_container "description" || real_command
 skip_if_container() {
   if is_container; then
     color_echo "yellow" "skipped: container - $1"
@@ -74,12 +70,10 @@ enable_service() {
   skip_if_container "systemctl enable --now $*" || systemctl enable --now "$@"
 }
 
-# run a command as the real user with their HOME
 as_user() {
   sudo -u "$ACTUAL_USER" -H -- "$@"
 }
 
-# run a shell snippet as the real user with user-level tools on PATH
 as_user_sh() {
   as_user bash -c "${USER_ENV}"$'\nset -e\n'"$1"
 }
@@ -88,7 +82,6 @@ is_pkg_installed() {
   rpm -q --whatprovides "$1" &>/dev/null
 }
 
-# installs anything not already installed; returns non-zero if any package failed
 install_packages() {
   local to_install=()
 
@@ -122,8 +115,6 @@ backup_file() {
   fi
 }
 
-# run_step <name> <function>: runs the function in a `set -e` subshell,
-# records the result and keeps going on failure
 run_step() {
   local name="$1" fn="$2"
   color_echo "blue" "==> [$name]"

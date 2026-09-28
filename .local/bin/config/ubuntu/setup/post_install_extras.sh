@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# docker, auto-cpufreq and firmware updates (opt-in: sudo ./run.sh extras)
 
 install_docker() {
   color_echo "yellow" "Installing Docker..."
@@ -23,7 +22,6 @@ install_docker() {
 }
 
 install_auto_cpufreq() {
-  # only useful on laptops
   if skip_in_container "auto-cpufreq"; then
     return 0
   fi

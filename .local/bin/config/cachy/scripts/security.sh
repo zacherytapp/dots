@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Firewall, fail2ban, network privacy, ssh hardening, mDNS and keys.
 
 step_firewall() {
   # rules are written to /etc/ufw even while ufw is inactive
@@ -31,7 +30,6 @@ step_fail2ban() {
 }
 
 step_network() {
-  # random MAC per connection on wifi and ethernet
   install -d /etc/NetworkManager/conf.d
   cat >/etc/NetworkManager/conf.d/randomize_mac_address.conf <<'EOF'
 [connection-mac-randomization]
@@ -50,7 +48,7 @@ EOF
 }
 
 step_discovery() {
-  # resolve .local hostnames through avahi, see wiki.archlinux.org/title/Avahi
+  # resolve .local hostnames through avahi
   local nsconf="/etc/nsswitch.conf"
   if ! grep -q '^hosts:.*mdns_minimal' "$nsconf"; then
     if grep -q '^hosts:.* resolve' "$nsconf"; then
@@ -65,7 +63,7 @@ step_discovery() {
 
 step_keys() {
   if [ -z "$USER_NAME" ] || [ -z "$USER_EMAIL" ]; then
-    # skip like fedora/ubuntu, so an unattended run without them still passes
+    # skip so an unattended run without them still passes
     print_warning "skipped: USER_NAME/USER_EMAIL not set, not generating keys"
     return 0
   fi

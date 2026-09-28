@@ -1,5 +1,4 @@
-# oh-my-zsh, powerlevel10k (instant prompt and ~/.p10k.zsh) and the zsh plugins
-# come from cachyos-zsh-config. Cargo's env is loaded in ~/.zshenv.
+# Provides oh-my-zsh, powerlevel10k (instant prompt, ~/.p10k.zsh) and zsh plugins.
 source /usr/share/cachyos-zsh-config/cachyos-config.zsh
 
 export NVM_DIR="$HOME/.config/nvm"
@@ -23,7 +22,6 @@ export SF_USE_GENERIC_UNIX_KEYCHAIN=true
 # lets pinentry ask for the gpg passphrase (commit signing) in terminals and SSH
 export GPG_TTY=$TTY
 
-# Gruvbox Material, matching nvim, tmux, the terminals and noctalia
 export BAT_THEME="gruvbox-dark"
 export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
   --color=fg:#d4be98,bg:-1,hl:#7daea3,fg+:#ddc7a1,bg+:#45403d,hl+:#7daea3 \
@@ -46,6 +44,5 @@ export PATH
 # openssh's user agent, except over ssh with a forwarded agent
 [[ -n $SSH_CONNECTION && -S $SSH_AUTH_SOCK ]] || export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 
-# Machine-specific settings (e.g. PATH entries that installers append) go in
-# ~/.config/shell/local.sh, which is not in dots.
+# Untracked machine-specific settings (e.g. PATH entries installers append).
 if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi

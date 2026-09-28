@@ -15,7 +15,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 BOLD='\033[1m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 if [ -z "${USER_EMAIL}" ]; then
   echo "please ensure user email is entered"
@@ -48,7 +48,6 @@ function check_root {
     exit 1
   fi
 
-  # Store the original user for later use
   SUDO_USER=$(logname)
   log_message "Original user is $SUDO_USER"
 }
@@ -95,11 +94,11 @@ function ask_confirmation {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       log_message "Operation accepted by user."
-      return 0 # User confirmed
+      return 0
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
       log_message "Operation cancelled by user."
       print_error "Operation cancelled."
-      return 1 # User cancelled
+      return 1
     else
       print_error "Invalid input. Please answer y or n."
     fi
@@ -182,7 +181,7 @@ function run_script {
     while ! bash "$script"; do
       print_error "$description script failed."
       if ! ask_confirmation "Retry $description"; then
-        return 1 # User chose not to retry
+        return 1
       fi
     done
     print_success "\n$description completed successfully."

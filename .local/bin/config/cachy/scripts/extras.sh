@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# Desktop steps and opt-in steps, run by name: ./run.sh greeter gaming kvm stow
 
-# Hyprland + Noctalia: checks (distro, hyprland >= 0.55 for the lua config,
-# leftover bars, display manager, gpu), then the packages. The config comes
-# from stowing the repo.
 step_desktop() {
   desktop_install
 }
@@ -35,7 +31,6 @@ step_kvm() {
 }
 
 step_stow() {
-  # links the repo into $HOME using the repo's .stowrc (--target=~ --no-folding)
   local repo_dir
   repo_dir=$(cd "$SCRIPT_DIR/../../../.." && pwd)
   if [ ! -f "$repo_dir/.stowrc" ]; then
@@ -51,6 +46,5 @@ step_stow() {
     return 1
   fi
   (cd "$repo_dir" && as_user stow .)
-  # keeps machine-local keys of the stowed settings files out of commits
   as_user "$repo_dir/.local/bin/config/local-keys.sh" install
 }

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# optional extras; sourced by run.sh and only run when named:
-#   sudo ./run.sh docker auto_cpufreq firmware
 
 install_docker() {
   color_echo "yellow" "Installing Docker..."

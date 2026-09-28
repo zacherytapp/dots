@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# flathub and flatpak apps; sourced by run.sh
 
 install_flatpaks() {
-  # replace the fedora flatpak remote with flathub
   color_echo "yellow" "Replacing Fedora Flatpak Repo with Flathub..."
   install_packages flatpak
   flatpak remote-delete fedora --force 2>/dev/null || true

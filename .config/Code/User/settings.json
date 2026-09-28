@@ -1,5 +1,4 @@
 {
-  // Visuals
   "editor.cursorSmoothCaretAnimation": "on",
   "editor.fontFamily": "Liga SFMono Nerd Font",
   "editor.fontLigatures": true,
@@ -19,7 +18,6 @@
   "workbench.tree.expandMode": "singleClick",
   "workbench.tree.indent": 10,
 
-  // Editor
   "debug.onTaskErrors": "debugAnyway",
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.wordSeparators": "`~!@#%^&*()=+[{]}\\|;:'\",.<>/?",
@@ -85,7 +83,6 @@
 "security.workspace.trust.untrustedFiles": "open",
   "update.mode": "none",
 
-  // Git Configuration
   "git.autofetch": true,
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
@@ -95,7 +92,6 @@
   "gitlens.ai.vscode.model": "copilot:gpt-4.1",
   "@azure.argTenant": "",
 
-  // Formatting
   "editor.formatOnSave": true,
   "prettier.enable": false,
   "prettier.printWidth": 200,
@@ -128,13 +124,11 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
 
-  // ESLint
-  // ESLint config: https://github.com/antfu/eslint-config
   "eslint.codeAction.showDocumentation": {
     "enable": true,
   },
   "eslint.quiet": true,
-  // Silent the stylistic rules in you IDE, but still auto fix them
+  // Hide stylistic rules in the editor; ESLint still auto-fixes them.
   "eslint.rules.customizations": [
     { "rule": "style/*", "severity": "off" },
     { "rule": "format/*", "severity": "off" },
@@ -149,7 +143,6 @@
   ],
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact", "vue", "html", "markdown", "json", "jsonc", "yaml", "toml"],
 
-  // AI - Github Copilot
   "chat.agent.maxRequests": 50,
   "chat.checkpoints.showFileChanges": true,
   "chat.edits2.enabled": true,
@@ -201,14 +194,12 @@
   },
   "github.copilot.nextEditSuggestions.enabled": true,
 
-  // Salesforce Settings
   "SFDoc.username": "Zakk Tapp, Craftsman Technology Group",
   "salesforcedx-vscode-apex.java.home": "/usr/lib/jvm/java-21-temurin-jdk",
   "salesforcedx-vscode-core.enable-sobject-refresh-on-startup": true,
   "salesforcedx-vscode-core.push-or-deploy-on-save.enabled": false,
   "salesforcedx-vscode-core.retrieve-test-code-coverage": true,
 
-  // Plugin Configuration
   "atlascode.bitbucket.enabled": false,
   "atlascode.jira.enabled": true,
   "atlascode.jira.explorer.fetchAllQueryResults": true,

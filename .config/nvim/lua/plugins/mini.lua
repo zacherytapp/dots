@@ -9,7 +9,6 @@ return {
     version = "*",
     lazy = false,
     init = function()
-      -- mini.icons stands in for nvim-web-devicons for every plugin
       package.preload["nvim-web-devicons"] = function()
         require("mini.icons").mock_nvim_web_devicons()
         return package.loaded["nvim-web-devicons"]
@@ -73,8 +72,7 @@ return {
         },
       })
 
-      -- Better a/i textobjects (LazyVim): f function, c class, o block,
-      -- u/U call, t tag, d digits, e word segment, g buffer, a argument
+      -- e: word segment (camelCase / snake_case part), g: whole buffer, u/U: function call
       local ai = require("mini.ai")
       ai.setup({
         n_lines = 500,
@@ -101,8 +99,7 @@ return {
         },
       })
 
-      -- Surround on gs* (flash.nvim owns s): gsa add, gsd delete, gsr replace,
-      -- gsf/gsF find, gsh highlight, gsn update n_lines
+      -- gs prefix because flash.nvim owns s
       require("mini.surround").setup({
         mappings = {
           add = "gsa",
@@ -115,12 +112,10 @@ return {
         },
       })
 
-      -- gS split / gJ join arguments
       require("mini.splitjoin").setup({
         mappings = { toggle = "", split = "gS", join = "gJ" },
       })
 
-      -- Move text: <M-h/j/k/l> (selection in Visual, line in Normal)
       require("mini.move").setup({})
     end,
   },

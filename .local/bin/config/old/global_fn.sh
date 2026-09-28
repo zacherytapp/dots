@@ -12,9 +12,9 @@ pkg_installed() {
     local PkgIn=$1
 
     if dnf list installed "${PkgIn}" &> /dev/null; then
-        return 0 # Package is installed
+        return 0
     else
-        return 1 # Package is not installed
+        return 1
     fi
 }
 
@@ -43,11 +43,10 @@ pkg_available() {
 pkg_available() {
     local PkgIn=$1
 
-    # dnf info exits with 0 if package is found, non-zero otherwise
     if dnf info "${PkgIn}" &> /dev/null; then
-        return 0 # Package is available
+        return 0
     else
-        return 1 # Package is not available
+        return 1
     fi
 }
 
@@ -116,12 +115,10 @@ install_from_file() {
 	local -a pkgInstall=()
 	local -a pkgDetected=()
 
-	# no file provided
 	if [ -z "$pkgListFile" ]; then
         	return 1 
 	fi
 
-	# no file found
 	if [ -f "$pkgListFile" ]; then
         	return 1 
 	fi

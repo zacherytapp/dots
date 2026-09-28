@@ -1,10 +1,3 @@
--- Salesforce: Apex (apex_ls + PMD), LWC (lwc_ls + vtsls/eslint from
--- lang/typescript.lua), Visualforce (visualforce_ls), Aura (aura_ls),
--- SOQL/SOSL/debug-log parsers, sf.nvim for org/deploy/test workflows (<leader>m).
---
--- apex_ls / visualforce_ls / aura_ls: `:SalesforceLspInstall` (see
--- lua/util/salesforce_lsp.lua). lwc_ls: `npm i -g @salesforce/lwc-language-server`.
--- All four only attach inside an sfdx project (sfdx-project.json).
 local sflsp = require("util.salesforce_lsp")
 local sfdx_root = { "sfdx-project.json" }
 
@@ -13,7 +6,7 @@ local function pmd_ruleset()
   return vim.fn.filereadable(custom) == 1 and custom or "rulesets/apex/quickstart.xml"
 end
 
---- prettier-plugin-apex installed in the project (otherwise prettier can't parse Apex)
+--- prettier can't parse Apex without prettier-plugin-apex in the project
 local function has_prettier_apex(dirname)
   return vim.fs.find("node_modules/prettier-plugin-apex", { upward = true, path = dirname, type = "directory" })[1]
     ~= nil
@@ -40,7 +33,6 @@ local visualforce_format = {
       if not edits or #edits == 0 then
         return callback(nil, lines)
       end
-      -- apply the edits to a scratch copy and hand the result back to conform
       local scratch = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_lines(scratch, 0, -1, false, lines)
       vim.lsp.util.apply_text_edits(edits, scratch, client.offset_encoding)
@@ -128,8 +120,6 @@ return {
           root_markers = sfdx_root,
           workspace_required = true,
         },
-        -- ctags-assisted goto definition for Apex (needs universal-ctags; see
-        -- <leader>mng to generate tags)
         ctags_lsp = {
           cmd = { "ctags-lsp" },
           filetypes = { "apex" },
@@ -137,7 +127,6 @@ return {
           workspace_required = true,
           enabled = vim.fn.executable("ctags") == 1,
         },
-        -- XML: Salesforce metadata (*-meta.xml), package.xml, Aura .app/.evt/...
         lemminx = {},
       },
     },
@@ -148,7 +137,6 @@ return {
       formatters_by_ft = {
         apex = { "prettierd_apex" },
         visualforce = { "visualforce_ls" },
-        -- Aura markup is not auto-formatted
         aura = {},
       },
       formatters = {
@@ -236,7 +224,6 @@ return {
       require("config.filetypes").setup()
     end,
     commander = {
-      -- Org (<leader>mo)
       { keys = { "n", "<leader>mof" }, cmd = sf("fetch_org_list"), desc = "Salesforce: Fetch org list" },
       { keys = { "n", "<leader>mog" }, cmd = sf("set_target_org"), desc = "Salesforce: Set target org" },
       { keys = { "n", "<leader>moG" }, cmd = sf("set_global_target_org"), desc = "Salesforce: Set global target org" },
@@ -247,14 +234,11 @@ return {
         desc = "Salesforce: Open current file in org",
       },
       { keys = { "n", "<leader>mol" }, cmd = sf("pull_log"), desc = "Salesforce: Pull Apex log" },
-      -- Terminal
       { keys = { "n", "<leader>mT" }, cmd = sf("toggle_term"), desc = "Salesforce: Toggle terminal" },
       { keys = { "n", "<leader>mC" }, cmd = sf("cancel"), desc = "Salesforce: Cancel running command" },
       { cmd = sf("go_to_sf_root"), desc = "Salesforce: cd terminal to project root" },
-      -- Deploy (<leader>md)
       { keys = { "n", "<leader>mds" }, cmd = sf("save_and_push"), desc = "Salesforce: Save and push file" },
       { keys = { "n", "<leader>mdd" }, cmd = sf("push_delta"), desc = "Salesforce: Deploy project (delta)" },
-      -- Retrieve (<leader>mr)
       { keys = { "n", "<leader>mrf" }, cmd = sf("retrieve"), desc = "Salesforce: Retrieve file" },
       { keys = { "n", "<leader>mrd" }, cmd = sf("retrieve_delta"), desc = "Salesforce: Retrieve project (delta)" },
       {
@@ -263,14 +247,12 @@ return {
         desc = "Salesforce: Retrieve Apex under cursor",
       },
       { keys = { "n", "<leader>mrp" }, cmd = sf("retrieve_package"), desc = "Salesforce: Retrieve package" },
-      -- Compare (<leader>mc)
       {
         keys = { "n", "<leader>mct" },
         cmd = sf("diff_in_target_org"),
         desc = "Salesforce: Diff file against target org",
       },
       { keys = { "n", "<leader>mco" }, cmd = sf("diff_in_org"), desc = "Salesforce: Diff file against chosen org" },
-      -- Query / execute (<leader>mq)
       { keys = { "n", "<leader>mqq" }, cmd = sf("run_query"), desc = "Salesforce: Run SOQL query in file" },
       { keys = { "x", "<leader>mqq" }, cmd = sf("run_highlighted_soql"), desc = "Salesforce: Run highlighted SOQL" },
       { keys = { "n", "<leader>mqt" }, cmd = sf("run_tooling_query"), desc = "Salesforce: Run tooling query in file" },
@@ -280,7 +262,6 @@ return {
         cmd = sf("run_anonymous_stdin"),
         desc = "Salesforce: Run buffer as anonymous Apex (unsaved)",
       },
-      -- Tests (<leader>mt); lowercase = with coverage, uppercase = quick
       {
         keys = { "n", "<leader>mtm" },
         cmd = sf("run_current_test_with_coverage"),
@@ -301,7 +282,6 @@ return {
       { keys = { "n", "<leader>mts" }, cmd = sf("toggle_sign"), desc = "Salesforce: Toggle coverage signs" },
       { keys = { "n", "]v" }, cmd = sf("uncovered_jump_forward"), desc = "Salesforce: Next uncovered line" },
       { keys = { "n", "[v" }, cmd = sf("uncovered_jump_backward"), desc = "Salesforce: Prev uncovered line" },
-      -- Create (<leader>mn)
       { keys = { "n", "<leader>mnc" }, cmd = sf("create_apex_class"), desc = "Salesforce: New Apex class" },
       { keys = { "n", "<leader>mna" }, cmd = sf("create_aura_bundle"), desc = "Salesforce: New Aura bundle" },
       { keys = { "n", "<leader>mnw" }, cmd = sf("create_lwc_bundle"), desc = "Salesforce: New LWC bundle" },
@@ -312,7 +292,6 @@ return {
         cmd = sf("create_and_list_ctags"),
         desc = "Salesforce: Generate and list ctags",
       },
-      -- Metadata (<leader>mm)
       {
         keys = { "n", "<leader>mmr" },
         cmd = sf("list_md_to_retrieve"),
@@ -339,11 +318,9 @@ return {
         end,
         desc = "Salesforce: Refresh custom sObject definitions",
       },
-      -- Misc
       { keys = { "n", "<leader>my" }, cmd = sf("copy_apex_name"), desc = "Salesforce: Copy Apex class name" },
       { cmd = "<cmd>SalesforceLspInstall<cr>", desc = "Salesforce: Install/update Apex, Visualforce, Aura LSPs" },
       { cmd = "<cmd>SalesforceLspStatus<cr>", desc = "Salesforce: Language server versions" },
-      -- Destructive: remote + local (<leader>mx)
       {
         keys = { "n", "<leader>mxd" },
         cmd = sf("delete_current_apex_remote_and_local"),

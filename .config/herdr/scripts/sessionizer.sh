@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Herdr port of tmux-sessionizer: pick a project directory and open (or focus)
-# a Herdr workspace rooted there. With an argument, skip the picker.
+# usage: sessionizer.sh [dir]
+# Open (or focus) a herdr workspace rooted at dir, picked with fzf if omitted.
 set -euo pipefail
 
 herdr="${HERDR_BIN_PATH:-herdr}"
 
 dots="$HOME/Projects/dots"
 
-# Directories whose immediate children are candidates — tmux-sessionizer's list
-# (~/.config covers nvim, tmux, herdr, ...), plus the dotfiles repo's configs
-# and the Documents/Downloads subfolders.
 search_dirs=(
     "$HOME/.config"
     "$HOME/.local"
@@ -33,8 +30,7 @@ if [[ $# -ge 1 ]]; then
 else
     existing_dirs=()
     for d in "${search_dirs[@]}"; do [[ -d "$d" ]] && existing_dirs+=("$d"); done
-    # find (not fd) so hidden and gitignored dirs like ~/Projects/dots/.config
-    # show up; -xtype d also keeps symlinked dirs.
+    # find, not fd: hidden/gitignored dirs must show up; -xtype d keeps symlinks.
     selected=$(find "${existing_dirs[@]}" -mindepth 1 -maxdepth 1 -xtype d \
             ! -name .git 2>/dev/null \
         | sed "s|^$HOME|~|" | sort -u \
@@ -51,10 +47,9 @@ if [[ ! -d "$selected" ]]; then
 fi
 
 name=$(basename "$selected" | tr . _)
-# Keep dotfiles-repo copies (e.g. dots/.config/nvim) apart from the live ~/.config ones.
+# Keep dots/.config/nvim distinct from the live ~/.config/nvim workspace.
 [[ "$selected" == "$dots"/?* ]] && name="dots_$name"
 
-# Focus an existing workspace with the same name instead of creating a second one.
 existing=$("$herdr" workspace list 2>/dev/null \
     | jq -r --arg n "$name" '[.result.workspaces[]? | select(.label == $n)][0].workspace_id // empty')
 

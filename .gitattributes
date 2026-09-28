@@ -1,5 +1,4 @@
-# Settings files that apps write machine-local keys into. The local-keys filter
-# keeps those keys on disk but out of commits; see .local/bin/config/local-keys.sh
-# and run `.local/bin/config/local-keys.sh install` once per clone.
+# Keeps machine-local keys on disk but out of commits. Requires running
+# `.local/bin/config/local-keys.sh install` once per clone.
 .claude/settings.json   filter=local-keys
 .pi/agent/settings.json filter=local-keys

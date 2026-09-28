@@ -7,7 +7,6 @@ cd "${ACTUAL_HOME}"
 THEME_DIR="${ACTUAL_HOME}/temp/Rose-Pine-GTK-Theme"
 mkdir ".themes"
 mkdir ".icons"
-# install rose-pine gtk
 if ! [ -d "${THEME_DIR}" ]; then
   mkdir "${THEME_DIR}/temp/Rose-Pine-GTK-Theme"
   git clone https://github.com/Fausto-Korpsvart/Rose-Pine-GTK-Theme.git "${THEME_DIR}"

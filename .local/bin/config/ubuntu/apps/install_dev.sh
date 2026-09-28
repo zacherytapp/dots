@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# editor, shell, terminal tooling and 1password
 
-# neovim from source; NVIM_REF picks the tag/branch (default stable),
-# NVIM_REBUILD=1 rebuilds over an existing install
 install_neovim() {
   local nvim_dir="${ACTUAL_HOME}/temp/neovim"
   local ref="${NVIM_REF:-stable}"
@@ -41,7 +38,6 @@ install_1password() {
   install_packages 1password-cli
 }
 
-# oh-my-zsh, plugins, tpm and zsh as the login shell
 install_shell() {
   local zsh_custom="${ACTUAL_HOME}/.oh-my-zsh/custom"
 
@@ -60,7 +56,6 @@ install_shell() {
     as_user git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${zsh_custom}/plugins/zsh-syntax-highlighting"
   fi
 
-  # tmux plugin manager
   if [ ! -d "${ACTUAL_HOME}/.tmux/plugins/tpm" ]; then
     as_user git clone https://github.com/tmux-plugins/tpm "${ACTUAL_HOME}/.tmux/plugins/tpm"
   fi
@@ -87,7 +82,6 @@ install_python_tools() {
     as_user_sh "pipx list --short 2>/dev/null | grep -q '^${tool} ' || pipx install ${tool}"
   done
 
-  # pyenv
   if [ ! -d "${ACTUAL_HOME}/.pyenv" ]; then
     as_user bash -c 'curl -fsSL https://pyenv.run | bash'
   fi

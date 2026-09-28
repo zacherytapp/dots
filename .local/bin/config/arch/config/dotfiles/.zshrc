@@ -45,7 +45,6 @@ export PROJECT_HOME=$HOME/Devel
 source /usr/local/bin/virtualenvwrapper.sh
 source /home/zakk/.cargo/env
 
-# Perl configuration
 PATH="/home/zakk/perl5/bin${PATH:+:${PATH}}"
 export PATH
 PERL5LIB="/home/zakk/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"

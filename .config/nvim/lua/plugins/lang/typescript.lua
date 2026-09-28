@@ -1,7 +1,3 @@
--- TypeScript / JavaScript / React / Next.js: vtsls (VS Code's TS server,
--- honours the workspace TypeScript and tsconfig plugins such as Next's), eslint
--- (fix-all on save), prettierd, jest + vitest (neotest), js-debug (nvim-dap),
--- package.json helpers. HTML/CSS/Tailwind/Emmet live in lang/web.lua.
 local ts_ft = { "javascript", "javascriptreact", "typescript", "typescriptreact" }
 
 local lang_settings = {

@@ -6,7 +6,6 @@ return {
     lazy = false,
     opts_extend = { "ensure_installed" },
     opts = {
-      -- Language files add their parsers
       ensure_installed = {
         "bash",
         "comment",
@@ -31,11 +30,10 @@ return {
         "vimdoc",
         "xml",
       },
-      -- filetype -> parser for filetypes without a parser of their own
       register = {
         dotenv = "bash",
       },
-      -- Filetypes that keep Vim's runtime indentexpr (treesitter indent is worse)
+      -- filetypes that keep Vim's runtime indentexpr (treesitter indent is worse)
       runtime_indent = {},
     },
     config = function(_, opts)
@@ -60,8 +58,7 @@ return {
         vim.treesitter.language.register(lang, ft)
       end
 
-      -- Enable highlighting + indentation for filetypes that have a parser.
-      -- Without the parser check every buffer would get a treesitter indentexpr.
+      -- only buffers with a parser, otherwise every buffer would get a treesitter indentexpr
       vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("user_treesitter", { clear = true }),
         callback = function(args)
@@ -105,8 +102,6 @@ return {
       local move = require("nvim-treesitter-textobjects.move")
       local swap = require("nvim-treesitter-textobjects.swap")
 
-      -- LazyVim motions: ]f function, ]c class, ]a argument (capitals = end),
-      -- plus ]i conditional and ]o loop. ]c / [c keep Vim's diff meaning in diff mode.
       local moves = {
         goto_next_start = {
           ["]f"] = "@function.outer",
@@ -151,7 +146,6 @@ return {
         end
       end
 
-      -- Swap with next / previous (<leader>cx)
       local swaps = {
         ["<leader>cxa"] = { "swap_next", "@parameter.inner", "Swap argument with next" },
         ["<leader>cxA"] = { "swap_previous", "@parameter.inner", "Swap argument with previous" },

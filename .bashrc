@@ -1,8 +1,3 @@
-#
-# ~/.bashrc
-#
-
-# If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
 alias ls='ls --color=auto'
@@ -27,6 +22,5 @@ esac
 
 # <<< juliaup initialize <<<
 
-# Machine-specific settings (e.g. PATH entries that installers append) go in
-# ~/.config/shell/local.sh, which is not in dots.
+# Untracked machine-specific settings (e.g. PATH entries installers append).
 if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi

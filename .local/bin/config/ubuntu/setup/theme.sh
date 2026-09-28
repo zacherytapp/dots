@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# papirus icons + gruvbox gtk theme (opt-in: sudo ./run.sh theme)
-#
-# Gruvbox (medium, green accent) matches the Gruvbox Material palette the rest
-# of the dots use. No -l: the stowed ~/.config/gtk-4.0/gtk.css imports the
-# noctalia-rendered gruvbox colors for libadwaita apps, and -l would replace it.
 
 configure_theme() {
   local theme_dir="${ACTUAL_HOME}/temp/Gruvbox-GTK-Theme"
@@ -20,6 +15,7 @@ configure_theme() {
     if [ ! -d "${theme_dir}/.git" ]; then
       as_user git clone --depth 1 https://github.com/Fausto-Korpsvart/Gruvbox-GTK-Theme.git "${theme_dir}"
     fi
+    # no -l: it would replace the stowed ~/.config/gtk-4.0/gtk.css libadwaita apps use
     as_user bash -c "cd '${theme_dir}/themes' && ./install.sh --tweaks medium macos float --theme green --color dark --dest '${ACTUAL_HOME}/.themes' --size compact"
   fi
 

@@ -1,5 +1,3 @@
--- Helm charts (Go templates in YAML): helm_ls. Chart templates are detected in
--- lua/config/filetypes.lua (templates/ next to Chart.yaml).
 return {
   {
     "nvim-treesitter/nvim-treesitter",

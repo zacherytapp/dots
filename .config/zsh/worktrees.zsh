@@ -1,7 +1,3 @@
-# git worktree helpers, ported from folke/dot's config/fish/conf.d/git.fish.
-# Worktrees go in $GIT_WORKTREES_ROOT/<repo>-<branch>, apart from the
-# .claude/worktrees/ ones Claude Code manages.
-#
 #   gw <branch>  cd into the branch's worktree, creating it (and the branch) if needed
 #   gpr <pr>     check out a GitHub PR in its own worktree and cd there
 #   gwl          fzf: cd into another worktree of this repo
@@ -12,11 +8,10 @@
 
 : ${GIT_WORKTREES_ROOT:=$HOME/Projects/git-worktrees}
 
-# oh-my-zsh's git plugin aliases gpr to `git pull --rebase`, and an alias
-# would win over the function
+# oh-my-zsh's git plugin aliases gpr, and an alias would shadow the function.
 unalias gw gpr gwl gwr gwm 2>/dev/null
 
-# every worktree of the current repo, main first
+# main worktree first
 function _gw_list {
   local out
   out=$(git worktree list --porcelain 2>/dev/null) || {
@@ -39,7 +34,7 @@ function gw {
   dir=$GIT_WORKTREES_ROOT/${main:t}-${branch//\//_}
   if [[ ! -d $dir ]]; then
     mkdir -p $GIT_WORKTREES_ROOT || return
-    # an existing local branch, or a remote one that git will track (DWIM)
+    # remote-only branches are DWIM-tracked by `git worktree add`
     if git show-ref --verify --quiet refs/heads/$branch ||
       [[ -n $(git for-each-ref --format=x "refs/remotes/*/$branch") ]]; then
       git worktree add $dir $branch || return

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# system-level configuration: apt, hostname, updates, ssh, flathub, codecs, git
 
 configure_apt() {
   color_echo "yellow" "Configuring apt..."
@@ -20,7 +19,6 @@ configure_system() {
     hostnamectl set-hostname "${SETUP_HOSTNAME}"
   fi
 
-  # enable automatic security updates
   color_echo "yellow" "Enabling unattended upgrades..."
   install_packages unattended-upgrades
   cat >/etc/apt/apt.conf.d/20auto-upgrades <<CONF
@@ -28,7 +26,6 @@ APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 CONF
 
-  # enable ssh
   color_echo "yellow" "Installing and enabling SSH..."
   install_packages openssh-server
   if ! skip_in_container "systemctl enable ssh"; then

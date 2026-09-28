@@ -1,6 +1,3 @@
--- Rust: rustaceanvim drives rust-analyzer (from rustup) with clippy checks,
--- runnables/debuggables (codelldb), neotest; crates.nvim for Cargo.toml;
--- taplo for TOML. rust_analyzer must NOT be enabled through lspconfig.
 return {
   {
     "nvim-treesitter/nvim-treesitter",

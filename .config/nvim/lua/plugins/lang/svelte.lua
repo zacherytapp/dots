@@ -1,6 +1,3 @@
--- Svelte / SvelteKit: svelte-language-server, the TypeScript svelte plugin in
--- vtsls (so .ts files see .svelte imports), prettier (prettier-plugin-svelte
--- from the project), eslint and tailwind from the other web files.
 return {
   {
     "nvim-treesitter/nvim-treesitter",

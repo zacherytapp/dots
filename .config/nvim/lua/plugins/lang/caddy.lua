@@ -1,6 +1,3 @@
--- Caddy (Caddyfile): treesitter highlighting/indent, `caddy fmt` formatting and
--- `caddy adapt` validation (both need the caddy binary). There is no Caddyfile
--- language server.
 return {
   {
     "nvim-treesitter/nvim-treesitter",

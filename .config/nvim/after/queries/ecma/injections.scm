@@ -1,10 +1,5 @@
 ; extends
 
-; adapted from https://github.com/folke/dot/blob/master/nvim/queries/ecma/injections.scm
-; ecma is the shared base for javascript, typescript, jsx and tsx.
-
-; sql (requires the `sql` treesitter parser)
-; e.g. db.query("SELECT * FROM users"), this.database.exec(`...`)
 (call_expression
   function: (member_expression
     object: [
@@ -27,6 +22,5 @@
     "exec" "query" "execute" "executeQuery" "executeUpdate" "executeBatch" "prepareStatement" "run"
     "prepare" "prepareQuery" "prepareUpdate" "prepareBatch")
   (#set! injection.language "sql")
-  ; strip the surrounding quotes / backticks
   (#offset! @injection.content 0 1 0 -1)
   (#set! injection.include-children))

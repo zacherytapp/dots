@@ -1,18 +1,6 @@
 #!/usr/bin/env bash
-# Pre-install checks for the Hyprland + Noctalia desktop, shared by every
-# distro's installer (arch, cachy, fedora, ubuntu). Sourced, never run.
-#
-# The dots config needs:
-#   - Hyprland >= 0.55: .config/hypr is written in the Lua config format
-#   - Noctalia v5: .config/noctalia/config.toml is the v5 (C++) format, the
-#     old Quickshell-based noctalia-shell (v4) reads settings.json instead
-#   - uwsm: the binds launch apps through `uwsm app --` and the session env
-#     lives in .config/uwsm/env
-#
-# desktop_preflight_os and desktop_preflight print what they find and return
-# non-zero only for problems that make the install pointless: an unsupported
-# distro, release or architecture, or a Hyprland too old for the lua config.
-# Everything else is a warning, so a re-run on a working machine is a no-op.
+# Sourced, never run. Only an unsupported distro/release/arch or a too-old
+# Hyprland fails; everything else warns, so a re-run is a no-op.
 
 DESKTOP_MIN_HYPRLAND="0.55.0"
 DESKTOP_MIN_FEDORA="44"
@@ -23,12 +11,10 @@ _desk_ok() { echo -e "\033[0;32m  ok    $1\033[0m"; }
 _desk_warn() { echo -e "\033[1;33m  warn  $1\033[0m"; }
 _desk_fail() { echo -e "\033[0;31m  FAIL  $1\033[0m"; }
 
-# version_ge <a> <b>: true when version a >= version b
 version_ge() {
   [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 
-# prints arch, cachyos, fedora or ubuntu (or the raw ID when unknown)
 desktop_distro() {
   local id id_like
   # shellcheck disable=SC1091
@@ -51,7 +37,6 @@ desktop_distro() {
   esac
 }
 
-# installed Hyprland version, empty when not installed
 hyprland_version() {
   command -v Hyprland &>/dev/null || return 0
   local runtime version
@@ -65,7 +50,6 @@ hyprland_version() {
   version=$(XDG_RUNTIME_DIR="$runtime" Hyprland --version 2>/dev/null |
     sed -n 's/^Hyprland \([0-9][0-9.]*\).*/\1/p' | head -n1) || true
   [ "$runtime" != "${XDG_RUNTIME_DIR:-}" ] && rm -rf "$runtime"
-  # fall back to the package database
   if [ -z "$version" ]; then
     if command -v pacman &>/dev/null; then
       version=$(pacman -Q hyprland 2>/dev/null | awk '{print $2}')
@@ -79,21 +63,18 @@ hyprland_version() {
   echo "$version"
 }
 
-# installed Noctalia major version, empty when not installed
 noctalia_major() {
   command -v noctalia &>/dev/null || return 0
   noctalia --version 2>/dev/null | sed -n 's/^noctalia v\{0,1\}\([0-9]*\).*/\1/p' | head -n1 || true
 }
 
-# the display manager systemd starts, e.g. greetd, sddm, gdm (empty if none)
 display_manager() {
   local unit
   unit=$(readlink /etc/systemd/system/display-manager.service 2>/dev/null) || return 0
   basename "$unit" .service
 }
 
-# desktop_preflight_os: distro, release and architecture. Runs before any
-# repo is added, so an unsupported machine is left untouched.
+# runs before any repo is added, so an unsupported machine is left untouched
 desktop_preflight_os() {
   local distro machine version rc=0
   distro=$(desktop_distro)
@@ -107,7 +88,6 @@ desktop_preflight_os() {
   case "$distro" in
   arch | cachyos) _desk_ok "distro: $distro" ;;
   fedora)
-    # noctalia is in fedora from 44; the hyprland copr builds 44 and newer
     if version_ge "$version" "$DESKTOP_MIN_FEDORA"; then
       _desk_ok "distro: fedora $version"
     else
@@ -143,10 +123,7 @@ desktop_preflight_os() {
   return "$rc"
 }
 
-# desktop_preflight <candidate hyprland version>
-# The caller passes the Hyprland version its package source would install
-# (pacman -Si / dnf repoquery / apt-cache policy), so a too-old package is
-# caught before anything is installed. An empty value skips that check.
+# desktop_preflight <candidate hyprland version>; empty skips that check
 desktop_preflight() {
   local candidate="${1:-}"
   local installed major dm rc=0
@@ -208,7 +185,6 @@ desktop_preflight() {
   return "$rc"
 }
 
-# desktop_verify: checks after installing; returns non-zero if anything is missing
 desktop_verify() {
   local rc=0 cmd version major
   echo "desktop verify:"

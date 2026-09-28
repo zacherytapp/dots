@@ -30,12 +30,10 @@ log_message() {
   echo "$(get_timestamp) - $message" | tee -a "$LOG_FILE"
 }
 
-# only prompt when a human is there to answer
 can_prompt() {
   [ "${NONINTERACTIVE:-0}" != "1" ] && [ -t 0 ]
 }
 
-# prompt_var <VAR> <question> <default>
 prompt_var() {
   local var="$1" question="$2" default="$3"
   if [ -z "${!var:-}" ]; then
@@ -63,7 +61,6 @@ is_container() {
   [ -f /.dockerenv ] || [ -f /run/.containerenv ]
 }
 
-# skip_in_container <what> -- returns 0 (and logs) when the caller should skip
 skip_in_container() {
   if is_container; then
     color_echo "yellow" "skipped: container ($1)"
@@ -72,12 +69,10 @@ skip_in_container() {
   return 1
 }
 
-# run a command as the real user with their HOME
 as_user() {
   sudo -u "$ACTUAL_USER" -H "$@"
 }
 
-# run a bash snippet as the real user with the user-level toolchains on PATH
 # shellcheck disable=SC2016 # expanded by the user shell
 as_user_sh() {
   as_user bash -c '
@@ -115,8 +110,6 @@ install_packages() {
   apt-get install -y -q "${to_install[@]}"
 }
 
-# add_apt_repo <name> <key url> <uris> <suites> <components> [arch]
-# writes /etc/apt/keyrings/<name>.gpg and /etc/apt/sources.list.d/<name>.sources
 add_apt_repo() {
   local name="$1" key_url="$2" uris="$3" suites="$4" components="$5" arch="${6:-$(dpkg --print-architecture)}"
   local keyring="/etc/apt/keyrings/${name}.gpg"
@@ -144,11 +137,8 @@ Signed-By: ${keyring}
 EOF
 }
 
-# vendor_apt_repo <package> <add_apt_repo args...>
-# chrome, brave and 1password rewrite their own sources.list.d/<name>.sources
-# (pointing at their own keyring) from postinst on every install and upgrade,
-# so ours is only a bootstrap: skip it once the package is installed, and drop
-# our keyring when the vendor's file has replaced ours
+# chrome, brave and 1password rewrite their own <name>.sources from postinst, so
+# ours only bootstraps: skip once installed, drop our keyring once replaced
 vendor_apt_repo() {
   local pkg="$1" name="$2"
   shift
@@ -164,7 +154,7 @@ vendor_apt_repo() {
   fi
 }
 
-# latest_github_tag <owner/repo> -- follows the releases/latest redirect (no API rate limit)
+# the releases/latest redirect avoids the API's rate limit
 latest_github_tag() {
   curl -fsSI "https://github.com/$1/releases/latest" |
     awk -F/ 'tolower($0) ~ /^location:/ {print $NF}' | tr -d '\r'
@@ -178,7 +168,6 @@ backup_file() {
   fi
 }
 
-# run_step <name> <function> -- runs a step, records failures and keeps going
 run_step() {
   local name="$1" fn="$2"
   color_echo "blue" "==> [$name] starting"

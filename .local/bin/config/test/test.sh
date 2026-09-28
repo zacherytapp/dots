@@ -3,8 +3,7 @@
 #
 #   .local/bin/config/test/test.sh <fedora|ubuntu|cachy> [step ...]
 #
-# Step names are passed through to run.sh so a single step can be re-tested.
-# Output is written to .local/bin/config/test/logs/<distro>.log.
+# Extra args are run.sh step names; output goes to test/logs/<distro>.log.
 #
 #   IDEMPOTENCY=1  run run.sh twice and diff test/snapshot.sh taken after each
 #                  run; anything the second run changed is a failure
@@ -33,7 +32,6 @@ log="$TEST_DIR/logs/$distro$suffix.log"
 
 docker build -f "$dockerfile" -t "$image" "$SETUP_DIR"
 
-# run.sh takes optional step names; verify.sh checks the result
 # shellcheck disable=SC2016 # expanded inside the container
 script='
 [ -z "$PRESEED" ] || ./test/preseed.sh seed || exit 1
