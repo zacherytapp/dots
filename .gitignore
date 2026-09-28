@@ -27,3 +27,9 @@
 /SPEC.md
 /.agents/AGENTS.md
 /.agents/CLAUDE.md
+
+# Plannotator's installer writes its skills straight into $HOME and rewrites
+# them on every update (see step_plannotator in .local/bin/config/cachy/scripts/dev.sh)
+.agents/skills/plannotator*/
+.claude/skills/plannotator*
+.pi/agent/skills/plannotator*
