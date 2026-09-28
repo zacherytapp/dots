@@ -71,10 +71,13 @@ step_services() {
 
 step_hooks() {
   # pacman hook that dumps the installed packages into the repo after every
-  # transaction, so `git diff` shows drift from the curated packages.conf
+  # transaction, so `git diff` shows drift from the curated packages.conf.
+  # Packages named in ~/.config/cachy/pkglist.ignore (one per line, not in
+  # dots) are left out, for things only this machine has.
   local hook=/etc/pacman.d/hooks/96-paclist.hook
   install -d -m 755 /etc/pacman.d/hooks
-  sed "s|@DIR@|$SCRIPT_DIR|g; s|@USER@|$ACTUAL_USER|g" "$SCRIPT_DIR/config/hooks/96-paclist.hook" >"$hook"
+  sed "s|@DIR@|$SCRIPT_DIR|g; s|@USER@|$ACTUAL_USER|g; s|@HOME@|$ACTUAL_HOME|g" \
+    "$SCRIPT_DIR/config/hooks/96-paclist.hook" >"$hook"
   chmod 644 "$hook"
 }
 

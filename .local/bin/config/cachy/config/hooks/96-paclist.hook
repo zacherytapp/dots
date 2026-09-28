@@ -8,4 +8,4 @@ Target = *
 [Action]
 Description = Writing package lists to the dots repo...
 When = PostTransaction
-Exec = /bin/sh -c 'pacman -Qqen > @DIR@/pkglist.native.txt; pacman -Qqem > @DIR@/pkglist.aur.txt; chown @USER@: @DIR@/pkglist.*.txt'
+Exec = /bin/sh -c 'i=@HOME@/.config/cachy/pkglist.ignore; [ -f "$i" ] || i=/dev/null; pacman -Qqen | grep -vxFf "$i" > @DIR@/pkglist.native.txt; pacman -Qqem | grep -vxFf "$i" > @DIR@/pkglist.aur.txt; chown @USER@: @DIR@/pkglist.*.txt'
