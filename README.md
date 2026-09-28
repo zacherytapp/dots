@@ -238,6 +238,7 @@ git clone git@github.com:zacherytapp/dots.git ~/Projects/dots
 cd ~/Projects/dots
 stow -n -v .   # dry run: shows links and conflicts
 stow .
+.local/bin/config/local-keys.sh install   # once per clone, see "Machine-specific settings"
 ```
 
 Distro installers ship default files (`~/.bashrc`, `~/.zshrc`, `kitty.conf`, ...) that make
@@ -266,6 +267,33 @@ to pull the file back into the repo.
 
 - Remove all links: `stow -D .`
 - Relink after adding or removing files: `stow -R .`
+
+**Machine-specific settings**
+
+Things that only fit one machine stay out of the repo. The shared configs load them from
+files that live only in `$HOME` (with `--no-folding` these directories are real, so nothing
+lands in the repo):
+
+- `~/.config/shell/local.sh`: sourced last by `.profile`, `.bash_profile`, `.bashrc` and
+  `.zshrc`; POSIX sh. Move PATH lines that installers append to the rc files (LM Studio's
+  `lms`, for example) here.
+- `~/.config/hypr/local/variables.lua`: loaded at the end of `config/variables.lua`, for
+  `MONITOR1..3`, `PRIMARY_MONITOR` and `MONITOR_SCALE` (monitor descriptions carry serial
+  numbers).
+- `~/.config/hypr/local/monitors.lua`: replaces the default rule in `config/monitors.lua`
+  with this machine's monitor layout.
+- `~/.config/cachy/pkglist.ignore`: packages the pacman hook leaves out of the pkglists,
+  one per line.
+
+Some apps write machine-local keys into stowed JSON files: `autoMode` in
+`~/.claude/settings.json` (from `/auto-mode-setup`), and pi's provider, model and changelog
+state in `~/.pi/agent/settings.json`. `.gitattributes` runs both through
+`.local/bin/config/local-keys.sh`, a git filter that keeps those keys on disk but out of
+diffs and commits (for pi, only `packages` is shared), and puts them back after a checkout
+or pull. The filter is per clone, so run `.local/bin/config/local-keys.sh install` after
+cloning (`run.sh stow` does it). If `git status` lists one of these files while `git diff`
+is empty, only local keys changed: `git add` it to refresh the index (nothing gets staged).
+To cover another file, add it to `.gitattributes` and to `shared()` in the script.
 
 ## Hyprland + Noctalia desktop
 
