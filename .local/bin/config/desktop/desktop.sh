@@ -216,6 +216,29 @@ _desk_install_ubuntu() {
   _desk_install_adw_gtk3
 }
 
+# noctalia owns idle, lock and sleep: its idle behaviors lock/suspend, it holds
+# logind's sleep delay inhibitor to lock before any suspend, and the power and
+# sleep keys are bound in .config/hypr/config/binds.lua to its session menu.
+# logind acts on those keys itself by default (power key = instant poweroff),
+# so it's told to leave them alone. The lid switch stays with logind; noctalia
+# still locks before that suspend.
+_desk_power_keys() {
+  local conf=/etc/systemd/logind.conf.d/10-noctalia.conf
+  install -d -m 755 /etc/systemd/logind.conf.d
+  cat >"$conf" <<'EOF'
+# Installed by dots .local/bin/config/desktop/desktop.sh: noctalia handles
+# these keys (bound in ~/.config/hypr/config/binds.lua) and idle.
+[Login]
+HandlePowerKey=ignore
+HandleSuspendKey=ignore
+HandleHibernateKey=ignore
+IdleAction=ignore
+EOF
+  chmod 644 "$conf"
+  # reload, not restart: restarting logind ends the running sessions
+  [ -d /run/systemd/system ] && systemctl reload systemd-logind
+}
+
 # checks, then installs the hyprland + noctalia session for this distro
 desktop_install() {
   local distro candidate
@@ -247,6 +270,7 @@ desktop_install() {
   ubuntu) _desk_ubuntu_repo && _desk_install_ubuntu ;;
   esac || return 1
 
+  _desk_power_keys
   desktop_verify
 }
 

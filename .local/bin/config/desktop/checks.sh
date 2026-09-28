@@ -237,6 +237,12 @@ desktop_verify() {
     rc=1
   fi
 
+  if [ -f /etc/systemd/logind.conf.d/10-noctalia.conf ]; then
+    _desk_ok "logind leaves the power/sleep keys to noctalia"
+  else
+    _desk_warn "no logind.conf.d/10-noctalia.conf, the power key powers off without noctalia's session menu"
+  fi
+
   if [ -f /usr/share/wayland-sessions/hyprland-uwsm.desktop ]; then
     _desk_ok "uwsm hyprland session entry"
   else

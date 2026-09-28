@@ -42,25 +42,43 @@ thickness = 22
 [hot_corners]
 enabled = true
 
+# Noctalia owns idle, lock, suspend and wake; there is no hypridle/hyprlock.
+#   - idle: the behaviors below (screens come back on with any input)
+#   - lock: [lockscreen], also bound to SUPER+SHIFT+L in hypr/config/binds.lua
+#   - suspend: lock_and_suspend here and in the session menu; lock_before_suspend
+#     makes noctalia lock ahead of any suspend, whoever triggers it
+#   - power/sleep keys: bound to noctalia in binds.lua, and logind is told to
+#     ignore them by .local/bin/config/desktop/desktop.sh (10-noctalia.conf)
+#
 # Ported from the old hypridle.conf: lock at 20 min, screens off at 50 min,
 # suspend at 2.5 h. hypridle's 15 min dim step has no noctalia equivalent.
+#
+# None of these fire by default: caffeine (idle inhibitor) is switched on at
+# login by hypr/config/autostart.lua, since noctalia has no config key for it.
+# Toggle it off with the bar's caffeine widget to get the timeouts back.
 [idle]
 behavior_order = [ "lock", "screen-off", "lock-and-suspend" ]
 
     [idle.behavior.lock]
     enabled = true
+    action = "lock"
     timeout = 1200.0
 
     [idle.behavior.screen-off]
     enabled = true
+    action = "screen_off"
     timeout = 3000.0
 
     [idle.behavior.lock-and-suspend]
     enabled = true
+    action = "lock_and_suspend"
     timeout = 9000.0
 
 [location]
 auto_locate = true
+
+[lockscreen]
+lock_before_suspend = true
 
 [notification]
 scale = 0.80
@@ -163,6 +181,9 @@ directory = "~/.config/walls"
 
     [wallpaper.default]
     path = "~/.config/walls/gruvbox1.png"
+
+[weather]
+unit = "imperial"
 
 [widget.clock]
 color = "secondary"

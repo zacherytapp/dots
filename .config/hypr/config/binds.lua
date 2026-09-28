@@ -143,6 +143,13 @@ hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd(noctCall .. "media previous"), { locke
 hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(noctCall .. "brightness-up 5"),   { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(noctCall .. "brightness-down 5"), { locked = true, repeating = true })
 
+-- Power / sleep keys go to noctalia, which owns idle, lock and suspend.
+-- logind is told to ignore these keys (logind.conf.d/10-noctalia.conf, from
+-- .local/bin/config/desktop/desktop.sh); without that it acts on them too.
+hl.bind("XF86PowerOff", hl.dsp.exec_cmd(noctCall .. "panel-toggle session"))
+hl.bind("XF86Sleep",    hl.dsp.exec_cmd(noctCall .. "session lock-and-suspend"), { locked = true })
+hl.bind("XF86Suspend",  hl.dsp.exec_cmd(noctCall .. "session lock-and-suspend"), { locked = true })
+
 ----------------------------------------------------------------------
 ---- EXTRAS (no equivalent in dots; safe to delete, no key clashes) --
 ----------------------------------------------------------------------
