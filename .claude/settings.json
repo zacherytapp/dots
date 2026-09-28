@@ -1,4 +1,9 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -38,6 +43,16 @@
       "Bash(pnpm list:*)",
       "Bash(pnpm outdated:*)",
       "Bash(nvim --version:*)"
+    ],
+    "deny": [
+      "Bash(op inject:*)",
+      "Bash(op item get:*)",
+      "Bash(op read:*)",
+      "Bash(op run:*)",
+      "Bash(systemd-creds decrypt:*)",
+      "Bash(with-secrets:*)",
+      "Read(~/.config/credstore.encrypted/**)",
+      "Read(~/.config/credstore/**)"
     ]
   },
   "includeCoAuthoredBy": false,
