@@ -1,0 +1,851 @@
+#!/usr/bin/env bash
+# clean-disk: deterministic disk cleanup for this machine.
+#
+#   clean-disk [scan]                  dry run: user tier, sudo tier estimate, review candidates
+#   clean-disk run                     clean the user tier, then list review candidates
+#   clean-disk review                  list review candidates only
+#   clean-disk remove [--force] PATH…  remove candidates from the last review (--force: dirty worktrees)
+#   clean-disk keep PATH…              never list PATH, or anything under it, as a candidate again
+#   clean-disk system [--dry-run]      root tier: pacman, journal, coredumps, flatpak, snapper, btrfs
+#
+# Tiers:
+#   user    regenerable caches, stale temp files, and agent leftovers that meet an age/merge/idle rule;
+#           deleted without asking.
+#   system  needs root; run as `sudo clean-disk system`.
+#   review  things that may still matter (worktrees, agent output, large files); the agent asks first.
+#
+# Every deletion is skipped when a live process references the path (cwd, open fd, argv, environment,
+# docker bind mount). Full results of the last run land in ~/.local/state/clean-disk/last-run.tsv.
+
+set -uo pipefail
+shopt -s nullglob dotglob
+
+if (( EUID == 0 )) && [[ -n ${SUDO_USER:-} ]]; then
+  REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+else
+  REAL_HOME=$HOME
+fi
+STATE_DIR=$REAL_HOME/.local/state/clean-disk
+KEEP_FILE=$REAL_HOME/.config/clean-disk/keep
+REVIEW_FILE=$STATE_DIR/review.tsv
+LAST_RUN=$STATE_DIR/last-run.tsv
+HISTORY=$STATE_DIR/history.log
+
+PROJECTS_DIR=$HOME/Projects
+CLAUDE_TMP=/tmp/claude-$(id -u)
+MIB=$((1024 * 1024))
+MIN_REVIEW=$((100 * MIB))       # smallest item worth asking about
+MIN_LARGE_FILE=$((1024 * MIB))  # files at least this big anywhere in $HOME are listed
+STALE_REPO_DAYS=30              # gitignored build output in repos idle this long goes
+REPO_SCRATCH_DAYS=7             # untracked .tmp/scratch dirs in repos untouched this long go
+TMP_AGE_KNOWN=60                # minutes untouched before known temp patterns go
+TMP_AGE_OTHER=1440              # minutes untouched before any other /tmp entry goes (1 day)
+SCRATCH_AGE=1440                # minutes untouched before an ended session's scratchpad goes (1 day)
+TRANSCRIPT_DAYS=14              # Claude session transcripts untouched this long go
+JOB_DAYS=7                      # finished Claude jobs untouched this long go
+WORKTREE_IDLE=1440              # minutes untouched before a merged, clean worktree goes (1 day)
+UUID_RE='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+DEFAULT_KEEP=("$HOME/Games" "$HOME/.local/share/Steam")
+
+# not /tmp: this tool has to work when /tmp is the thing that is full
+WORK=$(mktemp -d -p "${XDG_RUNTIME_DIR:-$REAL_HOME/.cache}" clean-disk.XXXXXX) || exit 1
+on_exit() {
+  rm -rf "$WORK"
+  # under sudo, hand the state dir back to the user who owns it
+  if (( EUID == 0 )) && [[ -n ${SUDO_USER:-} && -d $STATE_DIR ]]; then chown -R "$SUDO_USER": "$STATE_DIR"; fi
+}
+trap on_exit EXIT
+PROCS=$WORK/procs
+RESULTS=$WORK/results.tsv
+REVIEW=$WORK/review.tsv
+: > "$RESULTS"
+: > "$REVIEW"
+DRY=1
+
+die() { echo "clean-disk: $*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null; }
+human() { numfmt --to=iec --format='%.1f' -- "${1:-0}"; }
+size_of() { local s; s=$(du -sbx -- "$1" 2>/dev/null | cut -f1); echo "${s:-0}"; }
+# "4.3GB" / "840.26 MiB" -> bytes
+parse_size() {
+  local s=${1// /}
+  s=${s%B}
+  [[ -z $s ]] && { echo 0; return; }
+  if [[ $s == *i ]]; then numfmt --from=iec-i -- "${s/k/K}" 2>/dev/null || echo 0
+  else numfmt --from=si -- "${s^^}" 2>/dev/null || echo 0
+  fi
+}
+
+# --- process snapshot -----------------------------------------------------------------------------
+# One line per path-like token any of our processes holds: cwd, fd targets, argv, environment values
+# (split on ':' and '='), and docker bind-mount sources. Each token ends in '|' so prefix matches
+# can tell /tmp/a from /tmp/ab. Ancestors keep everything but argv (the shell that invoked us names
+# the very paths we are checking); this process and its children are left out entirely.
+snapshot_procs() {
+  local -A ancestor=() self=()
+  local pid=$$ ppid line
+  while [[ $pid =~ ^[0-9]+$ ]] && (( pid > 1 )); do
+    ppid=$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null | head -1)
+    ancestor[$ppid]=1
+    pid=$ppid
+  done
+  self[$$]=1
+  while read -r pid ppid; do [[ $ppid == "$$" ]] && self[$pid]=1; done < <(ps -u "$(id -u)" -o pid=,ppid=)
+  {
+    for p in /proc/[0-9]*; do
+      pid=${p#/proc/}
+      [[ -n ${self[$pid]:-} || $pid == "$BASHPID" || ! -O $p ]] && continue
+      readlink "$p/cwd"
+      find "$p/fd" -mindepth 1 -maxdepth 1 -printf '%l\n'
+      tr '\0' '\n' < "$p/environ"
+      [[ -n ${ancestor[$pid]:-} ]] || tr '\0' '\n' < "$p/cmdline"
+    done 2>/dev/null
+    if have docker && docker info >/dev/null 2>&1; then
+      docker ps -q | xargs -r docker inspect -f '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null
+    fi
+  } | sed -E 's/ \(deleted\)$//; s/:/|\n/g; s/=/|\n/g; s/$/|/' > "$PROCS"
+}
+in_use() { grep -qF -e "$1/" -e "$1|" "$PROCS"; }
+running() { pgrep -d, -u "$(id -u)" -x "$1" | cut -d, -f1-3; }  # prints up to 3 pids, fails when none
+recent() { [[ -n $(find "$1" -xdev -mmin "-$2" -print -quit 2>/dev/null) ]]; }  # touched within N minutes
+newest() { find "$1" -xdev -printf '%T@\n' 2>/dev/null | sort -n | tail -1 | cut -d. -f1; }
+ago() {
+  local t=${1:-0} now; now=$(date +%s)
+  local h=$(( (now - t) / 3600 ))
+  if (( h < 48 )); then echo "${h}h ago"; else echo "$(( h / 24 ))d ago"; fi
+}
+
+# --- result recording -----------------------------------------------------------------------------
+# results.tsv: bytes, status, rule, target. status is one of
+#   free        freed (run) / would free (dry run)
+#   upto        dry run of a prune command: at most this much
+#   skip:WHY    left alone
+record() { printf '%s\t%s\t%s\t%s\n' "${1:-0}" "$2" "$3" "$4" >> "$RESULTS"; }
+
+# zap RULE PATH: delete PATH unless a process uses it.
+zap() {
+  local rule=$1 path=$2 bytes left
+  [[ -e $path || -L $path ]] || return 0
+  bytes=$(size_of "$path")
+  if in_use "$path"; then record "$bytes" "skip:in use" "$rule" "$path"; return; fi
+  if (( ! DRY )); then
+    if ! rm -rf --one-file-system -- "$path" 2>/dev/null; then
+      chmod -R u+w -- "$path" 2>/dev/null
+      rm -rf --one-file-system -- "$path" 2>/dev/null
+    fi
+    if [[ -e $path ]]; then
+      left=$(size_of "$path")
+      record "$(( bytes - left ))" free "$rule" "$path"
+      record "$left" "skip:rm failed" "$rule" "$path"
+      return
+    fi
+  fi
+  record "$bytes" free "$rule" "$path"
+}
+
+# zap_children RULE DIR: zap each entry of DIR on its own, so one busy entry does not block the rest.
+zap_children() {
+  local e
+  [[ -d $2 ]] || return 0
+  for e in "$2"/*; do zap "$1" "$e"; done
+}
+
+# zap_idle PROC RULE PATH: zap PATH unless a process named PROC runs (caches with no fd to check).
+zap_idle() {
+  local pids
+  [[ -e $3 ]] || return 0
+  if pids=$(running "$1"); then record "$(size_of "$3")" "skip:$1 running (pid $pids)" "$2" "$3"; return; fi
+  zap "$2" "$3"
+}
+
+# shrink RULE DIR CMD…: run a tool's own prune command on DIR; the dry run reports DIR's size as a bound.
+shrink() {
+  local rule=$1 dir=$2 before after; shift 2
+  [[ -e $dir ]] || return 0
+  before=$(size_of "$dir")
+  if (( DRY )); then record "$before" upto "$rule" "$dir"; return; fi
+  if ! env -C / "$@" >/dev/null 2>&1; then record 0 "skip:$* failed" "$rule" "$dir"; return; fi
+  after=$(size_of "$dir")
+  record "$(( before - after ))" free "$rule" "$dir"
+}
+
+# --- review recording -----------------------------------------------------------------------------
+# review.tsv: kind, bytes, path, detail. remove accepts only paths listed here.
+KEEP=()
+load_keep() {
+  KEEP=()
+  if [[ ! -f $KEEP_FILE ]]; then
+    mkdir -p "${KEEP_FILE%/*}"
+    printf '%s\n' "# clean-disk never lists these paths (or anything under them) for review." \
+      "${DEFAULT_KEEP[@]}" > "$KEEP_FILE"
+  fi
+  local k
+  while IFS= read -r k; do [[ -n $k && $k != \#* ]] && KEEP+=("$k"); done < "$KEEP_FILE"
+}
+kept() {
+  local k
+  for k in "${KEEP[@]}"; do [[ $1 == "$k" || $1 == "$k"/* ]] && return 0; done
+  return 1
+}
+add_review() {
+  local kind=$1 path=$2 bytes=$3 detail=$4
+  kept "$path" && return 0
+  [[ -z $bytes ]] && bytes=$(size_of "$path")
+  printf '%s\t%s\t%s\t%s\n' "$kind" "$bytes" "$path" "$detail" >> "$REVIEW"
+}
+reviewed() { awk -F'\t' -v p="$1" '$3 == p {f=1} END {exit !f}' "$REVIEW"; }
+under_review() { awk -F'\t' -v p="$1" 'index(p, $3 "/") == 1 || $3 == p {f=1} END {exit !f}' "$REVIEW"; }
+
+# --- user tier ------------------------------------------------------------------------------------
+rules_go() {
+  have go || return 0
+  local cache mod pids d
+  cache=$(env -C / -u GOCACHE go env GOCACHE)
+  mod=$(env -C / -u GOMODCACHE go env GOMODCACHE)
+  if pids=$(running go); then
+    record "$(size_of "$cache")" "skip:go running (pid $pids)" go-build "$cache"
+    record "$(size_of "$mod")" "skip:go running (pid $pids)" go-mod "$mod"
+  else
+    shrink go-build "$cache" env -u GOCACHE go clean -cache -fuzzcache
+    shrink go-mod "$mod" env -u GOMODCACHE go clean -modcache
+  fi
+  for d in "$HOME"/.cache/golangci-* "$HOME/.cache/goimports"; do zap go-tools "$d"; done
+  zap_idle gopls go-tools "$HOME/.cache/gopls"
+}
+
+rules_node() {
+  if have npm; then shrink npm "$HOME/.npm/_cacache" npm cache clean --force; fi
+  zap_children npx "$HOME/.npm/_npx"
+  if have pnpm; then shrink pnpm-store "$(env -C / pnpm store path 2>/dev/null)" pnpm store prune; fi
+  zap_children pnpm-cache "$HOME/.cache/pnpm"
+  zap node-gyp "$HOME/.cache/node-gyp"
+  zap node-gyp "$HOME/.cache/typescript"
+}
+
+rules_python() {
+  if have uv; then shrink uv "$(uv cache dir)" uv cache prune; fi
+  if have pip; then shrink pip "$HOME/.cache/pip" pip cache purge; fi
+}
+
+rules_rust() {
+  local pids d
+  if pids=$(running cargo) || pids=$(running rustc); then
+    record "$(size_of "$HOME/.cargo/registry")" "skip:cargo running (pid $pids)" cargo "$HOME/.cargo/registry"
+    return
+  fi
+  for d in "$HOME/.cargo/registry/cache" "$HOME/.cargo/registry/src" "$HOME/.cargo/git/checkouts" \
+           "$HOME/.rustup/downloads" "$HOME/.rustup/tmp"; do
+    zap cargo "$d"
+  done
+}
+
+rules_apps() {
+  zap_idle firefox browser-cache "$HOME/.cache/mozilla"
+  zap_idle chrome browser-cache "$HOME/.cache/google-chrome"
+  zap_idle chrome browser-cache "$HOME/.cache/google-chrome-headless"
+  zap_idle thunderbird browser-cache "$HOME/.cache/thunderbird"
+  zap thumbnails "$HOME/.cache/thumbnails"
+}
+
+# AUR clones keep their git history (paru diffs against it); untracked files are build output.
+rules_paru() {
+  local d e pids
+  [[ -d $HOME/.cache/paru/clone ]] || return 0
+  if pids=$(running paru) || pids=$(running makepkg); then
+    record "$(size_of "$HOME/.cache/paru")" "skip:paru running (pid $pids)" paru "$HOME/.cache/paru"
+    return
+  fi
+  for d in "$HOME"/.cache/paru/clone/*/; do
+    d=${d%/}
+    [[ -d $d/.git ]] || continue
+    while IFS= read -r e; do zap paru "$d/${e%/}"; done < <(git -C "$d" ls-files --others --directory 2>/dev/null)
+  done
+}
+
+rules_docker() {
+  have docker && docker info >/dev/null 2>&1 || return 0
+  local out
+  if (( DRY )); then
+    out=$(docker images -f dangling=true --format '{{.Size}}' | while read -r s; do parse_size "$s"; done |
+      awk '{t += $1} END {print t + 0}')
+    record "$out" upto docker "dangling images"
+    out=$(docker system df --format '{{.Type}}\t{{.Reclaimable}}' | awk -F'\t' '$1 == "Images" {print $2}' | cut -d' ' -f1)
+    record "$(parse_size "$out")" upto docker "images unused and older than 7d"
+    out=$(docker system df --format '{{.Type}}\t{{.Size}}' | awk -F'\t' '$1 == "Build Cache" {print $2}')
+    record "$(parse_size "$out")" upto docker "build cache unused for 7d"
+    return
+  fi
+  out=$(docker image prune -f 2>/dev/null | sed -n 's/^Total reclaimed space: //p')
+  record "$(parse_size "$out")" free docker "dangling images"
+  out=$(docker image prune -af --filter until=168h 2>/dev/null | sed -n 's/^Total reclaimed space: //p')
+  record "$(parse_size "$out")" free docker "images unused and older than 7d"
+  out=$(docker builder prune -af --filter until=168h 2>/dev/null | sed -n 's/^Total:[[:space:]]*//p; s/^Total reclaimed space: //p' | tail -1)
+  record "$(parse_size "$out")" free docker "build cache unused for 7d"
+}
+
+rules_flatpak_user() {
+  have flatpak && [[ -d $HOME/.local/share/flatpak ]] || return 0
+  shrink flatpak "$HOME/.local/share/flatpak" flatpak uninstall --user --unused -y --noninteractive
+}
+
+# Linked worktrees whose directory is gone leave metadata behind; prune is metadata-only.
+rules_worktree_prune() {
+  local repo n
+  for repo in "$PROJECTS_DIR"/*/; do
+    repo=${repo%/}
+    [[ -e $repo/.git ]] || continue
+    n=$(git -C "$repo" worktree prune --dry-run 2>/dev/null | wc -l)
+    (( n )) || continue
+    (( DRY )) || git -C "$repo" worktree prune
+    record 0 free worktree-prune "$repo ($n stale worktree entries)"
+  done
+}
+
+# tmp_sweep DIR OTHER_AGE: user-owned top-level entries of a temp dir. Pure caches go whenever idle,
+# known build/test temp patterns once untouched for TMP_AGE_KNOWN, anything else once untouched for
+# OTHER_AGE (0 = never). Sockets, mounts and session dirs are left alone.
+tmp_sweep() {
+  local dir=$1 other_age=$2 e name age other bytes
+  for e in "$dir"/*; do
+    [[ -O $e && ! -L $e && $e != "$WORK" ]] || continue
+    name=${e##*/}
+    case $name in
+      claude-[0-9]*|tmux-*|ssh-*|.X*|.ICE*|.font-unix|.mount_*|systemd-*|pulse-*|nvim*|noctalia*|*.sock|*.pid|*.lock|clean-disk.*) continue ;;
+    esac
+    [[ -S $e ]] && continue
+    mountpoint -q -- "$e" && continue
+    [[ -d $e && -n $(find "$e" -xdev -type s -print -quit 2>/dev/null) ]] && continue
+    other=0
+    case $name in
+      node-compile-cache|jest_rs|gocache*|v8-compile-cache*) age=0 ;;
+      go-build*|go-link-*|gotmp*|cgo-*|tmp.*|Test*|playwright*|puppeteer*|.pnpm-store|sfdx-*|.org.chromium.*|.com.google.Chrome.*|pytest-of-*|vite*|esbuild*|tsx-*|jiti*) age=$TMP_AGE_KNOWN ;;
+      *) (( other_age )) || continue; age=$other_age; other=1 ;;
+    esac
+    if (( age )) && recent "$e" "$age"; then
+      if (( other )); then
+        bytes=$(size_of "$e")
+        (( bytes >= MIN_REVIEW )) && add_review tmp "$e" "$bytes" "temp entry touched $(ago "$(newest "$e")") ($dir is $(findmnt -no FSTYPE -T "$dir"))"
+      fi
+      continue
+    fi
+    zap tmp "$e"
+  done
+}
+
+# Claude Code scratchpads live in $CLAUDE_TMP/<project>/<session-uuid>. A session is live when any
+# process carries its id (CLAUDE_CODE_SESSION_ID in children, transcript fd in the CLI itself).
+rules_claude_tmp() {
+  [[ -d $CLAUDE_TMP ]] || return 0
+  local d sid e
+  for d in "$CLAUDE_TMP"/-*/*/; do
+    d=${d%/}; sid=${d##*/}
+    [[ $sid =~ $UUID_RE ]] || continue
+    if grep -qF "$sid" "$PROCS"; then record "$(size_of "$d")" "skip:session live" claude-scratch "$d"; continue; fi
+    if recent "$d" "$SCRATCH_AGE"; then
+      local bytes; bytes=$(size_of "$d")
+      (( bytes >= MIN_REVIEW )) && add_review claude-scratch "$d" "$bytes" "scratchpad of an ended Claude session, touched $(ago "$(newest "$d")")"
+      continue
+    fi
+    zap claude-scratch "$d"
+  done
+  (( DRY )) || find "$CLAUDE_TMP" -mindepth 1 -maxdepth 1 -name '-*' -type d -empty -delete 2>/dev/null
+  for e in "$CLAUDE_TMP"/*; do
+    case ${e##*/} in -*|bundled-skills) continue ;; esac
+    if [[ -d $e && ${e##*/} == bash-edit-diff ]]; then
+      local c
+      for c in "$e"/*; do recent "$c" "$SCRATCH_AGE" || zap claude-tmp "$c"; done
+    elif ! recent "$e" "$SCRATCH_AGE"; then
+      zap claude-tmp "$e"
+    fi
+  done
+}
+
+# Claude background jobs: a finished job untouched for JOB_DAYS goes whole; younger finished jobs
+# lose their build caches and the rest is listed for review.
+JOB_CACHES=(gocache gotmp go-build node-compile-cache .cache node_modules)
+rules_claude_jobs() {
+  local j state name updated c excl=()
+  for c in "${JOB_CACHES[@]}"; do excl+=(--exclude="$c"); done
+  for j in "$HOME"/.claude/jobs/*/; do
+    j=${j%/}
+    state=$(jq -r '.state // empty' "$j/state.json" 2>/dev/null)
+    if [[ $state != done && $state != failed && $state != stopped ]]; then
+      record "$(size_of "$j")" "skip:job ${state:-unknown}" claude-job "$j"
+      continue
+    fi
+    if ! in_use "$j" && ! recent "$j" $(( JOB_DAYS * 1440 )); then zap claude-job "$j"; continue; fi
+    while IFS= read -r c; do zap claude-job "$c"; done < <(
+      find "$j" -mindepth 1 -maxdepth 2 -type d \( -false $(printf -- '-o -name %s ' "${JOB_CACHES[@]}") \) -prune -print | sort)
+    local bytes; bytes=$(du -sbx "${excl[@]}" -- "$j" 2>/dev/null | cut -f1)
+    if (( ${bytes:-0} >= MIN_REVIEW )); then
+      name=$(jq -r '.name // .intent // "" | .[0:60]' "$j/state.json" 2>/dev/null)
+      updated=$(jq -r '.updatedAt // ""' "$j/state.json" 2>/dev/null)
+      add_review claude-job "$j" "$bytes" "Claude job ($state, updated ${updated%%T*}): $name$(in_use "$j" && echo '; still referenced by a running process')"
+    fi
+  done
+}
+
+# Claude transcripts: <project>/<uuid>.jsonl plus its <uuid>/ dir (subagents, tool results). Sessions
+# untouched for TRANSCRIPT_DAYS go, as does every session of a project whose directory is gone.
+# Live sessions stay, and so does anything else in a project dir (memory/).
+rules_claude_transcripts() {
+  local p f sid cwd orphan
+  for p in "$HOME"/.claude/projects/*/; do
+    p=${p%/}
+    cwd=""
+    for f in "$p"/*.jsonl; do
+      cwd=$(grep -m1 -o '"cwd":"[^"]*"' "$f" | head -1 | cut -d'"' -f4)
+      [[ -n $cwd ]] && break
+    done
+    orphan=0
+    [[ -n $cwd && ! -d $cwd ]] && orphan=1
+    for f in "$p"/*.jsonl; do
+      sid=${f##*/}; sid=${sid%.jsonl}
+      [[ $sid =~ $UUID_RE ]] || continue
+      if grep -qF "$sid" "$PROCS"; then record "$(size_of "$f")" "skip:session live" transcripts "$f"; continue; fi
+      if (( ! orphan )); then
+        recent "$f" $(( TRANSCRIPT_DAYS * 1440 )) && continue
+        recent "$p/$sid" $(( TRANSCRIPT_DAYS * 1440 )) && continue
+      fi
+      zap transcripts "$f"
+      zap transcripts "$p/$sid"
+    done
+    (( DRY )) || rmdir -- "$p" 2>/dev/null
+  done
+}
+
+default_branch() {
+  local b
+  for b in main master; do git -C "$1" show-ref -q --verify "refs/heads/$b" && { echo "$b"; return; }; done
+  git -C "$1" symbolic-ref -q --short refs/remotes/origin/HEAD
+}
+
+# Linked git worktrees: merged into the default branch, clean, unused and untouched for
+# WORKTREE_IDLE go via `git worktree remove` (the branch stays). The rest are listed for review.
+rules_worktrees() {
+  local repo base wt branch dirty merged last note bytes
+  for repo in "$PROJECTS_DIR"/*/; do
+    repo=${repo%/}
+    [[ -d $repo/.git ]] || continue
+    base=$(default_branch "$repo")
+    while IFS= read -r wt; do
+      [[ -d $wt ]] || continue
+      branch=$(git -C "$wt" symbolic-ref -q --short HEAD || echo detached)
+      dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l)
+      merged=no
+      [[ -n $base ]] && git -C "$repo" merge-base --is-ancestor "$(git -C "$wt" rev-parse HEAD)" "$base" 2>/dev/null && merged=yes
+      if [[ $merged == yes ]] && (( dirty == 0 )) && ! in_use "$wt" && ! recent "$wt" "$WORKTREE_IDLE"; then
+        bytes=$(size_of "$wt")
+        if (( ! DRY )) && ! git -C "$repo" worktree remove -- "$wt" >/dev/null 2>&1; then
+          record "$bytes" "skip:git worktree remove failed" worktree "$wt"
+          continue
+        fi
+        record "$bytes" free worktree "$wt"
+        continue
+      fi
+      last=$(git -C "$wt" log -1 --format=%cr 2>/dev/null)
+      note=""
+      in_use "$wt" && note="; OPEN in a running process"
+      add_review worktree "$wt" "" "git worktree: branch $branch, $dirty uncommitted, merged into ${base:-?}: $merged, last commit $last$note"
+    done < <(git -C "$repo" worktree list --porcelain | sed -n 's/^worktree //p' | tail -n +2)
+  done
+}
+
+# Repos: untracked scratch dirs untouched for REPO_SCRATCH_DAYS go (younger big ones are listed);
+# gitignored build output goes from repos with no commit for STALE_REPO_DAYS.
+rules_repo_output() {
+  local repo n d idle bytes
+  for repo in "$PROJECTS_DIR"/*/; do
+    repo=${repo%/}
+    [[ -d $repo/.git ]] || continue
+    for n in .tmp tmp scratch .scratch; do
+      d=$repo/$n
+      [[ -d $d ]] || continue
+      [[ -n $(git -C "$repo" ls-files -- "$n" | head -1) ]] && continue
+      if recent "$d" $(( REPO_SCRATCH_DAYS * 1440 )); then
+        bytes=$(size_of "$d")
+        (( bytes >= 50 * MIB )) && add_review repo-scratch "$d" "$bytes" "untracked scratch dir, touched $(ago "$(newest "$d")")"
+        continue
+      fi
+      zap repo-scratch "$d"
+    done
+    idle=$(( ( $(date +%s) - $(git -C "$repo" log -1 --format=%ct 2>/dev/null || date +%s) ) / 86400 ))
+    (( idle >= STALE_REPO_DAYS )) || continue
+    while IFS= read -r d; do
+      git -C "$repo" check-ignore -q -- "$d" && zap build-output "$d"
+    done < <(find "$repo" -maxdepth 3 \( -name .git -o -name .worktrees \) -prune -o -type d \
+               \( -name node_modules -o -name .next -o -name target -o -name .venv -o -name dist -o -name .turbo -o -name coverage \) \
+               -prune -print 2>/dev/null | sort)
+  done
+}
+
+run_user_tier() {
+  rules_go
+  rules_node
+  rules_python
+  rules_rust
+  rules_apps
+  rules_paru
+  rules_docker
+  rules_flatpak_user
+  rules_worktree_prune
+  rules_worktrees
+  rules_repo_output
+  rules_claude_jobs
+  rules_claude_transcripts
+  rules_claude_tmp
+  tmp_sweep /tmp "$TMP_AGE_OTHER"
+  tmp_sweep /var/tmp 0
+}
+
+# --- review collectors ----------------------------------------------------------------------------
+KNOWN_CACHE=(go-build goimports gopls pnpm node-gyp typescript uv pip mozilla google-chrome google-chrome-headless thunderbird paru thumbnails)
+collect_unknown_caches() {
+  local d n k known bytes
+  for d in "$HOME"/.cache/*; do
+    [[ -d $d ]] || continue
+    n=${d##*/}
+    known=0
+    for k in "${KNOWN_CACHE[@]}"; do [[ $n == "$k" ]] && known=1; done
+    [[ $n == golangci-* ]] && known=1
+    (( known )) && continue
+    bytes=$(size_of "$d")
+    (( bytes >= 500 * MIB )) && add_review cache "$d" "$bytes" "cache with no cleanup rule, touched $(ago "$(newest "$d")")"
+  done
+}
+
+STANDARD_HOME=(Desktop Documents Downloads Music Pictures Public Templates Videos Projects go)
+collect_home_dirs() {
+  local d n k std bytes
+  for d in "$HOME"/*/; do
+    d=${d%/}; n=${d##*/}
+    [[ $n == .* ]] && continue
+    std=0
+    for k in "${STANDARD_HOME[@]}"; do [[ $n == "$k" ]] && std=1; done
+    (( std )) && continue
+    kept "$d" && continue
+    bytes=$(size_of "$d")
+    (( bytes >= MIN_REVIEW )) && add_review home-dir "$d" "$bytes" "non-standard dir in ~, touched $(ago "$(newest "$d")")"
+  done
+}
+
+collect_large_files() {
+  local prune=() k bytes path mtime
+  for k in "${KEEP[@]}" "$HOME/.cache" "$HOME/.claude/jobs" "$HOME/go/pkg" "$HOME/.npm" "$HOME/.cargo" "$HOME/.rustup"; do
+    prune+=(-path "$k" -o)
+  done
+  prune+=(-name .git -o)   # repo history is never a deletion candidate
+  while IFS=$'\t' read -r bytes mtime path; do
+    under_review "$path" && continue
+    add_review large-file "$path" "$bytes" "large file, modified $(date -d "@${mtime%.*}" +%F)"
+  done < <(find "$HOME" -xdev \( "${prune[@]}" -false \) -prune -o -type f -size +$(( MIN_LARGE_FILE / MIB ))M \
+             -printf '%s\t%T@\t%p\n' 2>/dev/null)
+}
+
+collect_docker() {
+  have docker && docker info >/dev/null 2>&1 || return 0
+  local n bytes names
+  n=$(docker ps -aq -f status=exited -f status=created | wc -l)
+  (( n )) && add_review docker docker:stopped-containers 0 "$n stopped containers (docker container prune)"
+  bytes=$(docker system df --format '{{.Type}}\t{{.Reclaimable}}' | awk -F'\t' '$1 == "Images" {print $2}' | cut -d' ' -f1)
+  bytes=$(parse_size "$bytes")
+  (( bytes >= MIN_REVIEW )) && add_review docker docker:unused-images "$bytes" "images no container uses (docker image prune -a)"
+  names=$(docker system df -v --format '{{json .Volumes}}' 2>/dev/null |
+    jq -r '.[] | select(.Links == "0") | "\(.Size)\t\(.Name)"' 2>/dev/null)
+  [[ -n $names ]] || return 0
+  bytes=0
+  while IFS=$'\t' read -r s _; do bytes=$(( bytes + $(parse_size "$s") )); done <<< "$names"
+  n=$(wc -l <<< "$names")
+  names=$(cut -f2 <<< "$names" | grep -v '^[0-9a-f]\{64\}$' | head -5 | paste -sd, -)
+  add_review docker docker:unused-volumes "$bytes" "$n volumes no container uses (named: ${names:-none}) — may hold database data"
+}
+
+run_review() {
+  load_keep
+  collect_unknown_caches
+  collect_home_dirs
+  collect_docker
+  collect_large_files   # last: skips anything already listed
+}
+
+# --- system tier (root) ---------------------------------------------------------------------------
+sys_pacman() {
+  local pids out d bytes=0
+  if pids=$(pgrep -d, -x pacman) || [[ -e /var/lib/pacman/db.lck ]]; then
+    record 0 "skip:pacman running${pids:+ (pid $pids)}" pacman /var/cache/pacman/pkg
+    return
+  fi
+  local flag=-d; (( DRY )) || flag=-r
+  for args in "-k2" "-uk0"; do
+    out=$(paccache "$flag" $args 2>/dev/null | sed -nE 's/.*disk space saved: ([0-9.]+ [KMGT]?i?B).*/\1/p')
+    record "$(parse_size "$out")" free pacman "paccache $args"
+  done
+  for d in /var/cache/pacman/pkg/download-*; do
+    bytes=$(( bytes + $(size_of "$d") ))
+    (( DRY )) || rm -rf -- "$d"
+  done
+  record "$bytes" free pacman "interrupted downloads (download-*)"
+}
+
+sys_journal() {
+  local before after
+  before=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | head -1)
+  before=$(numfmt --from=iec "${before:-0}")
+  if (( DRY )); then
+    record $(( before > 500 * MIB ? before - 500 * MIB : 0 )) upto journal "vacuum to 500M / 4 weeks"
+    return
+  fi
+  journalctl --vacuum-size=500M --vacuum-time=4weeks >/dev/null 2>&1
+  after=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | head -1)
+  record $(( before - $(numfmt --from=iec "${after:-0}") )) free journal "vacuum to 500M / 4 weeks"
+}
+
+sys_coredumps() {
+  local f
+  while IFS= read -r f; do zap coredump "$f"; done < <(find /var/lib/systemd/coredump -type f -mtime +7 2>/dev/null)
+}
+
+sys_flatpak() {
+  have flatpak || return 0
+  if (( DRY )); then record 0 upto flatpak "uninstall --system --unused"; return; fi
+  shrink flatpak /var/lib/flatpak flatpak uninstall --system --unused -y --noninteractive
+}
+
+sys_snapper() {
+  have snapper || return 0
+  local cfg before after
+  for cfg in $(snapper --csvout list-configs 2>/dev/null | tail -n +2 | cut -d, -f1); do
+    before=$(snapper -c "$cfg" --csvout list 2>/dev/null | tail -n +3 | wc -l)
+    (( EUID == 0 )) || before="?"
+    if (( DRY )); then
+      record 0 upto snapper "$cfg: $before snapshots; cleanup number/timeline/empty-pre-post per /etc/snapper/configs/$cfg"
+      continue
+    fi
+    snapper -c "$cfg" cleanup number >/dev/null 2>&1
+    snapper -c "$cfg" cleanup timeline >/dev/null 2>&1
+    snapper -c "$cfg" cleanup empty-pre-post >/dev/null 2>&1
+    after=$(snapper -c "$cfg" --csvout list 2>/dev/null | tail -n +3 | wc -l)
+    record 0 free snapper "$cfg: $before -> $after snapshots"
+  done
+}
+
+# Balance only nearly empty data chunks, in rising steps, while allocated-but-unused data space is
+# above 10% of allocated. This returns slack to the unallocated pool (what metadata and new chunks
+# need); it does not change df's free figure, so it is reported apart from freed space.
+btrfs_slack() { btrfs filesystem df -b / 2>/dev/null | sed -nE 's/^Data, [^:]+: total=([0-9]+), used=([0-9]+)/\1 \2/p'; }
+sys_btrfs() {
+  have btrfs || return 0
+  [[ $(findmnt -no FSTYPE /) == btrfs ]] || return 0
+  local total used slack u
+  read -r total used < <(btrfs_slack)
+  slack=$(( total - used ))
+  if (( slack * 10 < total )); then record 0 "skip:data slack $(human "$slack") < 10%" btrfs "balance /"; return; fi
+  if (( DRY )); then record 0 upto btrfs "balance -dusage=10,25,50 / (data slack $(human "$slack"))"; return; fi
+  for u in 10 25 50; do
+    btrfs balance start -dusage=$u / >/dev/null 2>&1
+    read -r total used < <(btrfs_slack)
+    (( (total - used) * 10 < total )) && break
+  done
+  record 0 free btrfs "balance / : data slack $(human "$slack") -> $(human $(( total - used )))"
+}
+
+sys_tmpfiles() {
+  (( DRY )) && return 0
+  systemd-tmpfiles --clean >/dev/null 2>&1
+  record 0 free tmpfiles "systemd-tmpfiles --clean"
+}
+
+run_system_tier() {
+  sys_pacman
+  sys_journal
+  sys_coredumps
+  sys_flatpak
+  sys_snapper
+  sys_tmpfiles
+  sys_btrfs
+}
+
+# --- output ---------------------------------------------------------------------------------------
+# One line per (rule, status): total bytes, item count, largest target.
+print_results() {
+  local title=$1
+  echo "== $title"
+  if [[ ! -s $RESULTS ]]; then echo "  nothing to do"; return; fi
+  sort -t$'\t' -k3,3 -k2,2 -k1,1nr "$RESULTS" | awk -F'\t' -v dry="$DRY" '
+    { key = $3 SUBSEP $2
+      if (!(key in n)) { order[++k] = key; top[key] = $4 }
+      n[key]++; sum[key] += $1 }
+    END {
+      for (i = 1; i <= k; i++) {
+        key = order[i]; split(key, p, SUBSEP)
+        st = p[2]
+        if (st == "free") st = dry ? "would free" : "freed"
+        else if (st == "upto") st = "would free ≤"
+        else sub(/^skip:/, "skipped: ", st)
+        printf "%s\t%s\t%s\t%d\t%s\n", sum[key], p[1], st, n[key], top[key]
+      }
+    }' | sort -t$'\t' -k1,1nr -k2,2 | while IFS=$'\t' read -r bytes rule st count target; do
+      (( bytes > 0 && bytes < MIB )) && continue   # crumbs; last-run.tsv has them
+      (( count > 1 )) && target="$count items, largest: $target"
+      printf '  %9s  %-15s %-28s %s\n' "$(human "$bytes")" "$rule" "$st" "$target"
+    done
+  local total
+  total=$(awk -F'\t' '$2 == "free" || $2 == "upto" {t += $1} END {print t + 0}' "$RESULTS")
+  printf '  %9s  total %s (apparent size; btrfs compression makes the df change smaller)\n' "$(human "$total")" "$( (( DRY )) && echo "that would be freed" || echo freed)"
+}
+
+print_review() {
+  sort -t$'\t' -k2,2nr -k3,3 "$REVIEW" > "$WORK/review.sorted"
+  mkdir -p "$STATE_DIR"
+  cp "$WORK/review.sorted" "$REVIEW_FILE"
+  echo "== review: ask before removing (clean-disk remove PATH… | clean-disk keep PATH…)"
+  if [[ ! -s $REVIEW_FILE ]]; then echo "  nothing to review"; return; fi
+  local i=0 kind bytes path detail
+  while IFS=$'\t' read -r kind bytes path detail; do
+    i=$(( i + 1 ))
+    printf '  %2d. %9s  [%s] %s\n      %s\n' "$i" "$(human "$bytes")" "$kind" "$path" "$detail"
+  done < "$REVIEW_FILE"
+}
+
+df_line() { df -h --output=target,size,used,avail,pcent / /tmp 2>/dev/null | sed 's/^/  /'; }
+
+log_history() {
+  local total
+  total=$(awk -F'\t' '$2 == "free" {t += $1} END {print t + 0}' "$RESULTS")
+  mkdir -p "$STATE_DIR"
+  printf '%s\t%s\tfreed %s\t/ avail %s\n' "$(date -Is)" "$1" "$(human "$total")" \
+    "$(df -h --output=avail / | tail -1 | tr -d ' ')" >> "$HISTORY"
+  cp "$RESULTS" "$LAST_RUN"
+}
+
+# --- commands -------------------------------------------------------------------------------------
+lock() {
+  mkdir -p "$STATE_DIR"
+  exec 9> "$STATE_DIR/lock"
+  flock -n 9 || die "another clean-disk is running"
+}
+
+cmd_scan() {
+  DRY=1
+  snapshot_procs
+  load_keep
+  run_user_tier
+  print_results "user tier (dry run; clean-disk run)"
+  : > "$RESULTS"
+  echo
+  run_system_tier
+  print_results "system tier (dry run; needs: sudo $0 system)"
+  echo
+  run_review
+  print_review
+}
+
+cmd_run() {
+  DRY=0
+  echo "== disk before"; df_line
+  snapshot_procs
+  load_keep
+  run_user_tier
+  print_results "user tier"
+  log_history run
+  echo "== disk after"; df_line
+  echo
+  : > "$RESULTS"
+  DRY=1
+  snapshot_procs
+  run_review
+  print_review
+  echo
+  echo "== system tier: run 'sudo $0 system' (dry run: $0 system --dry-run)"
+}
+
+# The user tier contributes review rows (ended scratchpads, finished jobs, fresh /tmp entries),
+# so review runs it as a dry run and discards its results.
+cmd_review() {
+  DRY=1
+  snapshot_procs
+  load_keep
+  run_user_tier
+  run_review
+  print_review
+}
+
+cmd_system() {
+  DRY=0
+  [[ ${1:-} == --dry-run ]] && DRY=1
+  (( DRY || EUID == 0 )) || die "the system tier needs root: sudo $0 system"
+  (( DRY )) || { echo "== disk before"; df_line; }
+  snapshot_procs
+  run_system_tier
+  print_results "system tier$( (( DRY )) && echo ' (dry run)')"
+  (( DRY )) || { log_history system; echo "== disk after"; df_line; }
+}
+
+cmd_remove() {
+  local force=0 arg path row kind detail repo dirty bytes
+  [[ ${1:-} == --force ]] && { force=1; shift; }
+  (( $# )) || die "usage: clean-disk remove [--force] PATH…"
+  [[ -s $REVIEW_FILE ]] || die "no review on record; run: clean-disk review"
+  snapshot_procs
+  for arg; do
+    path=$arg
+    [[ $path == docker:* ]] || path=$(realpath -m -- "$arg")
+    row=$(awk -F'\t' -v p="$path" '$3 == p' "$REVIEW_FILE")
+    if [[ -z $row ]]; then echo "not in the last review, skipped: $path"; continue; fi
+    IFS=$'\t' read -r kind bytes _ detail <<< "$row"
+    case $kind in
+      info)
+        echo "informational only, skipped: $path"; continue ;;
+      docker)
+        case $path in
+          docker:stopped-containers) docker container prune -f >/dev/null ;;
+          docker:unused-images) docker image prune -af >/dev/null ;;
+          docker:unused-volumes) docker volume prune -af >/dev/null ;;
+        esac ;;
+      worktree)
+        if in_use "$path"; then echo "in use by a running process, skipped: $path"; continue; fi
+        dirty=$(git -C "$path" status --porcelain 2>/dev/null | wc -l)
+        if (( dirty && ! force )); then echo "worktree has $dirty uncommitted changes; rerun with --force to drop them: $path"; continue; fi
+        repo=$(git -C "$path" rev-parse --path-format=absolute --git-common-dir)
+        git -C "${repo%/.git}" worktree remove $( (( dirty )) && echo --force) -- "$path" || continue ;;
+      *)
+        if in_use "$path"; then echo "in use by a running process, skipped: $path"; continue; fi
+        rm -rf --one-file-system -- "$path" 2>/dev/null || { chmod -R u+w -- "$path"; rm -rf --one-file-system -- "$path"; }
+        [[ -e $path ]] && { echo "could not fully remove: $path"; continue; } ;;
+    esac
+    echo "removed $(human "$bytes")  $path"
+    printf '%s\tremove\t%s\t%s\n' "$(date -Is)" "$(human "$bytes")" "$path" >> "$HISTORY"
+    awk -F'\t' -v p="$path" '$3 != p' "$REVIEW_FILE" > "$WORK/r" && cat "$WORK/r" > "$REVIEW_FILE"
+  done
+}
+
+cmd_keep() {
+  (( $# )) || die "usage: clean-disk keep PATH…"
+  load_keep
+  local arg path
+  for arg; do
+    path=$arg
+    [[ $path == docker:* ]] || path=$(realpath -m -- "$arg")
+    kept "$path" && continue
+    echo "$path" >> "$KEEP_FILE"
+    echo "kept: $path"
+  done
+}
+
+main() {
+  local cmd=${1:-scan}
+  (( $# )) && shift
+  case $cmd in
+    scan) lock; cmd_scan ;;
+    run) lock; cmd_run ;;
+    review) lock; cmd_review ;;
+    remove) lock; cmd_remove "$@" ;;
+    keep) cmd_keep "$@" ;;
+    system) lock; cmd_system "$@" ;;
+    -h|--help|help) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" ;;
+    *) die "unknown command: $cmd (try --help)" ;;
+  esac
+}
+
+# sourced by the tests: functions only
+[[ ${BASH_SOURCE[0]} == "$0" ]] && main "$@"
