@@ -105,7 +105,8 @@ const SHELL_TOOLS = [
   "wl-clipboard",
   "xclip",
   "shellcheck",
-  "tea",
+  // the Gitea/Forgejo CLI, formerly tea; 1.0 renamed the package and its binary to gt
+  "gitea-cli",
 ];
 
 // jdk-openjdk is the current release (17+ for the Apex LSP, PMD and Code Analyzer)
@@ -588,7 +589,7 @@ export const arch: Distro = {
       "flatpak",
       "luarocks",
       "op",
-      "tea",
+      "gt",
       "htop",
       "cpupower",
       "task",
