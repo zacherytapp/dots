@@ -121,10 +121,7 @@
     "scope": "html"
   },
   "LWC template for:each": {
-    "body": [
-      "<template for:each={${1:array}} for:item='${2:item}'>",
-      "</template>"
-    ],
+    "body": ["<template for:each={${1:array}} for:item='${2:item}'>", "</template>"],
     "description": "Template for:each.",
     "prefix": ["templateForEach"],
     "scope": "html"
@@ -156,31 +153,19 @@
     "scope": "html"
   },
   "LWC lwc:if": {
-    "body": [
-      "<template lwc:if={${1:property}}>",
-      "\t$0",
-      "</template>"
-    ],
+    "body": ["<template lwc:if={${1:property}}>", "\t$0", "</template>"],
     "description": "Modern conditional rendering with lwc:if (replaces if:true)",
     "prefix": ["lwcIf", "lwc:if"],
     "scope": "html"
   },
   "LWC lwc:elseif": {
-    "body": [
-      "<template lwc:elseif={${1:property}}>",
-      "\t$0",
-      "</template>"
-    ],
+    "body": ["<template lwc:elseif={${1:property}}>", "\t$0", "</template>"],
     "description": "Modern conditional elseif directive",
     "prefix": ["lwcElseif", "lwc:elseif"],
     "scope": "html"
   },
   "LWC lwc:else": {
-    "body": [
-      "<template lwc:else>",
-      "\t$0",
-      "</template>"
-    ],
+    "body": ["<template lwc:else>", "\t$0", "</template>"],
     "description": "Modern conditional else directive",
     "prefix": ["lwcElse", "lwc:else"],
     "scope": "html"

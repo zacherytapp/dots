@@ -123,17 +123,13 @@
     "scope": "visualforce,html"
   },
   "VF OutputField": {
-    "body": [
-      "<apex:outputField value=\"{!${1:record}.${2:Field}}\"/>"
-    ],
+    "body": ["<apex:outputField value=\"{!${1:record}.${2:Field}}\"/>"],
     "description": "OutputField for display",
     "prefix": ["outputField", "vfOutput"],
     "scope": "visualforce,html"
   },
   "VF PageMessages": {
-    "body": [
-      "<apex:pageMessages id=\"${1:messages}\"/>"
-    ],
+    "body": ["<apex:pageMessages id=\"${1:messages}\"/>"],
     "description": "PageMessages for displaying errors/info",
     "prefix": ["pageMessages", "vfMessages"],
     "scope": "visualforce,html"
@@ -149,17 +145,13 @@
     "scope": "visualforce,html"
   },
   "VF Include Script": {
-    "body": [
-      "<apex:includeScript value=\"{!$Resource.${1:staticResourceName}}\"/>"
-    ],
+    "body": ["<apex:includeScript value=\"{!$Resource.${1:staticResourceName}}\"/>"],
     "description": "Include JavaScript from static resource",
     "prefix": ["includeScript", "vfScript"],
     "scope": "visualforce,html"
   },
   "VF Include Stylesheet": {
-    "body": [
-      "<apex:stylesheet value=\"{!$Resource.${1:staticResourceName}}\"/>"
-    ],
+    "body": ["<apex:stylesheet value=\"{!$Resource.${1:staticResourceName}}\"/>"],
     "description": "Include CSS from static resource",
     "prefix": ["includeStylesheet", "vfStylesheet"],
     "scope": "visualforce,html"
@@ -197,9 +189,7 @@
     "scope": "visualforce,html"
   },
   "VF RelatedList": {
-    "body": [
-      "<apex:relatedList list=\"${1:RelationshipName}\" subject=\"{!${2:recordId}}\"/>"
-    ],
+    "body": ["<apex:relatedList list=\"${1:RelationshipName}\" subject=\"{!${2:recordId}}\"/>"],
     "description": "apex:relatedList component",
     "prefix": ["relatedList", "vfRelatedList"],
     "scope": "visualforce,html"

@@ -118,9 +118,7 @@
     "scope": "javascript"
   },
   "LWC Import Custom Label": {
-    "body": [
-      "import ${1:labelName} from '@salesforce/label/${2:labelReference}';"
-    ],
+    "body": ["import ${1:labelName} from '@salesforce/label/${2:labelReference}';"],
     "description": "Import custom label.",
     "prefix": "importLabel",
     "scope": "javascript"
@@ -148,9 +146,7 @@
     "scope": "javascript"
   },
   "LWC Import Object": {
-    "body": [
-      "import ${1:objectName} from '@salesforce/schema/${2:objectApiName}';"
-    ],
+    "body": ["import ${1:objectName} from '@salesforce/schema/${2:objectApiName}';"],
     "description": "Import Object.",
     "prefix": "importObject",
     "scope": "javascript"
@@ -162,21 +158,13 @@
     "scope": "javascript"
   },
   "LWC Map": {
-    "body": [
-      "${1:array}.map((item, index) => {",
-      "\treturn {",
-      "\t\t$0",
-      "\t}",
-      "});"
-    ],
+    "body": ["${1:array}.map((item, index) => {", "\treturn {", "\t\t$0", "\t}", "});"],
     "description": "The map() method creates a new array populated with the results of calling a provided function on every element in the calling array.",
     "prefix": "map",
     "scope": "javascript"
   },
   "LWC Message Channel": {
-    "body": [
-      "import ${1:channelName} from '@salesforce/messageChannel/${2:channelReference}';"
-    ],
+    "body": ["import ${1:channelName} from '@salesforce/messageChannel/${2:channelReference}';"],
     "description": "Import message channel.",
     "prefix": "importMessageChannel",
     "scope": "javascript"
@@ -247,9 +235,7 @@
     "scope": "javascript"
   },
   "LWC Static Resource": {
-    "body": [
-      "import ${1:resourceName} from '@salesforce/resourceUrl/${2:resourceName}';"
-    ],
+    "body": ["import ${1:resourceName} from '@salesforce/resourceUrl/${2:resourceName}';"],
     "description": "Import static resource.",
     "prefix": "importStaticResource",
     "scope": "javascript"
@@ -284,10 +270,7 @@
     "scope": "javascript"
   },
   "LWC Wire Property": {
-    "body": [
-      "@wire(${1:apexMethodName}, { apexMethodParams })",
-      "${5:property};"
-    ],
+    "body": ["@wire(${1:apexMethodName}, { apexMethodParams })", "${5:property};"],
     "description": "wireProperty.",
     "prefix": "wireProperty",
     "scope": "javascript"
@@ -317,11 +300,7 @@
     "scope": "javascript"
   },
   "LWC connectedCallback": {
-    "body": [
-      "connectedCallback() {",
-      "\t$0",
-      "}"
-    ],
+    "body": ["connectedCallback() {", "\t$0", "}"],
     "description": "Simple connectedCallback lifecycle hook",
     "prefix": ["connected", "connectedCallback"],
     "scope": "javascript"

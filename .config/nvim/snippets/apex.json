@@ -98,19 +98,13 @@
     "scope": "apex,apex-anon"
   },
   "Assert Are Equals": {
-    "body": [
-      "Assert.areEqual(${1:expected}, ${2:actual}, ${3:message});",
-      "$0"
-    ],
+    "body": ["Assert.areEqual(${1:expected}, ${2:actual}, ${3:message});", "$0"],
     "description": "Assert equals condition in a test",
     "prefix": ["assertAreEqual", "Assert.areEqual", "aae"],
     "scope": "apex,apex-anon"
   },
   "Assert Are Not Equals": {
-    "body": [
-      "Assert.areNotEqual(${1:expected}, ${2:actual}, ${3:message});",
-      "$0"
-    ],
+    "body": ["Assert.areNotEqual(${1:expected}, ${2:actual}, ${3:message});", "$0"],
     "description": "Assert not equals condition in a test",
     "prefix": ["assertAreNotEqual", "Assert.areNotEqual", "aane"],
     "scope": "apex,apex-anon"
@@ -128,10 +122,7 @@
     "scope": "apex,apex-anon"
   },
   "Assert Is Instance of type": {
-    "body": [
-      "Assert.isInstanceOfType(${1:ObjectInstance}, ${2:SystemType}, ${3:message});",
-      "$0"
-    ],
+    "body": ["Assert.isInstanceOfType(${1:ObjectInstance}, ${2:SystemType}, ${3:message});", "$0"],
     "description": "Asserts that the instance is of the specified type",
     "prefix": ["assertIsInstanceOfType", "Assert.isInstanceOfType", "aii"],
     "scope": "apex,apex-anon"
@@ -142,11 +133,7 @@
       "$0"
     ],
     "description": "Asserts that the instance isn’t of the specified type",
-    "prefix": [
-      "assertIsNotInstanceOfType",
-      "Assert.isNotInstanceOfType",
-      "aini"
-    ],
+    "prefix": ["assertIsNotInstanceOfType", "Assert.isNotInstanceOfType", "aini"],
     "scope": "apex,apex-anon"
   },
   "Assert Is Not Null": {
@@ -168,9 +155,7 @@
     "scope": "apex,apex-anon"
   },
   "Database Count Query": {
-    "body": [
-      "Integer ${1:recordsAmount} = Database.countQuery(${2:queryString})$0"
-    ],
+    "body": ["Integer ${1:recordsAmount} = Database.countQuery(${2:queryString})$0"],
     "description": "eturns the number of records that a dynamic SOQL query.",
     "prefix": ["Database.countQuery"],
     "scope": "apex,apex-anon"
@@ -313,17 +298,13 @@
     "scope": "apex,apex-anon"
   },
   "JSON Serialize": {
-    "body": [
-      "String ${1:serializedResult} = JSON.serialize(${2:objectToSerialize});$0"
-    ],
+    "body": ["String ${1:serializedResult} = JSON.serialize(${2:objectToSerialize});$0"],
     "description": "Serializes Apex objects into JSON content.",
     "prefix": ["JSON.serialize"],
     "scope": "apex,apex-anon"
   },
   "JSON Serialize Pretty": {
-    "body": [
-      "String ${1:serializedResult} = JSON.serializePretty(${2:objectToSerialize});$0"
-    ],
+    "body": ["String ${1:serializedResult} = JSON.serializePretty(${2:objectToSerialize});$0"],
     "description": "Serializes Apex objects into JSON content.",
     "prefix": ["JSON.serializePretty"],
     "scope": "apex,apex-anon"
@@ -345,9 +326,7 @@
     "scope": "apex,apex-anon"
   },
   "New List": {
-    "body": [
-      "List<${1:ElementType}> ${2:newListName} = new List<${1:ElementType}>();$0"
-    ],
+    "body": ["List<${1:ElementType}> ${2:newListName} = new List<${1:ElementType}>();$0"],
     "description": "Construct a new list and assign to a local variable",
     "prefix": ["list", "nl"],
     "scope": "apex,apex-anon"
@@ -361,25 +340,19 @@
     "scope": "apex,apex-anon"
   },
   "New Map from list of records": {
-    "body": [
-      "Map<Id, ${1:SObject}> ${2:mapName} = new Map<Id, ${1}>(${3:recordList});"
-    ],
+    "body": ["Map<Id, ${1:SObject}> ${2:mapName} = new Map<Id, ${1}>(${3:recordList});"],
     "description": "Create map from list of records",
     "prefix": ["mapFromList", "nmfl"],
     "scope": "apex,apex-anon"
   },
   "New Set": {
-    "body": [
-      "Set<${1:ElementType}> ${2:newSetName} = new Set<${1:ElementType}>();$0"
-    ],
+    "body": ["Set<${1:ElementType}> ${2:newSetName} = new Set<${1:ElementType}>();$0"],
     "description": "Construct a new map and assign to a local variable",
     "prefix": ["set", "ns"],
     "scope": "apex,apex-anon"
   },
   "New Set of Ids from list of records": {
-    "body": [
-      "Set<Id> ${1:setName} = new Map<Id, ${2:SObjectType}>(${3:recordList}).keySet();"
-    ],
+    "body": ["Set<Id> ${1:setName} = new Map<Id, ${2:SObjectType}>(${3:recordList}).keySet();"],
     "description": "Create set of Ids from list of records",
     "prefix": ["setOfIds", "nsfl"],
     "scope": "apex,apex-anon"
@@ -486,9 +459,7 @@
     "scope": "apex,apex-anon"
   },
   "String join": {
-    "body": [
-      "String result = String.join(${1:iterableObj}, '${2:separator}');"
-    ],
+    "body": ["String result = String.join(${1:iterableObj}, '${2:separator}');"],
     "description": "String.join",
     "prefix": ["String.join"],
     "scope": "apex,apex-anon"
@@ -524,9 +495,7 @@
     "scope": "apex,apex-anon"
   },
   "System Assert Not Equals": {
-    "body": [
-      "System.assertNotEquals(${1:expected}, ${2:actual}, ${3:message});"
-    ],
+    "body": ["System.assertNotEquals(${1:expected}, ${2:actual}, ${3:message});"],
     "description": "Assert that a value is not an expected value in a unit test",
     "prefix": ["SystemAssertNotEquals", "sane"],
     "scope": "apex,apex-anon"
@@ -590,9 +559,7 @@
     "scope": "apex,apex-anon"
   },
   "Test.calculatePermissionSetGroups": {
-    "body": [
-      "Test.calculatePermissionSetGroup(${1:listOfPermissionSetGroupsIds});"
-    ],
+    "body": ["Test.calculatePermissionSetGroup(${1:listOfPermissionSetGroupsIds});"],
     "description": "Test.calculatePermissionSetGroups",
     "prefix": ["Test.calculatePermissionSetGroups"],
     "scope": "apex,apex-anon"
@@ -642,9 +609,7 @@
     "scope": "apex,apex-anon"
   },
   "Test.setMock": {
-    "body": [
-      "Test.setMock(HttpCalloutMock.class, new ${1:YourHttpCalloutMockImplementation}());"
-    ],
+    "body": ["Test.setMock(HttpCalloutMock.class, new ${1:YourHttpCalloutMockImplementation}());"],
     "description": "Test.setMock",
     "prefix": ["Test.setMock"],
     "scope": "apex,apex-anon"
@@ -680,15 +645,7 @@
     "scope": "apex,apex-anon"
   },
   "Try Catch Finally": {
-    "body": [
-      "try {",
-      "\t$0",
-      "} catch (${1:exceptionType}) {",
-      "\t",
-      "} finally {",
-      "\t",
-      "}"
-    ],
+    "body": ["try {", "\t$0", "} catch (${1:exceptionType}) {", "\t", "} finally {", "\t", "}"],
     "description": "Try Catch statement.",
     "prefix": ["tryCatchFinally", "tcf"],
     "scope": "apex,apex-anon"
