@@ -12,7 +12,7 @@ Merge the selected PR autonomously. Never create a PR, bypass repository protect
 ## Select and inspect
 
 1. Resolve the target from an explicit PR argument, then session context, then the current branch. Never silently choose the first PR in a list.
-2. Identify the provider from the target URL or its base-repository remote, not CLI precedence. Match that host to `gh auth status --hostname <host>` or `tea logins list -o json`; stop if unsupported or unauthenticated.
+2. Identify the provider from the target URL or its base-repository remote, not CLI precedence. Match that host to `gh auth status --hostname <host>` or `gt auth status --host <host> --json host,user,credential_available`; stop if unsupported or unauthenticated.
 3. Record the PR URL, base repository/default branch/ref, head repository/ref, and head SHA; compare those identities with `git remote -v`. If the checkout matches neither repository, operate remotely and skip local cleanup.
 4. Inspect `git status --short` and `git worktree list --porcelain`. Leave unrelated changes and all worktrees untouched.
 
@@ -23,10 +23,11 @@ gh pr view "$PR" --json number,title,url,body,state,isDraft,baseRefName,headRefN
 gh pr checks "$PR"
 ```
 
-Forgejo/Gitea:
+Forgejo/Gitea (`gt`, the Gitea CLI, formerly `tea`):
 
 ```bash
-tea pr "$PR" --repo "$BASE_REPO" --fields index,title,url,state,body,mergeable,base,base-commit,head,comments,ci --comments --output json
+gt pr view "$PR" --repo "$BASE_REPO" --json number,title,url,state,draft,body,mergeable,base,head,head_repo,head_sha,review_decision,reviews,comments
+gt pr checks "$PR" --repo "$BASE_REPO"
 ```
 
 ## Validate and merge
@@ -41,7 +42,7 @@ Choose the merge method from project docs, then PR history, then the host defaul
 gh pr merge "$PR" --squash --match-head-commit "$HEAD_SHA" # or --merge/--rebase per convention
 ```
 
-For Forgejo/Gitea, recheck the head immediately before `tea pr merge`. Wait for any merge queue and confirm the merged state and resulting commit before cleanup.
+For Forgejo/Gitea, recheck the head immediately before `gt pr merge`, which has no head-SHA guard. Wait for any merge queue and confirm the merged state and resulting commit before cleanup.
 
 ## Clean up
 

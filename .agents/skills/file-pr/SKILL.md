@@ -16,7 +16,7 @@ Package committed work into a pull request that is easy to understand, review, a
 - Review the full diff and confirm the branch contains only the intended work.
 - Rebase or merge the current base according to project convention. Ask before rewriting shared history.
 - Squash fixup commits. Prefer a compact history; retain separate logical commits only when the project benefits from them.
-- Determine the host from the remote and project context: use `gh` for GitHub and `tea` for Forgejo/Gitea. Ask if ambiguous.
+- Determine the host from the remote and project context: use `gh` for GitHub and `gt` (the Gitea CLI, formerly `tea`) for Forgejo/Gitea. Ask if ambiguous.
 
 ## 2. Write the Title
 
@@ -82,12 +82,12 @@ Resolve the writable head remote separately from the base remote. Push with `git
 # GitHub
 gh pr create --base "$base" --head "$branch" --title "$title" --body-file "$body_file"
 
-# Forgejo or Gitea
-tea pulls create --remote <base-or-provider-remote> --base "$base" --head "$branch" \
-  --title "$title" --description "$(cat "$body_file")"
+# Forgejo or Gitea; --yes skips gt's confirmations, --json url prints the new PR's URL
+gt pr create --remote <base-or-provider-remote> --base "$base" --head "$branch" \
+  --title "$title" --body-file "$body_file" --yes --json url
 ```
 
-Always use `tea pulls create` for Forgejo/Gitea; never use `gh` or a browser fallback. Capture the pull request URL.
+Always use `gt pr create` for Forgejo/Gitea; never use `gh` or a browser fallback. Capture the pull request URL.
 
 ## 6. Make Review Easier
 
