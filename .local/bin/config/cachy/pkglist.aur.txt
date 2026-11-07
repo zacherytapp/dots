@@ -1,6 +1,11 @@
 1password
+1password-cli
+bluebubbles-bin
+burpsuite
 google-chrome
+hyprwhspr
 slack-desktop
 spotify
+ttf-ms-fonts
 visual-studio-code-bin
 zoom

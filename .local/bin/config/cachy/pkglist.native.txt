@@ -62,6 +62,7 @@ dnsmasq
 docker
 docker-buildx
 docker-compose
+doctl
 dolphin
 dosfstools
 duf
@@ -83,12 +84,14 @@ foomatic-db-nonfree
 foomatic-db-nonfree-ppds
 foomatic-db-ppds
 fsarchiver
+fuse2
 ghostscript
 ghostty
 gimp
 git
 git-delta
 github-cli
+gitleaks
 glances
 go
 gpu-screen-recorder
@@ -100,6 +103,7 @@ gst-plugins-bad
 gst-plugins-ugly
 gutenprint
 hdparm
+htop
 hwdetect
 hwinfo
 hyprland
@@ -109,6 +113,7 @@ intel-media-driver
 intel-ucode
 iwd
 jdk-openjdk
+jdk21-openjdk
 jfsutils
 kitty
 lazydocker
@@ -158,9 +163,11 @@ networkmanager-openvpn
 nfs-utils
 nilfs-utils
 noctalia-greeter
+nodejs-lts-krypton
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
+npm
 nss-mdns
 nvidia-prime
 nvidia-settings
@@ -183,6 +190,7 @@ pkgfile
 playerctl
 plocate
 plymouth
+podman
 poppler-glib
 power-profiles-daemon
 protonup-qt
@@ -202,6 +210,7 @@ rsync
 ruby
 s-nail
 sg3_utils
+shellcheck
 shelly
 smartmontools
 snapper
@@ -234,10 +243,13 @@ vlc-plugins-all
 vpl-gpu-rt
 vulkan-icd-loader
 vulkan-intel
+webkitgtk-6.0
 wget
 which
+winboat
 wireplumber
 wpa_supplicant
 xdg-user-dirs
 xfsprogs
 xl2tpd
+zen-browser-bin
