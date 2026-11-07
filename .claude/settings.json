@@ -153,6 +153,21 @@
             "type": "command",
             "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/git-guard.ts",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sf-cli-guard.ts",
+            "timeout": 75
+          }
+        ]
+      },
+      {
+        "matcher": "^(Bash|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/soql-guard.ts",
+            "timeout": 10
           }
         ]
       },
@@ -184,6 +199,16 @@
             "type": "command",
             "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/prompt-injection-guard.ts",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^(Write|Edit|MultiEdit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/apex-quality.ts",
+            "timeout": 75
           }
         ]
       },
@@ -221,6 +246,11 @@
       },
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sf-stop-check.ts",
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
