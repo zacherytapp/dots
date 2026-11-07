@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Function to select a pane with a given title
 select_pane_with_title() {
@@ -12,7 +12,7 @@ select_pane_with_title() {
         tmux select-pane -t "$pane_id"
         echo "Selected pane with title: $pane_id"
     else
-        echo "No pane found with title: $pane_id"
+        echo "No pane found with title: $pane_title"
     fi
 }
 

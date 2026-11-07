@@ -22,14 +22,11 @@ for window_name in "${window_names[@]}" ; do
 
 done
 
-# Check if there are any windows with the given name in the current session
-matching_window=$(tmux list-windows -t "$session_name" -F '#W' | grep "^$window_name$")
-
 # Check if the current directory contains a Golang project
 if [ -f "go.mod" ] && pgrep tmux > /dev/null; then
   # Rename a new tmux session named 'golang'
   current_session=$(tmux display-message -p '#S')
-  tmux rename-session -t "$current_session" "goloang"
+  tmux rename-session -t "$current_session" "golang"
 
   tmux rename-window "editor"
 
