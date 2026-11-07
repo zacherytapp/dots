@@ -17,7 +17,7 @@ Use the `sf` CLI, pass `--target-org <alias>` on every org command, and request 
 
 ## 1. Confirm the org
 
-After `implement`'s setup, confirm the target with `sf config get target-org --json`, `sf org list --json`, and `sf org display --target-org <alias> --json`. State its alias, username, and type. Develop and deploy only in a confirmed scratch org or sandbox; production and the Dev Hub are stop conditions. If no allowed org exists, use `sf-org-manage` after confirming the Dev Hub. Assign only required permission sets.
+After `implement`'s setup, confirm the target with `sf config get target-org --json`, `sf org list --json`, and `sf org display --target-org <alias> --json`. State its alias, username, and type. Develop and deploy only in a confirmed scratch org or sandbox; production and the Dev Hub are stop conditions. If no allowed org exists, follow [sf-org-manage](../sf-org-manage/SKILL.md) after confirming the Dev Hub. Assign only required permission sets.
 
 ## 2. Reconcile inside the worktree
 

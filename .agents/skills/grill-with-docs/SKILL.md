@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Workflow: **`grill-with-docs`** → `to-spec` → `to-tickets` → `implement`.
 
-Run the `grilling` skill. While it runs, also build the domain model as below. When the user confirms shared understanding, summarize the decisions and suggest `to-spec`.
+Read and follow [grilling](../grilling/SKILL.md). While it runs, also build the domain model as below. When the user confirms shared understanding, summarize the decisions and suggest `to-spec`.
 
 ## Docs layout
 

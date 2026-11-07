@@ -17,7 +17,7 @@ State alias, username, and type before acting. Production and Dev Hub targets ar
 
 ## Create a scratch org
 
-Use `sf-org-manage` after confirming the Dev Hub. Creation sources are mutually exclusive:
+Follow [sf-org-manage](../sf-org-manage/SKILL.md) after confirming the Dev Hub. Creation sources are mutually exclusive:
 
 | Source          | Flag                              |
 | --------------- | --------------------------------- |
