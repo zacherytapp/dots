@@ -1,5 +1,10 @@
 {
   "packages": [
     "npm:@plannotator/pi-extension"
-  ]
+  ],
+  "lastChangelogVersion": "1.5.0",
+  "theme": "dark",
+  "deviceId": "5d7880b1-d817-4559-81cc-15545de390e5",
+  "defaultProvider": "openai",
+  "defaultModel": "gpt-6.1-sol"
 }
