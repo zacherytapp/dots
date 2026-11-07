@@ -48,11 +48,21 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/hook-doctor.ts\" || echo '{\"systemMessage\":\"hook-doctor: node could not run the Claude Code hooks (not on PATH, or a Node.js without built-in TypeScript support; 24.2+ is needed). bash-guard, secret-guard and the other guards are NOT running this session.\"}'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "^(startup|resume|clear|compact|fork)$",
         "hooks": [
           {
             "type": "command",
-            "command": "bash '/home/zakk/.claude/hooks/herdr-agent-state.sh' session",
+            "command": "bash \"$HOME/.claude/hooks/herdr-agent-state.sh\" session || true",
             "timeout": 10
           }
         ]
@@ -76,6 +86,24 @@
             "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/pulse.py turn_start 2>/dev/null || true"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/secret-guard.ts",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -89,12 +117,52 @@
         ]
       },
       {
+        "matcher": "^Write$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/organize-guard.ts",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/bash-guard.ts",
+            "timeout": 15
+          }
+        ]
+      },
+      {
         "matcher": "^(Bash|Write|Edit|NotebookEdit)$",
         "hooks": [
           {
             "type": "command",
             "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/consent.py 2>/dev/null || true",
             "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/git-guard.ts",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^(Write|Edit|MultiEdit|NotebookEdit|Bash|WebFetch|WebSearch|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
+            "timeout": 10
           }
         ]
       }
@@ -106,6 +174,26 @@
           {
             "type": "command",
             "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/pulse.py turn_start 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "^(Read|WebFetch|WebSearch|Bash|Grep|Agent|Task|Workflow|ReadMcpResourceTool|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/prompt-injection-guard.ts",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^(Read|Bash|Grep|Glob|WebFetch|WebSearch|Agent|Task|Workflow|ReadMcpResourceTool|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
+            "timeout": 10
           }
         ]
       }
@@ -130,6 +218,15 @@
             "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/pulse.py turn_end 2>/dev/null || true"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -139,6 +236,17 @@
           {
             "type": "command",
             "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/pulse.py session_end 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/sensitive-data-guard.ts",
+            "timeout": 10
           }
         ]
       }
