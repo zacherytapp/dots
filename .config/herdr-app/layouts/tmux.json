@@ -1,0 +1,247 @@
+{
+  "id": "root",
+  "cloned_from": {
+    "name": "main",
+    "version": "0.1.13"
+  },
+  "type": "column",
+  "background": "canvas",
+  "terminal_padding": [6, 8],
+  "titlebar": "none",
+  "traffic_lights": [12, 14],
+  "children": [
+    {
+      "id": "topbar",
+      "type": "row",
+      "size": {
+        "px": 42
+      },
+      "resizable": false,
+      "background": "chrome",
+      "children": [
+        {
+          "id": "tabs",
+          "type": "block",
+          "window_drag": true,
+          "content": {
+            "mod": "mc-tabs",
+            "props": {
+              "view": "topbar"
+            }
+          }
+        },
+        {
+          "id": "tmux-status",
+          "type": "block",
+          "size": {
+            "px": 300
+          },
+          "window_drag": true,
+          "content": {
+            "mod": "tmux-status"
+          }
+        }
+      ]
+    },
+    {
+      "id": "body",
+      "type": "row",
+      "divider": {
+        "width": 1,
+        "color": "border"
+      },
+      "children": [
+        {
+          "id": "sidebar",
+          "type": "column",
+          "size": {
+            "px": 268
+          },
+          "min": 44,
+          "max": 480,
+          "background": "chrome",
+          "resizable": false,
+          "children": [
+            {
+              "id": "sidebar-lists",
+              "type": "column",
+              "resizable": false,
+              "children": [
+                {
+                  "id": "mc-spaces",
+                  "type": "block",
+                  "size": {
+                    "px": 220
+                  },
+                  "min": 34,
+                  "content": {
+                    "mod": "mc-spaces"
+                  }
+                },
+                {
+                  "id": "mc-agents",
+                  "type": "block",
+                  "size": {
+                    "weight": 1
+                  },
+                  "min": 34,
+                  "content": {
+                    "mod": "mc-agents"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "sidebar-footer",
+              "type": "block",
+              "content": {
+                "mod": "workspace-chrome",
+                "props": {
+                  "footer": true
+                }
+              },
+              "size": {
+                "px": 69
+              }
+            }
+          ]
+        },
+        {
+          "id": "work",
+          "type": "column",
+          "resizable": false,
+          "children": [
+            {
+              "id": "main",
+              "type": "block",
+              "content": {
+                "tab": "active",
+                "pane": {
+                  "gap": 1,
+                  "radius": 0,
+                  "background": "background",
+                  "lone": false,
+                  "border": {
+                    "width": 0,
+                    "color": "border"
+                  },
+                  "focus": {
+                    "width": 1,
+                    "color": "accent"
+                  },
+                  "header": {
+                    "content": {
+                      "mod": "pane"
+                    },
+                    "height": 24,
+                    "position": "bottom",
+                    "reveal": "always"
+                  }
+                }
+              }
+            },
+            {
+              "id": "status",
+              "type": "block",
+              "content": {
+                "mod": "workspace-status"
+              },
+              "size": {
+                "px": 28
+              },
+              "hidden": true
+            }
+          ]
+        },
+        {
+          "id": "panel",
+          "type": "column",
+          "size": {
+            "px": 460
+          },
+          "min": 300,
+          "max": 1600,
+          "hidden": true,
+          "children": [
+            {
+              "id": "panel-nav",
+              "type": "block",
+              "size": {
+                "px": 36
+              },
+              "content": {
+                "mod": "mc-tabs",
+                "props": {
+                  "view": "navigation"
+                }
+              }
+            },
+            {
+              "id": "panel-body",
+              "type": "stack",
+              "active": "files",
+              "children": [
+                {
+                  "id": "files",
+                  "type": "block",
+                  "content": {
+                    "mod": "files"
+                  }
+                },
+                {
+                  "id": "changes",
+                  "type": "block",
+                  "content": {
+                    "mod": "changes"
+                  }
+                },
+                {
+                  "id": "issues",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-github-issues"
+                  }
+                },
+                {
+                  "id": "pulls",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-pulls"
+                  }
+                },
+                {
+                  "id": "branches",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-branches"
+                  }
+                },
+                {
+                  "id": "forgejo",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-forgejo"
+                  }
+                },
+                {
+                  "id": "jira",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-jira"
+                  }
+                },
+                {
+                  "id": "sessions",
+                  "type": "block",
+                  "content": {
+                    "mod": "mc-sessions"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

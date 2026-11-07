@@ -1,0 +1,5 @@
+{
+  "place": "none",
+  "title": "sessionizer-ref",
+  "overlay": { "kind": "popup", "frame": "none", "width": 1, "height": 1 }
+}

@@ -1,0 +1,60 @@
+{
+  "agent": {
+    "argv": ["claude"],
+    "resume": ["claude", "--resume"]
+  },
+  "issueActions": [
+    {
+      "label": "Review issue",
+      "skill": "review-issue"
+    },
+    {
+      "label": "Implement",
+      "skill": "implement"
+    },
+    {
+      "label": "Review code",
+      "skill": "review-code"
+    }
+  ],
+  "agents": {
+    "claude": {
+      "argv": ["claude"],
+      "skill": "/{skill}"
+    },
+    "opencode": {
+      "argv": ["opencode"],
+      "skill": "/{skill}"
+    },
+    "pi": {
+      "argv": ["pi"],
+      "skill": "/skill:{skill}"
+    }
+  },
+  "github": {
+    "closedDays": 14,
+    "limit": 50
+  },
+  "forgejo": {
+    "url": "https://forgejo.abyssus.me",
+    "sshHosts": [],
+    "tokenEnv": "FORGEJO_TOKEN",
+    "tokenCommand": null,
+    "closedDays": 14,
+    "limit": 50
+  },
+  "jira": {
+    "site": "",
+    "auth": "basic",
+    "email": "",
+    "tokenEnv": "JIRA_API_TOKEN",
+    "tokenCommand": null,
+    "jql": "assignee = currentUser() AND (statusCategory != Done OR resolved >= -14d) ORDER BY updated DESC",
+    "projects": {},
+    "limit": 50
+  },
+  "sessions": {
+    "days": 30,
+    "limit": 80
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "place": "none",
+  "title": "goto-deploy",
+  "overlay": { "kind": "popup", "frame": "none", "width": 1, "height": 1 }
+}
