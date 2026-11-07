@@ -1,38 +1,46 @@
 ---
 name: review-issue
-description: Reviews issues and specs for necessity, accuracy, design quality, and implementation readiness. Use when one or more work items need adversarial readiness review.
+description: Reviews specs, tickets, and issues for necessity, accuracy, sizing, blocking edges, and implementation readiness against the shared spec and ticket templates. Use when work items need an adversarial readiness review before implementation.
 disable-model-invocation: true
 ---
 
 # Review Issues and Specs
 
+Workflow: `to-spec` / `to-tickets` → **`review-issue`** → `implement`.
+
 ## Goal
 
-Determine whether each work item is needed, consistent with the current project, and implementable without guessing. This is requirements and design review, not PR code review; do not invoke `review-code` or create a PR findings ledger. The goal is to review the issue along the definitions outlined in the project and the items outlined below. The project goals/standards should always supercede what is specified below.
+Decide whether each work item is needed, consistent with the current project, and implementable without guessing. This is requirements and design review, not code review: don't invoke `review-code` or create a PR findings ledger. Project goals and standards supersede this skill.
 
 Apply [design-standards.md](design-standards.md) and project conventions. Recommend closing unnecessary work, but close issues or delete source files only with explicit approval.
 
-The issue should be clear (with examples) around types, boundaries, abstractions and the general call stack. These should all be defined explicitly in the issue. Anything that's created or modified related to this should be called out.
-
 ## Workflow
 
-1. **Locate the source material.** Read the issue or spec, linked documents, durable decisions from comments, and referenced files.
-2. **Resolve the comparison point.** Use the ticket's target, configured default branch, relevant stacked base, or merge base. Do not assume `main`.
-3. **Compare against the project.** Read relevant architecture, ADRs, conventions, domain docs, existing behavior, related issues, and in-flight work. Establish whether the request already exists or conflicts with another source of truth.
-4. **Review readiness.** Check scope and non-goals, architecture, terminology, data/UI/API/security impacts, acceptance criteria, edge and failure states, tests, rollout, dependencies, and vertical sequencing.
-5. **Resolve ambiguity.** Research answers available from code and docs. If an important product or domain decision remains, use `grill-with-docs` and keep unsettled choices out of the ready specification.
-6. **Prepare source-of-truth changes.** By default, provide exact replacement text or a structured patch. Edit an issue body or spec directly only when the user asked for updates or has otherwise explicitly authorized them. Keep the work item self-contained rather than leaving durable decisions only in review comments.
+1. **Locate the source material.** The spec and its tickets, from the tracker or `docs/specs/<feature-slug>/`, plus linked documents, durable decisions in comments, and referenced files.
+2. **Resolve the comparison point.** Use the ticket's target, the configured default branch, a stacked base, or the merge base. Don't assume a branch name.
+3. **Compare against the project.** Read the relevant architecture, ADRs, glossary, conventions, existing behavior, related issues, and in-flight work. Establish whether the request already exists or conflicts with another source of truth.
+4. **Review readiness** using the checks below.
+5. **Resolve ambiguity.** Research what code and docs can answer. If a product or domain decision remains, use `grill-with-docs`, and keep unsettled choices under the spec's Open questions rather than in ready tickets.
+6. **Prepare source-of-truth changes.** By default, give exact replacement text or a structured patch. Edit an issue or file directly only when the user asked for updates or otherwise authorized them. Keep each work item self-contained; don't leave durable decisions only in review comments.
 
-Use additional agents only when the harness supports them and review areas are independent. Otherwise evaluate each area sequentially in the current agent.
+Use additional agents only when the harness supports them and the review areas are independent; otherwise review each area sequentially.
+
+## Readiness checks
+
+- **Spec** follows [SPEC_TEMPLATE.md](../to-spec/SPEC_TEMPLATE.md): every section present, user stories cover all actors and failure flows, decisions settled rather than assumed, glossary terms used, no volatile file paths, and testing limited to the minimum behaviors at one seam.
+- **Tickets** follow [TICKET_TEMPLATE.md](../to-tickets/TICKET_TEMPLATE.md) and stand alone: exact paths, symbols, and verified commands; concrete acceptance criteria; and a **Tests** list no bigger than the criteria need.
+- **Sizing:** tickets are as large as one agent session allows. Flag tickets to merge (too small, one layer only, or only tests, docs, or cleanup) and tickets to split (beyond one session).
+- **Blocking:** every ticket states **Blocked by** and **Blocks**; each edge is a real dependency on merged output, with its reason; there are no cycles; and at least one ticket can start now.
+- **Coverage:** together the tickets deliver every user story and acceptance criterion in the spec, and nothing outside it.
 
 ## Output
 
 For each item report:
 
 - **Verdict:** Ready / Ready after proposed edits / Blocked by decisions / Unnecessary
-- **Evidence:** current code, docs, decisions, and related work checked
-- **Proposed updates:** exact source changes, or changes applied with authorization
-- **Key fixes:** the most important scope, design, acceptance, or sequencing corrections
+- **Evidence:** the code, docs, decisions, and related work checked; screenshots or videos where they help the user review
+- **Proposed updates:** exact source changes, or the changes applied with authorization
+- **Key fixes:** the most important scope, design, sizing, blocking, or acceptance corrections
 - **Remaining questions:** only unresolved decisions that block implementation
 
-Do not represent repository labels as provider approval states. If suggesting a readiness label, first verify that the repository defines it or use the configured equivalent.
+Don't present repository labels as provider approval states. Before suggesting a readiness label, confirm the repository defines it or use its configured equivalent.

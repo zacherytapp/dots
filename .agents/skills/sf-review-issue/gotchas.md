@@ -7,7 +7,7 @@ Salesforce fails at runtime in ways a generic ticket never anticipates. For each
 Trigger/handler/service code runs on batches up to 200; anything that assumes one record breaks in bulk.
 
 - **No SOQL/DML in loops.** Collect Ids into a `Set<Id>`, query once `WHERE Id IN :ids`, build a `Map<Id, SObject>`, DML once on a list.
-- If the change adds a query or DML to a per-record path, require the bulk-safe shape — and a **200-record** test to prove it.
+- If the change adds a query or DML to a per-record path, require the bulk-safe shape and a bulk test sized to the limit at risk (for example, 200 records through a trigger with a per-record query against the 100-query limit). Don't require 200 records when a smaller cardinality proves the boundary.
 
 ## Governor limits — name the one at risk
 
@@ -45,10 +45,10 @@ Per sync transaction: SOQL **100**, query rows **50k**, DML **150**, DML rows **
 
 ## Tests & coverage — name them
 
-Production deploy requires **≥75%** org-wide (follow a higher repo bar if documented); coverage is the floor, not the goal. Plan only the tests needed to hold that bar and lock core behavior and regressions — not exhaustive permutations.
+Production deploy requires **≥75%** org-wide (follow a higher repo bar if documented); coverage is the floor, not the goal. The ticket's **Tests** list names only the tests that prove its acceptance criteria and the risks the change introduces — not exhaustive permutations.
 
 - **Name the test artifacts** (also in [inventory.md](inventory.md)): which `@IsTest` class/methods to extend, which to create.
-- Require the cases the change demands, no more: **bulk (200)**, boundary/null, negative (expected exceptions via `Assert` + `try/catch`), async via `Test.startTest()/stopTest()`.
+- Require the cases the change demands, no more: bulk (sized to the risk), boundary/null, negative (expected exceptions via `Assert` + `try/catch`), async via `Test.startTest()/stopTest()`.
 - `@TestSetup` for shared data; no reliance on org data (`SeeAllData=true` is a red flag). Mock all callouts.
 - Assertions use the modern **`System.Assert`** class, expected-first, with a message — never legacy `System.assertEquals`.
 
@@ -56,4 +56,4 @@ Production deploy requires **≥75%** org-wide (follow a higher repo bar if docu
 
 ## Deploy sequencing
 
-Dependent metadata deploys in order or references fail: **objects/fields → permsets → Apex → Flows (Draft) → activate**. If the change spans layers, put the order in the ticket's sequencing section.
+Dependent metadata deploys in order or references fail: **objects/fields → permsets → Apex → Flows (Draft) → activate**. If the change spans layers, put the order in the ticket's **Implementation** section.

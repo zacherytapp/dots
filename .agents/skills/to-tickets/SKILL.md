@@ -1,27 +1,49 @@
 ---
 name: to-tickets
-description: Break a plan, spec, or conversation into implementation-ready tracer-bullet tickets. Use when the user wants dependent work items published to the configured tracker.
+description: Breaks a spec into the fewest, largest implementation-ready tickets with explicit blocking edges, using a fixed template, saved under docs/specs/ or to the project's tracker. Use when the user wants a spec, plan, or issue turned into tickets for agents to implement.
 disable-model-invocation: true
 ---
 
 # To Tickets
 
-Create small, implementation-ready tickets that deliver complete, verifiable behavior.
+Workflow: `grill-with-docs` → `to-spec` → **`to-tickets`** → `implement`. Run `review-issue` on the tickets when they need a readiness gate.
+
+A ticket is the largest vertical slice one agent can build, verify, and commit in a single fresh session. Prefer fewer, bigger tickets: every split adds a handoff, a merge, and a blocking edge to get wrong.
+
+## Sizing
+
+Start from one ticket for the whole spec. Split only when:
+
+1. it won't fit one agent session;
+2. part of it is a genuine prerequisite, such as a prefactor or a schema or contract that other work builds on; or
+3. independent parts can run in parallel and each is still substantial.
+
+Each ticket delivers working, verifiable behavior through every layer it touches. Never create a ticket for one layer alone ("the schema", "the UI") or for tests, docs, or cleanup alone; fold those into the ticket whose behavior they serve. "Make the change easy, then make the easy change": prefactoring goes first, in its own ticket only when other tickets block on it.
+
+**Wide refactors** are the exception. When one mechanical change (renaming a column, retyping a shared symbol) breaks too many call sites to land green, use expand–contract: one ticket adds the new form beside the old; migration tickets, each blocked by the expand, move callers in batches sized by blast radius; a final contract ticket, blocked by every batch, deletes the old form. If batches can't stay green alone, they share an integration branch and block a final integrate-and-verify ticket.
+
+## Blocking
+
+- Ticket B is blocked by A only when B cannot start without A's merged output. Give the reason with each edge ("needs the `Invoice` table from 01"). Touching the same files or a preferred order is not a blocker.
+- No cycles. Number tickets in dependency order, blockers first, from `01`.
+- Every ticket states **Blocked by** and **Blocks** at the top, with `None` when empty.
 
 ## Process
 
-1. **Read the source.** Use the conversation and any supplied spec, issue, URL, or file. Read issue comments when they may contain decisions or constraints.
-2. **Inspect only relevant project context.** Find the code, config, tests, project instructions, ADRs, conventions, and issue-specific constraints needed to remove implementation guesswork. Prefer precise paths and symbols over broad summaries.
-3. **Draft using [TICKET_TEMPLATE.md](TICKET_TEMPLATE.md).** Each ticket must:
-   - Deliver a narrow, complete path through the affected layers rather than one horizontal layer.
-   - Be independently demoable or verifiable and fit one fresh agent context.
-   - State only genuine blockers. No blockers means it can start immediately.
-   - Put prerequisite prefactoring first when it makes later changes safer or simpler.
-4. **Confirm the breakdown.** Show a numbered list with each ticket's title, blockers, and delivered behavior. Ask whether to change granularity, dependencies, or grouping. Revise until approved.
-5. **Publish blockers first.** Do not close or modify the source issue.
+1. **Read the source.** The spec (path, issue, or conversation), including issue comments. If its open questions change the breakdown, stop, list them, and suggest `grill-with-docs`.
+2. **Explore the code** the spec touches. Tickets ship next, so unlike the spec they name exact paths, symbols, conventions, and test commands verified from project config.
+3. **Propose the breakdown** as a table and name the frontier (tickets that can start now):
 
-For a wide mechanical refactor that cannot land green as vertical slices, use expand-contract: add the new form, migrate callers in independently green batches, then remove the old form after all migrations. If batches cannot be green alone, use an integration branch and a final integration-verification ticket.
+   | #   | Title | Blocked by | Delivers (user stories) |
+   | --- | ----- | ---------- | ----------------------- |
 
-For local tracking, write one ticket per `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered in dependency order, with `# <NN> - <Title>` and the repository's configured ready status. For a configured issue tracker, create one issue per ticket in dependency order and use native blocking links when available. Before applying `ready-for-agent`, verify that the label exists; otherwise use the configured equivalent or publish without inventing a label and report that choice. Ask if the tracker is unknown.
+   Ask whether any tickets should merge, split, or be re-wired. Revise until approved.
 
-Work only tickets whose blockers are complete. Implement one at a time with `/implement`, clearing context between tickets.
+4. **Write** each ticket with [TICKET_TEMPLATE.md](TICKET_TEMPLATE.md).
+5. **Publish in dependency order**, where the spec lives:
+   - **Tracker:** one issue per ticket, as sub-issues of the spec issue when supported. Use native blocking links when the tracker has them and keep the text lines too. Apply the project's ready label only if it exists.
+   - **Docs:** `docs/specs/<feature-slug>/tickets/NN-<slug>.md`, one file per ticket.
+
+   Set the spec's **Tickets** line. Don't otherwise modify or close the spec.
+
+6. **Report** the tickets and the frontier, then suggest `implement`.

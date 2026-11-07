@@ -9,6 +9,8 @@ Extend `review-code`; do not weaken or replace any of its standards, mechanics, 
 
 ## Scope
 
+Review is read-only. Never deploy, retrieve into the PR branch, or change org data. Confirm an org's alias and type before running tests against it, and keep any production access read-only.
+
 Pin the diff exactly as `review-code` requires. Review only that diff, but inspect callers, automation, metadata, and existing utilities needed to establish transaction-wide behavior. Treat Apex, Flow, triggers, invocable actions, and downstream automation as one governor-limit and order-of-execution surface.
 
 Run three independent axes, in parallel when the harness supports it and otherwise sequentially:
@@ -27,7 +29,7 @@ Every finding must cite concrete code and explain the failing cardinality, limit
 4. Search for `System.assert`, `System.assertEquals`, and `System.assertNotEquals`. Any changed or added use is a blocker; require `Assert` methods such as `isTrue`, `areEqual`, `isNull`, or `fail`.
 5. Before accepting any new helper, framework, wrapper, parser, iterator, result type, security utility, retry mechanism, or async abstraction, search the repo and the current official Apex/API reference for an existing Salesforce capability. Record the candidates checked. Prefer the platform primitive unless the PR proves a material gap.
 6. Run project checks. If Salesforce Code Analyzer is available, scan changed Salesforce files with the repository config and `Recommended` rules. Verify exact rule names before selecting individual PMD/SFGE rules. Treat tools as evidence, not a substitute for transaction tracing.
-7. Inspect tests for observable assertions, bulk cardinality, negative paths, permissions, partial failure, recursion, and async completion. Coverage alone is not evidence.
+7. Inspect tests for observable assertions and for bulk cardinality, negative paths, permissions, partial failure, recursion, and async completion where the change introduces those risks. Coverage alone is not evidence; flag test bloat too.
 
 Useful searches (adapt paths to the repo):
 

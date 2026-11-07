@@ -25,6 +25,7 @@ Use judgment and trace the complete transaction. A pattern is a finding only whe
 ## Tests
 
 - Require `Assert` class methods; changed or added `System.assert*` is a blocker. Prefer the most specific assertion and a useful failure message where context is not obvious.
-- Tests prove outcomes, not line coverage: single, empty when callable, and bulk inputs; positive and negative paths; all trigger contexts; recursion/re-entry; partial DML; permissions/sharing; async work after `Test.stopTest`; and callouts with mocks.
+- Tests prove the acceptance criteria and the risks the change introduces, not line coverage. Expect single, empty, and bulk inputs; negative paths; affected trigger contexts; recursion/re-entry; partial DML; permissions/sharing; async work after `Test.stopTest`; and mocked callouts only where the change creates that risk.
+- Flag test bloat as a nit: duplicate coverage, tests of private helpers, and tests that only raise coverage.
 - Tests create deterministic data and avoid `SeeAllData=true` unless a platform-only dependency makes it unavoidable and the reason is explicit. Use `Test.startTest`/`stopTest` around the action under test, not setup.
 - Bulk tests must exercise the risky cardinality and assert every relevant record, not merely that no exception was thrown. Do not require exactly 200 records when a smaller cardinality proves the boundary more directly.

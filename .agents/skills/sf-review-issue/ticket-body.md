@@ -1,87 +1,52 @@
-# Ticket Body — target shape, and updating in place
+# Salesforce Specs and Tickets
 
-The output of this skill is a **rewritten ticket body** that is the single source of truth — not a review comment, not a side doc. Comments get consolidated into it.
+Salesforce work items use the shared templates and every rule they carry. Add the Salesforce detail below; don't invent another structure.
 
-## Be maximally specific
+## Specs
 
-Carry **every criterion** the **to-spec** / **to-tickets** skills call for — problem, solution, what-to-build, user stories, implementation and testing decisions, acceptance, out-of-scope — but reverse their stance on detail. They forbid file paths and code snippets because their outputs age before implementation; this ticket ships **next**, so specificity pays off. Name exact classes, methods, field API names, permsets, and paths; inline a short code example when it pins a decision better than prose (a signature, DTO shape, SOQL, trigger hook — trimmed to the decision, not a demo); give the exact commands so the implementer copies rather than composes. The bar is the self-contained test at the bottom.
+A Salesforce spec follows [SPEC_TEMPLATE.md](../to-spec/SPEC_TEMPLATE.md) and, like any spec, names no file paths. Its **Implementation decisions** settle the data model, the automation choice (Apex or Flow, synchronous or asynchronous), the security model (sharing, CRUD/FLS, permission sets), and the org setup convention. The exact artifacts belong in tickets.
 
-## Target structure
+## Tickets
 
-Rewrite to this shape; drop a section only when it genuinely doesn't apply:
+A Salesforce ticket follows [TICKET_TEMPLATE.md](../to-tickets/TICKET_TEMPLATE.md): blocking edges at the top, exact references, concrete criteria, and a minimal **Tests** list. Fill its sections like this:
 
-```markdown
-## Summary
+| Template section       | Salesforce content                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Implementation**     | The approach plus the deploy order for the phases in play: objects and fields → permission sets → Apex → draft Flows → activation  |
+| **Project references** | The Touch / Create map from [inventory.md](inventory.md): classes, methods, field API names, LWC, Flows, permission sets           |
+| **Tests**              | Test classes and methods to extend or create, with the bulk, permission, and mock cases only where the change introduces that risk |
+| **Verification**       | Focused `sf apex run test --tests <Class.method>` and Jest commands, then the final `--dry-run` deploy with `RunLocalTests`        |
 
-Intent and observable outcome, in a line or two. What, and why.
+Add two sections after **Implementation**:
 
-## Scope
-
-- **In:** …
-- **Out / non-goals:** the adjacent things this ticket does NOT do.
-
+```md
 ## Org & setup
 
-<the block from org-setup.md — org, standup script/commands, permsets, seed, validation>
+<The block from org-setup.md: org, standup commands, permission sets, seed data, validation>
 
-## Implementation map
+## Salesforce constraints
 
-<the Touch / Create lists from inventory.md — exact classes, methods, field API names, LWC, permsets, paths>
-
-## Salesforce constraints & gotchas
-
-<only the risks from gotchas.md that apply — each specific: the limit and where>
-
-## Tests & coverage
-
-- Extend / Create: <test classes.methods>
-- Cases (only what holds coverage + locks core behavior/regressions): bulk (200), boundary/null, negative, async — those that apply
-- Callout mocks: <if any> · Coverage: ≥75% org-wide (or repo bar), new/changed classes covered
-- Run: `sf apex run test --tests <Class.method> --target-org <alias>` and `sf project deploy start --dry-run --source-dir force-app --test-level RunLocalTests --target-org <alias> --json`
-
-## Acceptance criteria
-
-- Observable outcomes with the exact check: `sf data query --query "…"` result, a UI state, a debug-log assertion
-- Failure states handled; no regressions in <blast-radius artifacts from the map>
-
-## Sequencing & dependencies
-
-- **Parallel:** work that can proceed at once — <tasks with no shared edge>
-- **Blocked by / gates:** only what genuinely serializes, and why
-- Deploy order for the phases in play: objects/fields → permsets → Apex → Flows(Draft) → activate
-
-## Open questions
-
-- Remaining ambiguity that doesn't block start but the implementer must watch, each with the current best assumption. (Omit if none; anything that _blocks_ is a stop-and-ask, not a ticket note.)
-
-## References
-
-- Docs / ADRs / linked issues / prior art
+<Only the risks from gotchas.md that apply, each specific: the limit at risk and where>
 ```
 
-## Update the body directly — never a review comment
+## Updating the source
 
-Replace the body in place, preserving the title, labels, and any still-true original content (you're enriching, not erasing intent):
+Follow `review-issue`: propose exact replacement text by default, and edit only when the user asked for updates or authorized them. When authorized:
 
-- **Forgejo/Gitea:** `forgejo-mcp` `issue_read` to pull body + comments, `issue_write` to replace the body.
+- **Docs:** edit the spec or ticket file under `docs/specs/<feature-slug>/`.
 - **GitHub:** `gh issue view <n> --comments`, then `gh issue edit <n> --body-file <file>`.
+- **Forgejo/Gitea:** read the body and comments, then replace the body, with the configured Forgejo tools.
 
-## Consolidate comments into the body
+Preserve the title, labels, and still-true original content. Fold each comment's durable content (decisions, constraints, links, corrections) into the relevant section rather than dumping it, then add a trailer:
 
-Comments scatter the ticket's truth. Fold them in:
+```md
+---
 
-1. Extract each comment's durable content — decisions, constraints, links, corrections.
-2. Merge into the **relevant section** (a scope decision → Scope, a constraint → Gotchas, a link → References). Not a raw dump.
-3. Add a trailer so history stays traceable:
+_Consolidated from N prior comments during review._
+```
 
-   ```markdown
-   ---
-
-   _Consolidated from N prior comments during review. Superseded discussion left inline below._
-   ```
-
-4. **Don't delete comment history** by default — it's the audit trail. To close the loop, add one brief comment noting the body now supersedes the thread. Deleting someone else's comment is a stop-and-ask.
+Don't delete comment history; add one brief comment noting the body now supersedes the thread. Deleting someone else's comment is a stop-and-ask.
 
 ## The self-contained test
 
-Before finishing: could an implementer complete the ticket having opened **only** the links inside it — no repo hunting, no comment thread, no org guessing? If not, the body isn't done.
+Before finishing: could an implementer complete the ticket having opened only the links inside it, with no repo hunting, comment thread, or org guessing? If not, it isn't ready.

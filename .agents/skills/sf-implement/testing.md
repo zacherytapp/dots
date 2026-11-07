@@ -30,7 +30,7 @@ sf apex run test --test-level RunLocalTests --code-coverage --output-dir ./test-
 
 ## Assertions
 
-Prefer the modern **`System.Assert`** class (API 55.0+) for new or edited assertions when repository conventions allow it. Both modern and legacy equality assertions use expected-first ordering. Always pass a message so a failure explains itself.
+Use the modern **`System.Assert`** class (API 55.0+) for every new or edited assertion; `sf-review-code` blocks added or changed legacy `System.assert*` calls. Both use expected-first ordering. Always pass a message so a failure explains itself.
 
 | Legacy                                            | Modern (`System.Assert`)                                                            |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -43,7 +43,7 @@ Prefer the modern **`System.Assert`** class (API 55.0+) for new or edited assert
 
 - Argument order is **expected first, then actual**, matching legacy `System.assertEquals` and `System.assertNotEquals`.
 - Failures still surface as `System.AssertException`, so the fix-loop table below is unchanged.
-- Follow the repository's assertion convention. Do not perform an unrelated migration of untouched tests.
+- Don't migrate assertions in tests the change doesn't touch.
 
 ## The fix loop (max 3 attempts)
 
@@ -68,4 +68,4 @@ npm run test:unit -- path/to/file.test.js  # one file
 npm run test:unit -- -t "renders header"   # one test by name
 ```
 
-Prioritize critical paths and complex logic. Jest, linting, and static analysis are cheap — lean on them so the expensive Apex runs stay rare.
+Write Jest tests only for the component behavior a ticket's acceptance criteria cover. Jest, linting, and static analysis are cheap — lean on them so the expensive Apex runs stay rare.

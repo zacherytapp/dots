@@ -11,14 +11,14 @@ Look in the repo — don't assume:
 - **Dev Hub:** `sf config get target-dev-hub --json`. None set → stop-and-ask; don't pick one.
 - **Permission sets:** which PS/PSG to assign after create.
 - **Seed data:** the load step (`sf data import tree`, a `data/` dir, a seed `.apex`) the feature needs to be exercisable.
-- **Reuse vs. fresh:** shared long-lived scratch org, or fresh per ticket? Infer from README/CONVENTIONS; if unstated, default to "reuse a confirmed scratch org, else create from the definition file" and say so.
+- **Reuse vs. fresh:** shared long-lived scratch org, or fresh per ticket? Infer from README/CONVENTIONS; if unstated, default to "reuse a confirmed scratch org, else create from the definition file" and say so. Tickets that can run in parallel need one org each, because two agents must never share an org at once.
 
 ## Write into the ticket
 
-An `### Org & setup` block the implementer runs top to bottom. Cite the project's own script when one exists; give the raw command as the fallback, not the lead:
+A `## Org & setup` section the implementer runs top to bottom. Cite the project's own script when one exists; give the raw command as the fallback, not the lead:
 
 ```text
-### Org & setup
+## Org & setup
 - **Org:** reuse a confirmed scratch org, else create fresh (this project uses per-ticket orgs).
 - **Create:** `npm run org:create -- --alias <ticket-id>`  ← wraps scratch create + permset + seed
   (raw: `sf org create scratch --definition-file config/project-scratch-def.json --alias <ticket-id> --set-default --json`)
@@ -26,7 +26,7 @@ An `### Org & setup` block the implementer runs top to bottom. Cite the project'
 - **Seed:** `npm run data:seed`
 - **Dev Hub:** `<hub-alias>` (configured).
 
-### Validate setup
+**Validate setup**
 - `sf org display --target-org <alias> --json` — alias/username/instance
 - `sf data query --query "SELECT COUNT() FROM Account WHERE Name LIKE 'Seed%'" --target-org <alias>` — seed loaded
 - `sf project deploy start --source-dir force-app --target-org <alias> --json` — source compiles

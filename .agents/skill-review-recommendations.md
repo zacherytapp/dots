@@ -1,6 +1,6 @@
 # Skill Review Recommendations
 
-Original review scope: the 25 `SKILL.md` files present at review time and the references needed to validate their workflows. The repository now contains 31 skills.
+Original review scope: the 25 `SKILL.md` files present at review time and the references needed to validate their workflows. The repository now contains 34 skills.
 
 ## Implementation status
 
@@ -12,7 +12,7 @@ All 17 findings below have been addressed. The implementation:
 - removed fabricated log integrations, unsupported examples, benchmark claims, fix assets, and personal conventions;
 - strengthened `scripts/validate-skills.mjs` for description shape, dependencies, anchors, hooks, hard-coded bases, and ledger markers.
 
-`npm run check` passes with all 31 skills validated. The findings are retained below as the historical rationale for the changes.
+`pnpm check:skills` passes with all 34 skills validated. The findings are retained below as the historical rationale for the changes.
 
 ## Resolved findings
 

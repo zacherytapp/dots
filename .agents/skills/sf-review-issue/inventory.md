@@ -27,10 +27,10 @@ For each layer the change touches, name the **exact** artifacts and paths. Split
 
 ## Shape it into the ticket
 
-Write the `### Implementation map` section as tight Touch / Create lists:
+Write the ticket's **Project references** section as tight Touch / Create lists:
 
 ```text
-### Implementation map
+## Project references
 **Touch**
 - `AccountTriggerHandler.onAfterUpdate` (force-app/main/default/classes/) — add discount recalculation
 - `Account.Discount_Rate__c` (Percent) — read only, no schema change

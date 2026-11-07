@@ -1,54 +1,60 @@
 ---
 name: implement
-description: Implements work from a spec or tickets in an isolated worktree. Use when the user invokes an implementation workflow with an existing plan.
+description: Implements a spec's tickets, or a single ticket, in isolated project worktrees, shipping only the tests that prove the acceptance criteria. Use when the user wants planned work built from a spec, ticket, or issue.
 disable-model-invocation: true
 ---
 
 # Implement
 
-## 1. Clarify the target
+Workflow: `to-spec` → `to-tickets` → **`implement`** → `file-pr` → `babysit-pr`.
 
-Require a clear plan, target base branch, and intended base repository. Resolve them from the issue, PR, project configuration, or provider metadata; ask only when they remain ambiguous. Verify referenced files and code before changing anything.
+Build what the tickets say and no more. A ticket's acceptance criteria are its definition of done. Follow [code-conventions.md](code-conventions.md) and the project's own docs (`AGENTS.md`, ADRs, glossary), which take precedence.
 
-## 2. Start from the resolved base
+## Setup
 
-Determine which remote represents the base repository; do not assume `origin`, especially for forks. Fetch the target base, record its SHA, list existing worktrees, and create the branch from that fetched ref:
+1. **Read the work.** The spec and its tickets, from the tracker or `docs/specs/<feature-slug>/`, including comments. State each ticket's title. Stop and report if a ticket has open questions or an unmerged blocker. Ask if the reference is ambiguous.
+2. **Resolve the base.** Get the base repository and branch from the ticket, project config, or provider metadata; don't assume `origin` or a default branch. Fetch it and record the SHA.
+3. **Create the worktree.** Worktrees always live in `.worktrees/` at the root of the main checkout, kept out of git without a commit:
 
-```bash
-git fetch <base-remote> <base>
-git rev-parse FETCH_HEAD
-git worktree list
-git worktree add .worktrees/<slug> -b <branch> FETCH_HEAD
-cd .worktrees/<slug>
-```
+   ```bash
+   root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+   git fetch <base-remote> <base> && git rev-parse FETCH_HEAD
+   git -C "$root" check-ignore -q .worktrees/ || echo .worktrees/ >> "$root/.git/info/exclude"
+   git worktree add "$root/.worktrees/<branch-slug>" -b <branch> FETCH_HEAD
+   ```
 
-Use the repository's preferred worktree location. If `.worktrees/` is used, ensure it is ignored without mixing that housekeeping change into feature work. Never edit, retrieve generated source, test, or commit in the primary checkout.
+   `<branch-slug>` is the branch name with `/` replaced by `-`. Never edit, test, or commit in the main checkout. When a caller supplies an existing worktree (for example `implement-pr-fixes`), use it instead.
 
-## 3. Plan
+## One ticket
 
-Explore relevant code and use the project's domain vocabulary. Follow [code-conventions](code-conventions.md), ADRs, and architecture docs. Design for [deep modules](deep-modules.md) and [testability](interface-design.md). Split the work into small, independently validated vertical tasks.
+In the ticket's worktree:
 
-## 4. Implement and validate
+1. Implement the ticket. Typecheck and run focused tests as you go; run the full applicable suite once at the end.
+2. Write the tests the ticket lists, following [Tests](#tests), and nothing beyond them.
+3. Before each commit, check the branch and staged paths. Commit focused changes on the ticket branch.
+4. For a docs-based ticket, set its **Status** to `done` in the same branch. Tracker tickets close through the PR.
 
-Implement one task at a time. Run the relevant focused tests and checks at task boundaries, then the complete applicable validation before finalizing. Apply the [refactoring checklist](refactoring.md) to touched code without broadening scope.
+## A spec with several tickets
 
-Use additional agents only when the harness provides them and parallel work has independent boundaries. Assign roles by capability—research, mechanical implementation, UI work, or review—not product or model names. If orchestration is unavailable, perform the same tasks sequentially in the current agent.
+The tickets form a task graph. The **frontier** is every ticket whose blockers are merged.
 
-## 5. Commit and hand off
+1. Create the integration worktree as in [Setup](#setup), on a branch named for the spec.
+2. For each frontier ticket, start a fresh implementer subagent, in the background when supported. Pass only pointers: the spec and ticket paths, the integration branch, and its own worktree `.worktrees/<integration-slug>-NN` branched from the integration tip. It follows [One ticket](#one-ticket), merges the integration tip into its branch before finishing, and reports back briefly: branch, commits, checks run, and anything left undone.
+3. When one finishes, merge its branch in the integration worktree (use `resolving-merge-conflicts` on conflicts), run the checks, recompute the frontier, and start the newly unblocked tickets.
+4. Without subagent support, work the frontier yourself, one ticket at a time.
+5. When every ticket is merged, run the full validation in the integration worktree. Then have a fresh subagent review the integration diff against the spec and the review-code [Standards](../review-code/SKILL.md#standards) and [Spec axis](../review-code/SKILL.md#two-axes), without the PR ledger or comments. Fix its blockers in one pass.
+6. Remove the ticket worktrees and merged ticket branches; keep the integration worktree.
 
-Before each commit, confirm the worktree branch and inspect staged paths. Create focused commits only on the feature branch. Finish with:
+## Tests
 
-- the resolved base repository, branch, and starting SHA;
-- commits created and checks run;
-- remaining risks or blockers;
-- a handoff to `file-pr` when the user wants a pull request.
+Ship the minimum set of tests that proves the work:
 
-Do not create the PR, wait for CI, perform PR review, or merge; those belong to `file-pr`, `babysit-pr`, `review-code`, and `merge-pr-into-main`.
+- One behavior test per acceptance criterion at most, at the spec's seam, through the public interface. A bug fix gets one regression test. One test that proves two criteria beats two tests.
+- Extend existing test files and fixtures before creating new ones.
+- Don't test private helpers, trivial code, what the type checker already guarantees, framework behavior, or mocks of code you own. No snapshots unless the snapshot is the behavior.
+- Delete exploratory and scaffolding tests before committing.
+- Project-mandated coverage thresholds still apply; meet them with behavior tests, not filler.
 
-## Red flags
+## Finish
 
-- Branching from an unresolved current `HEAD`
-- Assuming the base remote or branch
-- Changing files outside the isolated worktree
-- Writing code without a clear plan
-- Skipping relevant tests or mixing unrelated changes
+Report the base repository, branch, and starting SHA; the worktree path and branch; commits; checks run and their results; tickets completed; and remaining risks. Hand off to `file-pr` when the user wants a pull request. Don't open, review, or merge the PR yourself.

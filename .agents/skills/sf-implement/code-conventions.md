@@ -4,13 +4,9 @@
 
 Discover and follow the target repository's `AGENTS.md`, contribution guide, ADRs, Code Analyzer/PMD configuration, formatter, and nearby source. Repository conventions supersede this reference.
 
-## Structural defaults
+## Shared standards
 
-- Prefer direct, maintainable designs that remove branches, modes, wrappers, or duplicate layers.
-- Keep behavior in the canonical layer and reuse existing project/platform capabilities.
-- Avoid untyped `Object` and `Map<String, Object>` boundaries when a clear DTO or platform type fits.
-- Do not grow a file past the repository's size conventions merely by appending behavior.
-- Keep tests at observable seams rather than coupling them to private helpers.
+Apply the shared [code conventions](../implement/code-conventions.md). In Apex, that means avoiding untyped `Object` and `Map<String, Object>` boundaries when a DTO or platform type fits, and reusing platform capabilities before writing infrastructure.
 
 ## Comments and documentation
 
@@ -36,4 +32,4 @@ Follow configured ESLint, Prettier, JSDoc, component, accessibility, and testing
 
 ## Branch naming
 
-Use the repository's branch convention. If none exists, choose a short kebab-case outcome name with an intent prefix and include the issue identifier when one exists. Do not assume a specific default branch.
+Use the repository's branch convention, otherwise the shared [branch naming](../implement/code-conventions.md#branch-naming).
