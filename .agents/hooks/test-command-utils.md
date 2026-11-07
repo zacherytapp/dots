@@ -1,4 +1,4 @@
 # Command utility tests
 
-Replaced by [`test-safety-hook.sh`](test-safety-hook.sh), which exercises the
-local bash command parsing through the public hook entrypoint.
+Replaced by [`safety-hook.test.ts`](safety-hook.test.ts), which exercises the
+command parsing directly and through the hook entrypoint.

@@ -1,6 +1,6 @@
 # Bash `.env` protection
 
-Implemented locally in [`safety-hook.sh`](safety-hook.sh) under the
+Implemented locally in [`safety-hook.ts`](safety-hook.ts) under the
 `PreToolUse` / `Bash` handler.
 
 Blocks direct Bash access to `.env` and `.env.*` files through common readers,

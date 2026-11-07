@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$HOME/.agents}/hooks/safety-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$HOME/.agents}/hooks/safety-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$HOME/.agents}/hooks/safety-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$HOME/.agents}/hooks/safety-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-hook.sh\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$HOME/.agents}/hooks/safety-hook.ts\"",
             "timeout": 10
           }
         ]

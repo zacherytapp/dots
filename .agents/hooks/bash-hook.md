@@ -1,6 +1,6 @@
 # Bash safety hook
 
-Implemented locally in [`safety-hook.sh`](safety-hook.sh) under the
+Implemented locally in [`safety-hook.ts`](safety-hook.ts) under the
 `PreToolUse` / `Bash` handler.
 
 Checks run in priority order:

@@ -1,6 +1,6 @@
 # File length limit hook
 
-Implemented locally in [`safety-hook.sh`](safety-hook.sh) under the
+Implemented locally in [`safety-hook.ts`](safety-hook.ts) under the
 `PreToolUse` / `Edit|Write` handlers.
 
 Source files over `MAX_FILE_LINES` lines trigger a speed bump asking the agent

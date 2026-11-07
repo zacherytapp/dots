@@ -1,6 +1,6 @@
 # Git commit safety hook
 
-Implemented locally in [`safety-hook.sh`](safety-hook.sh) under the
+Implemented locally in [`safety-hook.ts`](safety-hook.ts) under the
 `PreToolUse` / `Bash` handler.
 
 Commits ask for approval by default. Session-scoped approval can be enabled with

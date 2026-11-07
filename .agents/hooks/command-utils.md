@@ -1,6 +1,6 @@
 # Command parsing utilities
 
-Implemented as bash functions inside [`safety-hook.sh`](safety-hook.sh).
+Implemented as functions inside [`safety-hook.ts`](safety-hook.ts).
 
 The local implementation includes helpers for:
 
