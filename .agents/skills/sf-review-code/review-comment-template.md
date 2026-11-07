@@ -1,4 +1,5 @@
-<!-- review-code:review — single canonical comment, updated in place on each review run -->
+<!-- review-code:review -->
+<!-- single canonical comment, updated in place on each review run -->
 
 ## Salesforce code review: `<branch>`
 

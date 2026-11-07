@@ -1,4 +1,5 @@
-<!-- review-code:ledger — one canonical comment, updated in place on each review run -->
+<!-- review-code:ledger -->
+<!-- one canonical comment, updated in place on each review run -->
 
 ## Salesforce review ledger
 

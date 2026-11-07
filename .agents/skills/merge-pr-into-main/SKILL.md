@@ -13,7 +13,7 @@ Merge the selected PR autonomously. Never create a PR, bypass repository protect
 
 1. Resolve the target from an explicit PR argument, then session context, then the current branch. Never silently choose the first PR in a list.
 2. Identify the provider from the target URL or its base-repository remote, not CLI precedence. Match that host to `gh auth status --hostname <host>` or `gt auth status --host <host> --json host,user,credential_available`; stop if unsupported or unauthenticated.
-3. Record the PR URL, base repository/default branch/ref, head repository/ref, and head SHA; compare those identities with `git remote -v`. If the checkout matches neither repository, operate remotely and skip local cleanup.
+3. Record the PR URL, base repository (as `BASE_REPO`, `OWNER/REPO`)/default branch/ref, head repository/ref, and head SHA; compare those identities with `git remote -v`. If the checkout matches neither repository, operate remotely and skip local cleanup.
 4. Inspect `git status --short` and `git worktree list --porcelain`. Leave unrelated changes and all worktrees untouched.
 
 GitHub:

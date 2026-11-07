@@ -15,7 +15,7 @@ Identify the PR from the user, current branch, or provider output. Never silentl
 gt pr list --json number,title,head,state,url
 ```
 
-Set `PR`, `HEAD`, and `BASE` from the selected PR.
+Set `PR`, `HEAD`, and `BASE` from the selected PR, and `BASE_REMOTE` to the local remote whose URL matches the PR's base repository.
 
 ## Inspect the PR
 
@@ -75,7 +75,7 @@ Follow the `resolving-merge-conflicts` skill. Ask about ambiguous resolutions an
 
 ## Validate and push
 
-Run the relevant local checks, inspect the diff, then create focused commits and push normally. Do not use `git add -A` without first checking for unrelated changes.
+Run the relevant local checks, inspect the diff, then create focused commits and push normally. Stage by explicit path after checking for unrelated changes; never `git add -A` or `git add .`.
 
 After each push, re-check PR state, reviews, and CI with the inspection commands. Wait for CI with `gh pr checks "$PR" --watch` or `gt pr checks "$PR" --watch`; both stop at the first failure. Attempt at most three fix-push-review-check rounds.
 

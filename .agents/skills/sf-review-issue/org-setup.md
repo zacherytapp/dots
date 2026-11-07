@@ -21,7 +21,8 @@ A `## Org & setup` section the implementer runs top to bottom. Cite the project'
 ## Org & setup
 - **Org:** reuse a confirmed scratch org, else create fresh (this project uses per-ticket orgs).
 - **Create:** `npm run org:create -- --alias <ticket-id>`  ← wraps scratch create + permset + seed
-  (raw: `sf org create scratch --definition-file config/project-scratch-def.json --alias <ticket-id> --set-default --json`)
+  (raw: `sf org create scratch --definition-file config/project-scratch-def.json --alias <ticket-id> --json`)
+- **Target:** pass `--target-org <ticket-id>` on every command; never `--set-default`, since parallel agents share the default config.
 - **Permsets:** `Discount_Access`, `Billing_Admin` — `sf org assign permset --name Discount_Access --name Billing_Admin --target-org <alias>`
 - **Seed:** `npm run data:seed`
 - **Dev Hub:** `<hub-alias>` (configured).

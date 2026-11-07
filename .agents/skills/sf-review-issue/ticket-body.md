@@ -10,12 +10,12 @@ A Salesforce spec follows [SPEC_TEMPLATE.md](../to-spec/SPEC_TEMPLATE.md) and, l
 
 A Salesforce ticket follows [TICKET_TEMPLATE.md](../to-tickets/TICKET_TEMPLATE.md): blocking edges at the top, exact references, concrete criteria, and a minimal **Tests** list. Fill its sections like this:
 
-| Template section       | Salesforce content                                                                                                                 |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Implementation**     | The approach plus the deploy order for the phases in play: objects and fields → permission sets → Apex → draft Flows → activation  |
-| **Project references** | The Touch / Create map from [inventory.md](inventory.md): classes, methods, field API names, LWC, Flows, permission sets           |
-| **Tests**              | Test classes and methods to extend or create, with the bulk, permission, and mock cases only where the change introduces that risk |
-| **Verification**       | Focused `sf apex run test --tests <Class.method>` and Jest commands, then the final `--dry-run` deploy with `RunLocalTests`        |
+| Template section       | Salesforce content                                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Implementation**     | The approach plus the deploy order for the phases in play: objects and fields → permission sets → Apex → draft Flows → activation                                                  |
+| **Project references** | The Touch / Create map from [inventory.md](inventory.md): classes, methods, field API names, LWC, Flows, permission sets                                                           |
+| **Tests**              | Test classes and methods to extend or create, with the bulk, permission, and mock cases only where the change introduces that risk                                                 |
+| **Verification**       | Focused `sf apex run test --tests <Class.method>` and Jest commands only; [sf-implement](../sf-implement/SKILL.md) runs the single `RunLocalTests` dry-run at its integration gate |
 
 Add two sections after **Implementation**:
 

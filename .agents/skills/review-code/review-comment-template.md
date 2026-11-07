@@ -1,4 +1,5 @@
-<!-- review-code:review — single canonical comment, updated in place on each review-code run -->
+<!-- review-code:review -->
+<!-- single canonical comment, updated in place on each review-code run -->
 
 ## Code review — `<branch>`
 
