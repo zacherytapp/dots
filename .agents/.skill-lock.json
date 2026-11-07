@@ -65,6 +65,51 @@
       "skillFolderHash": "e63f538e4fe05f9b101f3ad11559a79d43073d06",
       "installedAt": "2026-08-12T21:25:29.645Z",
       "updatedAt": "2026-08-12T21:25:29.645Z"
+    },
+    "plannotator": {
+      "source": "backnotprop/plannotator",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
+      "skillPath": "apps/skills/core/plannotator/SKILL.md",
+      "skillFolderHash": "9de7296c79a93a3fe714df027c087e99fcad7407",
+      "installedAt": "2026-11-05T19:16:16.000Z",
+      "updatedAt": "2026-11-05T19:16:16.000Z"
+    },
+    "plannotator-annotate": {
+      "source": "backnotprop/plannotator",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
+      "skillPath": "apps/skills/core/plannotator-annotate/SKILL.md",
+      "skillFolderHash": "e02ac47fba36fe22b41c6501575ee5c51ecf3ec8",
+      "installedAt": "2026-11-05T19:16:16.000Z",
+      "updatedAt": "2026-11-05T19:16:16.000Z"
+    },
+    "plannotator-last": {
+      "source": "backnotprop/plannotator",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
+      "skillPath": "apps/skills/core/plannotator-last/SKILL.md",
+      "skillFolderHash": "ccb34fe1725400970d626d0dafa120bdb88a7aa3",
+      "installedAt": "2026-11-05T19:16:16.000Z",
+      "updatedAt": "2026-11-05T19:16:16.000Z"
+    },
+    "plannotator-review": {
+      "source": "backnotprop/plannotator",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
+      "skillPath": "apps/skills/core/plannotator-review/SKILL.md",
+      "skillFolderHash": "da2d79190405f5182a0f9614d7b36b56e23fc339",
+      "installedAt": "2026-11-05T19:16:16.000Z",
+      "updatedAt": "2026-11-05T19:16:16.000Z"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "76a98a285cb0434f3d39e1a873823556330e398b",
+      "installedAt": "2026-11-05T19:16:16.000Z",
+      "updatedAt": "2026-11-05T19:16:16.000Z"
     }
   },
   "dismissed": {

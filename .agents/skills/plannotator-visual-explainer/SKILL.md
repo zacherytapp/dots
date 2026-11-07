@@ -101,7 +101,7 @@ For architecture diagrams, data tables, slide decks, project recaps, comparisons
 
 1. Ensure `visual-explainer` is installed:
    - Check: `~/.claude/skills/visual-explainer/SKILL.md` or `~/.agents/skills/visual-explainer/SKILL.md`
-   - If not found: `npx skills add nicobailon/visual-explainer -g --yes`
+   - If not found: stop and ask the user before installing it. It is unpinned third-party code; only run `npx skills add nicobailon/visual-explainer -g` after they agree
 2. Read visual-explainer's `SKILL.md` (workflow, diagram types, anti-slop rules)
 3. Read the relevant visual-explainer references and templates for your content type
 4. Read `references/theme-override.md` — Plannotator tokens replacing Nico's palettes
