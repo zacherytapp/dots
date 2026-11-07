@@ -55,9 +55,9 @@ Reproduce the failure with repository commands before changing code. Typical sta
 
 ## Enforce quality and coordinate feedback
 
-At the start of the first round, load and follow `review-code` with the PR URL, actual base, and original request or issue; use `sf-review-code` for Salesforce changes. Treat the canonical ledger's open blockers and actionable in-scope human feedback as the worklist.
+At the start of the first round, read and follow [review-code](../review-code/SKILL.md) with the PR URL, actual base, and original request or issue; read [sf-review-code](../sf-review-code/SKILL.md) instead for Salesforce changes. Treat the canonical ledger's open blockers and actionable in-scope human feedback as the worklist.
 
-Delegate code changes for that worklist to `implement-pr-fixes` in the existing branch and environment. Do not edit the ledger from the implementation role. After each fix push, run the selected reviewer so it independently reconciles findings against the new SHA. Ask the user about ambiguous requests or design decisions; do not automatically implement subjective nits or out-of-scope suggestions.
+Make code changes for that worklist by following [implement-pr-fixes](../implement-pr-fixes/SKILL.md) in the existing branch and environment. Do not edit the ledger from the implementation role. After each fix push, run the selected reviewer so it independently reconciles findings against the new SHA. Ask the user about ambiguous requests or design decisions; do not automatically implement subjective nits or out-of-scope suggestions.
 
 Aim for no open review blockers, no actionable in-scope human feedback, passing required CI, and no conflicts—not zero comments. After a Forgejo/Gitea fix is pushed and independently verified, resolve its thread with `tea pr resolve <comment-id>`. Report feedback that cannot be resolved automatically.
 

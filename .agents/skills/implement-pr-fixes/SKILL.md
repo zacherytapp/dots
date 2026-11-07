@@ -20,14 +20,14 @@ Once the PR is clear, resolve its base/head repositories and branches, find the 
 
 Use the platform-specific implementation workflow in the existing PR environment:
 
-- **Salesforce:** Confirm and reuse the PR's existing scratch org or sandbox. Do not create or switch orgs or change the default target org. Use `sf-implement` for fixes, overriding its new-worktree and target-org setup with the confirmed PR context. If the environment cannot be identified or accessed, stop and ask.
-- **Otherwise:** Use `implement` for fixes, overriding its new-worktree setup with the confirmed PR context.
+- **Salesforce:** Confirm and reuse the PR's existing scratch org or sandbox. Do not create or switch orgs or change the default target org. Follow [sf-implement](../sf-implement/SKILL.md) for fixes, overriding its new-worktree and target-org setup with the confirmed PR context. If the environment cannot be identified or accessed, stop and ask.
+- **Otherwise:** Follow [implement](../implement/SKILL.md) for fixes, overriding its new-worktree setup with the confirmed PR context.
 
 Review ownership stays with `review-code` or `sf-review-code`, normally coordinated by `babysit-pr`; this skill does not re-review its own fixes.
 
 ## Plan the fixes
 
-Work from the review's findings ledger in the PR comments. The `open` **blockers** are your mandatory worklist; every one must be resolved. Also fold in `open` **nits** where the fix is cheap and low-risk; a nit you skip stays in the ledger and never blocks. Turn the blockers, selected nits, and other PR feedback into an actionable plan. Resolve ambiguity before touching code with `grill-with-docs`; don't proceed until the plan is unambiguous.
+Work from the review's findings ledger in the PR comments. The `open` **blockers** are your mandatory worklist; every one must be resolved. Also fold in `open` **nits** where the fix is cheap and low-risk; a nit you skip stays in the ledger and never blocks. Turn the blockers, selected nits, and other PR feedback into an actionable plan. Resolve ambiguity before touching code by following [grill-with-docs](../grill-with-docs/SKILL.md); don't proceed until the plan is unambiguous.
 
 ## Implement the fixes
 

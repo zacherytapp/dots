@@ -23,6 +23,8 @@ const skillNames = fs
   .map((entry) => entry.name)
   .sort();
 const installed = new Set(skillNames);
+// Skills only the user can start (Claude Code hides them from the model's Skill tool)
+const manualOnly = new Set<string>();
 const installedHooks = new Set(
   fs
     .readdirSync(path.join(root, "hooks"), { withFileTypes: true })
@@ -114,6 +116,7 @@ for (const skillName of skillNames) {
   } else {
     const name = frontmatter[1].match(/^name:\s*["']?([^\n"']+)["']?\s*$/m)?.[1];
     const description = frontmatter[1].match(/^description:\s*(.+)$/m)?.[1] ?? "";
+    if (/^disable-model-invocation:\s*true\s*$/m.test(frontmatter[1])) manualOnly.add(skillName);
     if (name !== skillName)
       fail(`skills/${skillName}/SKILL.md: frontmatter name is ${name ?? "missing"}`);
     if (!locked.has(skillName) && !/^[^.]+\. Use when\b/.test(description)) {
@@ -164,6 +167,16 @@ for (const file of markdown) {
     }
 
     const prose = content.replace(/<!--[\s\S]*?-->/g, "");
+    // A skill that builds on a manual-only skill must link its SKILL.md for the agent to read
+    const invocation =
+      /\b(?:load|invoke|run|use|follow|extend|delegate)\b[^.\n]{0,40}?`([a-z][a-z0-9-]+)`/gi;
+    for (const match of prose.matchAll(invocation)) {
+      if (match[1] && manualOnly.has(match[1])) {
+        fail(
+          `${relativeFile}: tells the agent to invoke manual-only skill ${match[1]}; link [${match[1]}](../${match[1]}/SKILL.md) and have it read the file`,
+        );
+      }
+    }
     for (const hook of prose.matchAll(/\b([a-z][a-z0-9]*-[a-z0-9-]+) hook\b/g)) {
       if (!installedHooks.has(hook[1]) && !installedHooks.has(`${hook[1]}-hook`)) {
         fail(`${relativeFile}: references absent hook ${hook[1]}`);

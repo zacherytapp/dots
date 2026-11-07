@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # To Spec
 
-Workflow: `grill-with-docs` → **`to-spec`** → `to-tickets` → `implement`. Run `review-issue` on the spec when it needs a readiness gate.
+Workflow: `grill-with-docs` → **`to-spec`** → `to-tickets` → `implement`. Suggest `review-issue` when the spec needs a readiness gate.
 
 Synthesize what is already known: the conversation, the codebase, the glossary, and ADRs. Don't interview the user. Record a missing decision under **Open questions** instead of inventing an answer; if many core decisions are missing, stop and suggest `grill-with-docs` first.
 

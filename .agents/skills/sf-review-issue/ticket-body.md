@@ -31,7 +31,7 @@ Add two sections after **Implementation**:
 
 ## Updating the source
 
-Follow `review-issue`: propose exact replacement text by default, and edit only when the user asked for updates or authorized them. When authorized:
+Follow [review-issue](../review-issue/SKILL.md#workflow): propose exact replacement text by default, and edit only when the user asked for updates or authorized them. When authorized:
 
 - **Docs:** edit the spec or ticket file under `docs/specs/<feature-slug>/`.
 - **GitHub:** `gh issue view <n> --comments`, then `gh issue edit <n> --body-file <file>`.

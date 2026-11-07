@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # To Tickets
 
-Workflow: `grill-with-docs` → `to-spec` → **`to-tickets`** → `implement`. Run `review-issue` on the tickets when they need a readiness gate.
+Workflow: `grill-with-docs` → `to-spec` → **`to-tickets`** → `implement`. Suggest `review-issue` when the tickets need a readiness gate.
 
 A ticket is the largest vertical slice one agent can build, verify, and commit in a single fresh session. Prefer fewer, bigger tickets: every split adds a handoff, a merge, and a blocking edge to get wrong.
 

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Implement Salesforce Work
 
-Extend `implement`; don't replace its setup, `.worktrees/` layout, ticket graph, minimal-test rules, or finish. Load that skill first, then apply this one. Read [boundaries.md](boundaries.md) before acting. Command detail lives in:
+Extend [implement](../implement/SKILL.md); don't replace its setup, `.worktrees/` layout, ticket graph, minimal-test rules, or finish. Read that skill first, then apply this one. Read [boundaries.md](boundaries.md) before acting. Command detail lives in:
 
 - [orgs-and-deploy.md](orgs-and-deploy.md)
 - [testing.md](testing.md)
@@ -27,7 +27,7 @@ Run `sf project retrieve preview`, then retrieve only the metadata the change to
 
 An org is shared state: two agents must never deploy to or run tests in the same org at once.
 
-- When `implement` runs tickets in parallel, give each implementer its own confirmed scratch org and pass the alias in its pointers. Scratch orgs count against Dev Hub allocations, so confirm the number with the user before creating them.
+- When tickets run in parallel, give each implementer its own confirmed scratch org and pass the alias in its pointers. Scratch orgs count against Dev Hub allocations, so confirm the number with the user before creating them.
 - With only one org (any sandbox, or a single scratch org), work the frontier sequentially.
 - Never change the default `target-org` or `target-dev-hub` config while other agents are working.
 - Run the final gate in the integration worktree against the primary confirmed org.
@@ -64,6 +64,6 @@ Never use `sf project deploy validate` or `quick`; they are the production quick
 
 ## 7. Finish
 
-Extend `implement`'s report with the target orgs, the drift commit, test and coverage results, and the dry-run result. Delete scratch orgs created for parallel tickets only after retrieving their changes and with the user's confirmation.
+Report everything `implement` reports, plus the target orgs, the drift commit, test and coverage results, and the dry-run result. Delete scratch orgs created for parallel tickets only after retrieving their changes and with the user's confirmation.
 
 Never deploy to production, build or promote packages, or create, review, or merge the PR.

@@ -16,6 +16,7 @@
 
 - Keep skill instructions token-efficient: avoid duplication and filler. Every line must earn its place.
 - Follow `write-a-skill` for canonical skill structure, metadata, and references.
+- Skills with `disable-model-invocation: true` start only when the user invokes them; the model can't load them through the Skill tool. A skill that builds on one must link its `SKILL.md` and tell the agent to read it, which `check:skills` enforces.
 - `CLAUDE.md` is a symlink to this file.
 - Don't add a `package.json`, lockfile or formatter config here; use the repo-root tooling.
 

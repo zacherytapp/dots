@@ -6,16 +6,16 @@ disable-model-invocation: true
 
 # Review Issue (Salesforce)
 
-Extend `review-issue`; don't replace its readiness workflow, template checks, sizing and blocking rules, authorization rule for edits, or output. Load that skill first, then apply these Salesforce requirements. Implementation belongs in `sf-implement`.
+Extend [review-issue](../review-issue/SKILL.md); don't replace its readiness workflow, template checks, sizing and blocking rules, authorization rule for edits, or output. Read that skill first, then apply these Salesforce requirements. Implementation belongs in `sf-implement`.
 
 ## Working with the org
 
-This skill only _reads_ the org. Never deploy, run tests, assign permissions, or load data; those belong to `sf-implement`.
+This skill only _reads_ the org. Deploying, running tests, assigning permissions, and loading data belong to `sf-implement`.
 
 - Confirm the org's alias, username, and type before the first query. Production is read-only; keep queries scoped and small.
 - Discover with `sf ... --json`, `sf sobject describe`, Tooling API SOQL, and Read/Grep. Never write throwaway Python/Node or `find`/`locate` to hunt metadata.
 - Pass `--target-org <alias>` on every org command and read fields from `--json`.
-- Confirm unfamiliar Apex, LWC, or metadata behavior with `sf-docs` before writing it in. Never rely on memory.
+- Confirm unfamiliar Apex, LWC, or metadata behavior by following [sf-docs](../sf-docs/SKILL.md) before writing it in. Never rely on memory.
 
 References:
 
@@ -45,7 +45,7 @@ Apply the generic design bar plus these Salesforce checks:
 ## Stop and ask
 
 - Metadata is absent from both org and source, or they disagree beyond clean reconciliation.
-- A design ambiguity would misdirect the implementer; use `grill-with-docs`.
+- A design ambiguity would misdirect the implementer; grill the user by following [grill-with-docs](../grill-with-docs/SKILL.md).
 - The org convention is unclear (no definition file, scripts, or Dev Hub) and the repo doesn't reveal it.
 - The work needs production deployment, packaging, or Dev Hub changes.
 - The behavior may already exist or conflicts with in-flight work.

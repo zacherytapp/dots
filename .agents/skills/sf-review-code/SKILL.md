@@ -5,7 +5,7 @@ description: Extends strict code review with governor limits, bulk safety, secur
 
 # Salesforce Code Review
 
-Extend `review-code`; do not weaken or replace any of its standards, mechanics, ledger reconciliation, capability-based orchestration, or approval bar. Load that skill first, then apply this skill.
+Extend [review-code](../review-code/SKILL.md); do not weaken or replace any of its standards, mechanics, ledger reconciliation, capability-based orchestration, or approval bar. Read that skill first, then apply this skill.
 
 ## Scope
 

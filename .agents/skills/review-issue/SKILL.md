@@ -10,7 +10,7 @@ Workflow: `to-spec` / `to-tickets` → **`review-issue`** → `implement`.
 
 ## Goal
 
-Decide whether each work item is needed, consistent with the current project, and implementable without guessing. This is requirements and design review, not code review: don't invoke `review-code` or create a PR findings ledger. Project goals and standards supersede this skill.
+Decide whether each work item is needed, consistent with the current project, and implementable without guessing. This is requirements and design review, not code review: leave PR review and findings ledgers to `review-code`. Project goals and standards supersede this skill.
 
 Apply [design-standards.md](design-standards.md) and project conventions. Recommend closing unnecessary work, but close issues or delete source files only with explicit approval.
 
@@ -20,7 +20,7 @@ Apply [design-standards.md](design-standards.md) and project conventions. Recomm
 2. **Resolve the comparison point.** Use the ticket's target, the configured default branch, a stacked base, or the merge base. Don't assume a branch name.
 3. **Compare against the project.** Read the relevant architecture, ADRs, glossary, conventions, existing behavior, related issues, and in-flight work. Establish whether the request already exists or conflicts with another source of truth.
 4. **Review readiness** using the checks below.
-5. **Resolve ambiguity.** Research what code and docs can answer. If a product or domain decision remains, use `grill-with-docs`, and keep unsettled choices under the spec's Open questions rather than in ready tickets.
+5. **Resolve ambiguity.** Research what code and docs can answer. If a product or domain decision remains, grill the user by following [grill-with-docs](../grill-with-docs/SKILL.md), and keep unsettled choices under the spec's Open questions rather than in ready tickets.
 6. **Prepare source-of-truth changes.** By default, give exact replacement text or a structured patch. Edit an issue or file directly only when the user asked for updates or otherwise authorized them. Keep each work item self-contained; don't leave durable decisions only in review comments.
 
 Use additional agents only when the harness supports them and the review areas are independent; otherwise review each area sequentially.
