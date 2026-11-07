@@ -1,23 +1,24 @@
-# oh-my-zsh, powerlevel10k (instant prompt and ~/.p10k.zsh) and the zsh plugins
-# come from cachyos-zsh-config. Cargo's env is loaded in ~/.zshenv.
-source /usr/share/cachyos-zsh-config/cachyos-config.zsh
+# On CachyOS, oh-my-zsh, powerlevel10k (instant prompt and ~/.p10k.zsh) and the zsh
+# plugins come from cachyos-zsh-config. Elsewhere, the same pieces are installed into
+# ~/.oh-my-zsh as described in the README. Cargo's env is loaded in ~/.zshenv.
+if [[ -r /usr/share/cachyos-zsh-config/cachyos-config.zsh ]]; then
+  source /usr/share/cachyos-zsh-config/cachyos-config.zsh
+else
+  if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+  fi
+  export ZSH="$HOME/.oh-my-zsh"
+  ZSH_THEME="powerlevel10k/powerlevel10k"
+  plugins=(git fzf extract zsh-autosuggestions zsh-syntax-highlighting)
+  [[ -r "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
+  [[ -r ~/.p10k.zsh ]] && source ~/.p10k.zsh
+fi
 
 export NVM_DIR="$HOME/.config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-export PNPM_HOME="$HOME/.local/share/pnpm"
+# PATH (including pnpm, go and juliaup) is set in ~/.zshenv.
 
-typeset -U path
-path=(
-  "$HOME/.local/bin"
-  "$HOME/bin"
-  "$PNPM_HOME/bin"
-  "$HOME/go/bin"
-  /opt/pmd/bin
-  $path
-)
-
-export SFDX_APEX_LOG_COLOR_MAP="$HOME/.config/nvim/lspserver/apex-colors.json"
 export SF_USE_GENERIC_UNIX_KEYCHAIN=true
 
 # lets pinentry ask for the gpg passphrase (commit signing) in terminals and SSH
@@ -32,13 +33,6 @@ export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
 
 source ~/.config/zsh/worktrees.zsh
 
-# >>> juliaup initialize >>>
-
-# !! Contents within this block are managed by juliaup !!
-
-path=('/home/zakk/.juliaup/bin' $path)
-export PATH
-# Tab completion for juliaup and julia channel selection
-[ -f "/home/zakk/.julia/juliaup/completions/zsh.zsh" ] && source "/home/zakk/.julia/juliaup/completions/zsh.zsh"
-
-# <<< juliaup initialize <<<
+# juliaup completions; its PATH is in ~/.zshenv (juliaup's modifypath is off so it
+# never rewrites these files with absolute paths)
+[ -f "$HOME/.julia/juliaup/completions/zsh.zsh" ] && source "$HOME/.julia/juliaup/completions/zsh.zsh"
