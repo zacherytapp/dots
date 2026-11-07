@@ -31,10 +31,9 @@ end
 bindApp(mainMod .. " + Return", TERMINAL) -- dots: $terminal
 bindApp(mainMod .. " + T", TERMINAL)      -- dots: $terminal (kept as alias)
 bindApp(mainMod .. " + B", BROWSER)      -- dots: $browser
-bindApp(mainMod .. " + F", FILE_MANAGER) -- dots: $fileManager
+bindApp(mainMod .. " + SHIFT + F", FILE_MANAGER) -- dots: $fileManager (SUPER+F moved to dictation)
 bindApp(mainMod .. " + C", EDITOR)       -- dots: $editor
 bindApp(mainMod .. " + O", NOTES)        -- dots: $notes (obsidian, not installed)
-bindApp(mainMod .. " + S", EDITOR_ALT)   -- dots: $editor-alt (subl, not installed)
 bindApp("XF86Calculator",  CALCULATOR)
 
 -- dots had `$mainMod, D, exec, $menu` (tofi-drun)
@@ -108,6 +107,12 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 -- Colour picker (dots: $colorPicker | wl-copy; hyprpicker -a already copies)
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(COLOR_PICKER))
+
+-- Dictation (hyprwhspr, push-to-talk): hold to record, release to paste into
+-- the focused window. Needs external_bindings in ~/.config/hyprwhspr/config.json.
+local whsprFifo = "echo %s > \"$XDG_RUNTIME_DIR/hyprwhspr/recording_control\""
+hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(whsprFifo:format("start")),   { description = "Dictation: start" })
+hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(whsprFifo:format("release")), { release = true, description = "Dictation: stop and paste" })
 
 -- Clipboard history (dots: cliphist list | tofi | cliphist decode | wl-copy)
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(noctCall .. "panel-toggle clipboard"))

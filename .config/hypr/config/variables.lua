@@ -8,7 +8,6 @@ TERMINAL     = "ghostty"
 FILE_MANAGER = "dolphin"
 BROWSER      = "firefox"                      -- dots used: brave (wayland flags)
 EDITOR       = "gnome-text-editor --new-window" -- dots used: code
-EDITOR_ALT   = ""                             -- dots used: subl (not installed)
 NOTES        = ""                             -- dots used: obsidian (not installed)
 CALCULATOR   = "gnome-calculator"
 COLOR_PICKER = "hyprpicker -a -n"
