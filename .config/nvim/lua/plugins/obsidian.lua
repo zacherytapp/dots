@@ -19,10 +19,7 @@ return {
       date_format = "%Y-%m-%d",
       default_tags = { "daily" },
     },
-    completion = {
-      nvim_cmp = false,
-      min_chars = 2,
-    },
+    -- completion comes from obsidian's built-in obsidian-ls server (via blink's lsp source)
     picker = { name = "fzf-lua" },
     ui = { enable = false }, -- Let render-markdown.nvim handle rendering
     attachments = {
@@ -30,22 +27,22 @@ return {
     },
   },
   cmd = "Obsidian",
-  commander = {
+  keys = {
     {
-      keys = { "n", "<leader>nf" },
-      cmd = function()
+      "<leader>nf",
+      function()
         require("fzf-lua").files({ cwd = "~/Documents/brain" })
       end,
       desc = "Notes: Find note file",
     },
-    { keys = { "n", "<leader>no" }, cmd = "<cmd>Obsidian quick_switch<cr>", desc = "Notes: Open note" },
-    { keys = { "n", "<leader>nn" }, cmd = "<cmd>Obsidian new<cr>", desc = "Notes: New note" },
-    { keys = { "n", "<leader>nd" }, cmd = "<cmd>Obsidian today<cr>", desc = "Notes: Daily note" },
-    { keys = { "n", "<leader>ns" }, cmd = "<cmd>Obsidian search<cr>", desc = "Notes: Search" },
-    { keys = { "n", "<leader>nb" }, cmd = "<cmd>Obsidian backlinks<cr>", desc = "Notes: Backlinks" },
-    { keys = { "n", "<leader>nl" }, cmd = "<cmd>Obsidian links<cr>", desc = "Notes: Links" },
-    { keys = { "n", "<leader>nt" }, cmd = "<cmd>Obsidian tags<cr>", desc = "Notes: Tags" },
-    { keys = { "n", "<leader>nr" }, cmd = "<cmd>Obsidian rename<cr>", desc = "Notes: Rename" },
-    { keys = { "n", "<leader>np" }, cmd = "<cmd>Obsidian pasteimg<cr>", desc = "Notes: Paste image" },
+    { "<leader>no", "<cmd>Obsidian quick_switch<cr>", desc = "Notes: Open note" },
+    { "<leader>nn", "<cmd>Obsidian new<cr>", desc = "Notes: New note" },
+    { "<leader>nd", "<cmd>Obsidian today<cr>", desc = "Notes: Daily note" },
+    { "<leader>ns", "<cmd>Obsidian search<cr>", desc = "Notes: Search" },
+    { "<leader>nb", "<cmd>Obsidian backlinks<cr>", desc = "Notes: Backlinks" },
+    { "<leader>nl", "<cmd>Obsidian links<cr>", desc = "Notes: Links" },
+    { "<leader>nt", "<cmd>Obsidian tags<cr>", desc = "Notes: Tags" },
+    { "<leader>nr", "<cmd>Obsidian rename<cr>", desc = "Notes: Rename" },
+    { "<leader>np", "<cmd>Obsidian pasteimg<cr>", desc = "Notes: Paste image" },
   },
 }

@@ -15,9 +15,33 @@ end
 
 -- General
 -----------------------------------------------------------------
-if not vim.env.SSH_TTY then
-  -- don't set the clipboard when in SSH (OSC 52 handles it there)
-  opt.clipboard = "unnamedplus"
+-- Every yank and delete goes to the system clipboard. Locally that's wl-copy
+-- (or xclip). Over SSH, including herdr remote machines, there's no display,
+-- so copy with OSC 52, which herdr passes through to ghostty. Paste returns
+-- this nvim's last yank: an OSC 52 read would stall on ghostty's
+-- clipboard-read prompt. Paste text from the host with ctrl+shift+v.
+opt.clipboard = "unnamedplus"
+local remote = vim.env.SSH_TTY or vim.env.SSH_CONNECTION
+if remote or not (vim.env.WAYLAND_DISPLAY or vim.env.DISPLAY) then
+  local osc52 = require("vim.ui.clipboard.osc52")
+  local last = {} ---@type table<string, { [1]: string[], [2]: string }>
+  local function copy(reg)
+    local send = osc52.copy(reg)
+    return function(lines, regtype)
+      last[reg] = { lines, regtype }
+      send(lines)
+    end
+  end
+  local function paste(reg)
+    return function()
+      return last[reg] or 0
+    end
+  end
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = { ["+"] = copy("+"), ["*"] = copy("*") },
+    paste = { ["+"] = paste("+"), ["*"] = paste("*") },
+  }
 end
 
 opt.confirm = true -- confirm changes before exiting a buffer
@@ -31,7 +55,7 @@ opt.mouse = "a"
 opt.sessionoptions = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "skiprtp", "folds" }
 opt.jumpoptions = "view"
 opt.updatetime = 200
-opt.timeoutlen = vim.g.vscode and 1000 or 300 -- lower than default to quickly trigger which-key
+opt.timeoutlen = 300 -- lower than default to quickly trigger which-key
 opt.visualbell = true
 opt.virtualedit = "block"
 opt.inccommand = "nosplit" -- preview incremental substitute
@@ -67,7 +91,8 @@ opt.signcolumn = "yes"
 opt.winborder = "rounded"
 opt.conceallevel = 2
 opt.laststatus = 3 -- global statusline
-opt.cmdheight = vim.g.vscode and 1 or 0
+opt.showtabline = 0 -- no tabline; find buffers with <leader>, (toggle with <leader>uA)
+opt.cmdheight = 0
 opt.showmode = false -- lualine shows the mode
 opt.ruler = false
 opt.title = true
@@ -111,7 +136,6 @@ opt.tabstop = 2
 opt.softtabstop = 2
 opt.shiftwidth = 2
 opt.shiftround = true
-opt.smartindent = true
 
 -- Folding (treesitter; open by default)
 opt.foldmethod = "expr"

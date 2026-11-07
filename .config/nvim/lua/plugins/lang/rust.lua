@@ -28,7 +28,7 @@ return {
           local map = function(lhs, rhs, desc)
             vim.keymap.set("n", lhs, rhs, { buffer = bufnr, desc = desc })
           end
-          map("<leader>cR", function()
+          map("<leader>ca", function()
             vim.cmd.RustLsp("codeAction")
           end, "Rust: Code action (grouped)")
           map("<leader>ce", function()
@@ -37,7 +37,7 @@ return {
           map("<leader>cE", function()
             vim.cmd.RustLsp("explainError")
           end, "Rust: Explain error")
-          map("<leader>dr", function()
+          map("<leader>dd", function()
             vim.cmd.RustLsp("debuggables")
           end, "Rust: Debuggables")
           map("<leader>cX", function()

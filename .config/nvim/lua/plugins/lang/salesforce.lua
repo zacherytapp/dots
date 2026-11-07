@@ -5,11 +5,12 @@
 -- apex_ls / visualforce_ls / aura_ls: `:SalesforceLspInstall` (see
 -- lua/util/salesforce_lsp.lua). lwc_ls: `npm i -g @salesforce/lwc-language-server`.
 -- All four only attach inside an sfdx project (sfdx-project.json).
+local call = require("util").call
 local sflsp = require("util.salesforce_lsp")
 local sfdx_root = { "sfdx-project.json" }
 
 local function pmd_ruleset()
-  local custom = vim.fn.expand("~/.config/apex/apex_ruleset.xml")
+  local custom = vim.fn.stdpath("config") .. "/pmd/apex.xml"
   return vim.fn.filereadable(custom) == 1 and custom or "rulesets/apex/quickstart.xml"
 end
 
@@ -52,7 +53,7 @@ local visualforce_format = {
 }
 
 local function sf(fn)
-  return ("<cmd>lua require('sf').%s()<cr>"):format(fn)
+  return call("sf", fn)
 end
 
 return {
@@ -72,7 +73,10 @@ return {
     opts = {
       servers = {
         apex_ls = {
-          cmd = sflsp.cmd("apex"),
+          -- lspconfig's default cmd is a function, which lsp.lua's available()
+          -- treats as startable; a missing placeholder keeps apex_ls off until
+          -- :SalesforceLspInstall makes salesforce_lsp.enable() set the real cmd.
+          cmd = sflsp.cmd("apex") or { "apex-jorje-lsp-not-installed" },
           filetypes = { "apex" },
           root_markers = sfdx_root,
           workspace_required = true,
@@ -235,125 +239,76 @@ return {
       -- restore this config's Visualforce / Apex-log detection
       require("config.filetypes").setup()
     end,
-    commander = {
-      -- Org (<leader>mo)
-      { keys = { "n", "<leader>mof" }, cmd = sf("fetch_org_list"), desc = "Salesforce: Fetch org list" },
-      { keys = { "n", "<leader>mog" }, cmd = sf("set_target_org"), desc = "Salesforce: Set target org" },
-      { keys = { "n", "<leader>moG" }, cmd = sf("set_global_target_org"), desc = "Salesforce: Set global target org" },
-      { keys = { "n", "<leader>moo" }, cmd = sf("org_open"), desc = "Salesforce: Open org in browser" },
+    keys = {
+      { "<leader>mof", sf("fetch_org_list"), desc = "Salesforce: Fetch org list" },
+      { "<leader>mog", sf("set_target_org"), desc = "Salesforce: Set target org" },
+      { "<leader>moG", sf("set_global_target_org"), desc = "Salesforce: Set global target org" },
+      { "<leader>moo", sf("org_open"), desc = "Salesforce: Open org in browser" },
+      { "<leader>moF", sf("org_open_current_file"), desc = "Salesforce: Open current file in org" },
+      { "<leader>mol", sf("pull_log"), desc = "Salesforce: Pull Apex log" },
+      { "<leader>mT", sf("toggle_term"), desc = "Salesforce: Toggle terminal" },
+      { "<leader>mC", sf("cancel"), desc = "Salesforce: Cancel running command" },
+      { "<leader>mds", sf("save_and_push"), desc = "Salesforce: Save and push file" },
+      { "<leader>mdd", sf("push_delta"), desc = "Salesforce: Deploy project (delta)" },
+      { "<leader>mrf", sf("retrieve"), desc = "Salesforce: Retrieve file" },
+      { "<leader>mrd", sf("retrieve_delta"), desc = "Salesforce: Retrieve project (delta)" },
+      { "<leader>mra", sf("retrieve_apex_under_cursor"), desc = "Salesforce: Retrieve Apex under cursor" },
+      { "<leader>mrp", sf("retrieve_package"), desc = "Salesforce: Retrieve package" },
+      { "<leader>mct", sf("diff_in_target_org"), desc = "Salesforce: Diff file against target org" },
+      { "<leader>mco", sf("diff_in_org"), desc = "Salesforce: Diff file against chosen org" },
+      { "<leader>mqq", sf("run_query"), desc = "Salesforce: Run SOQL query in file" },
+      { "<leader>mqq", sf("run_highlighted_soql"), mode = "x", desc = "Salesforce: Run highlighted SOQL" },
+      { "<leader>mqt", sf("run_tooling_query"), desc = "Salesforce: Run tooling query in file" },
+      { "<leader>mqa", sf("run_anonymous"), desc = "Salesforce: Run file as anonymous Apex" },
+      { "<leader>mqb", sf("run_anonymous_stdin"), desc = "Salesforce: Run buffer as anonymous Apex (unsaved)" },
+      { "<leader>mtm", sf("run_current_test_with_coverage"), desc = "Salesforce: Test method (coverage)" },
+      { "<leader>mtf", sf("run_all_tests_in_this_file_with_coverage"), desc = "Salesforce: Test file (coverage)" },
+      { "<leader>mtM", sf("run_current_test"), desc = "Salesforce: Test method (quick)" },
+      { "<leader>mtF", sf("run_all_tests_in_this_file"), desc = "Salesforce: Test file (quick)" },
+      { "<leader>mto", sf("open_test_select"), desc = "Salesforce: Select tests" },
+      { "<leader>mtr", sf("repeat_last_tests"), desc = "Salesforce: Repeat last test run" },
+      { "<leader>mtl", sf("run_local_tests"), desc = "Salesforce: Run all local tests" },
+      { "<leader>mtj", sf("run_all_jests"), desc = "Salesforce: Run all Jest tests" },
+      { "<leader>mtJ", sf("run_jest_file"), desc = "Salesforce: Run Jest tests in file" },
+      { "<leader>mts", sf("toggle_sign"), desc = "Salesforce: Toggle coverage signs" },
+      { "]v", sf("uncovered_jump_forward"), desc = "Salesforce: Next uncovered line" },
+      { "[v", sf("uncovered_jump_backward"), desc = "Salesforce: Prev uncovered line" },
+      { "<leader>mnc", sf("create_apex_class"), desc = "Salesforce: New Apex class" },
+      { "<leader>mna", sf("create_aura_bundle"), desc = "Salesforce: New Aura bundle" },
+      { "<leader>mnw", sf("create_lwc_bundle"), desc = "Salesforce: New LWC bundle" },
+      { "<leader>mnt", sf("create_trigger"), desc = "Salesforce: New Apex trigger" },
+      { "<leader>mng", sf("create_ctags"), desc = "Salesforce: Generate ctags" },
+      { "<leader>mnG", sf("create_and_list_ctags"), desc = "Salesforce: Generate and list ctags" },
+      { "<leader>mmr", sf("list_md_to_retrieve"), desc = "Salesforce: List metadata to retrieve" },
+      { "<leader>mmp", sf("pull_md_json"), desc = "Salesforce: Pull metadata names" },
+      { "<leader>mmt", sf("list_md_type_to_retrieve"), desc = "Salesforce: List metadata types to retrieve" },
+      { "<leader>mmT", sf("pull_md_type_json"), desc = "Salesforce: Pull metadata type list" },
+      { "<leader>mmP", sf("set_current_package"), desc = "Salesforce: Set current package" },
       {
-        keys = { "n", "<leader>moF" },
-        cmd = sf("org_open_current_file"),
-        desc = "Salesforce: Open current file in org",
-      },
-      { keys = { "n", "<leader>mol" }, cmd = sf("pull_log"), desc = "Salesforce: Pull Apex log" },
-      -- Terminal
-      { keys = { "n", "<leader>mT" }, cmd = sf("toggle_term"), desc = "Salesforce: Toggle terminal" },
-      { keys = { "n", "<leader>mC" }, cmd = sf("cancel"), desc = "Salesforce: Cancel running command" },
-      { cmd = sf("go_to_sf_root"), desc = "Salesforce: cd terminal to project root" },
-      -- Deploy (<leader>md)
-      { keys = { "n", "<leader>mds" }, cmd = sf("save_and_push"), desc = "Salesforce: Save and push file" },
-      { keys = { "n", "<leader>mdd" }, cmd = sf("push_delta"), desc = "Salesforce: Deploy project (delta)" },
-      -- Retrieve (<leader>mr)
-      { keys = { "n", "<leader>mrf" }, cmd = sf("retrieve"), desc = "Salesforce: Retrieve file" },
-      { keys = { "n", "<leader>mrd" }, cmd = sf("retrieve_delta"), desc = "Salesforce: Retrieve project (delta)" },
-      {
-        keys = { "n", "<leader>mra" },
-        cmd = sf("retrieve_apex_under_cursor"),
-        desc = "Salesforce: Retrieve Apex under cursor",
-      },
-      { keys = { "n", "<leader>mrp" }, cmd = sf("retrieve_package"), desc = "Salesforce: Retrieve package" },
-      -- Compare (<leader>mc)
-      {
-        keys = { "n", "<leader>mct" },
-        cmd = sf("diff_in_target_org"),
-        desc = "Salesforce: Diff file against target org",
-      },
-      { keys = { "n", "<leader>mco" }, cmd = sf("diff_in_org"), desc = "Salesforce: Diff file against chosen org" },
-      -- Query / execute (<leader>mq)
-      { keys = { "n", "<leader>mqq" }, cmd = sf("run_query"), desc = "Salesforce: Run SOQL query in file" },
-      { keys = { "x", "<leader>mqq" }, cmd = sf("run_highlighted_soql"), desc = "Salesforce: Run highlighted SOQL" },
-      { keys = { "n", "<leader>mqt" }, cmd = sf("run_tooling_query"), desc = "Salesforce: Run tooling query in file" },
-      { keys = { "n", "<leader>mqa" }, cmd = sf("run_anonymous"), desc = "Salesforce: Run file as anonymous Apex" },
-      {
-        keys = { "n", "<leader>mqb" },
-        cmd = sf("run_anonymous_stdin"),
-        desc = "Salesforce: Run buffer as anonymous Apex (unsaved)",
-      },
-      -- Tests (<leader>mt); lowercase = with coverage, uppercase = quick
-      {
-        keys = { "n", "<leader>mtm" },
-        cmd = sf("run_current_test_with_coverage"),
-        desc = "Salesforce: Test method (coverage)",
-      },
-      {
-        keys = { "n", "<leader>mtf" },
-        cmd = sf("run_all_tests_in_this_file_with_coverage"),
-        desc = "Salesforce: Test file (coverage)",
-      },
-      { keys = { "n", "<leader>mtM" }, cmd = sf("run_current_test"), desc = "Salesforce: Test method (quick)" },
-      { keys = { "n", "<leader>mtF" }, cmd = sf("run_all_tests_in_this_file"), desc = "Salesforce: Test file (quick)" },
-      { keys = { "n", "<leader>mto" }, cmd = sf("open_test_select"), desc = "Salesforce: Select tests" },
-      { keys = { "n", "<leader>mtr" }, cmd = sf("repeat_last_tests"), desc = "Salesforce: Repeat last test run" },
-      { keys = { "n", "<leader>mtl" }, cmd = sf("run_local_tests"), desc = "Salesforce: Run all local tests" },
-      { keys = { "n", "<leader>mtj" }, cmd = sf("run_all_jests"), desc = "Salesforce: Run all Jest tests" },
-      { keys = { "n", "<leader>mtJ" }, cmd = sf("run_jest_file"), desc = "Salesforce: Run Jest tests in file" },
-      { keys = { "n", "<leader>mts" }, cmd = sf("toggle_sign"), desc = "Salesforce: Toggle coverage signs" },
-      { keys = { "n", "]v" }, cmd = sf("uncovered_jump_forward"), desc = "Salesforce: Next uncovered line" },
-      { keys = { "n", "[v" }, cmd = sf("uncovered_jump_backward"), desc = "Salesforce: Prev uncovered line" },
-      -- Create (<leader>mn)
-      { keys = { "n", "<leader>mnc" }, cmd = sf("create_apex_class"), desc = "Salesforce: New Apex class" },
-      { keys = { "n", "<leader>mna" }, cmd = sf("create_aura_bundle"), desc = "Salesforce: New Aura bundle" },
-      { keys = { "n", "<leader>mnw" }, cmd = sf("create_lwc_bundle"), desc = "Salesforce: New LWC bundle" },
-      { keys = { "n", "<leader>mnt" }, cmd = sf("create_trigger"), desc = "Salesforce: New Apex trigger" },
-      { keys = { "n", "<leader>mng" }, cmd = sf("create_ctags"), desc = "Salesforce: Generate ctags" },
-      {
-        keys = { "n", "<leader>mnG" },
-        cmd = sf("create_and_list_ctags"),
-        desc = "Salesforce: Generate and list ctags",
-      },
-      -- Metadata (<leader>mm)
-      {
-        keys = { "n", "<leader>mmr" },
-        cmd = sf("list_md_to_retrieve"),
-        desc = "Salesforce: List metadata to retrieve",
-      },
-      { keys = { "n", "<leader>mmp" }, cmd = sf("pull_md_json"), desc = "Salesforce: Pull metadata names" },
-      {
-        keys = { "n", "<leader>mmt" },
-        cmd = sf("list_md_type_to_retrieve"),
-        desc = "Salesforce: List metadata types to retrieve",
-      },
-      { keys = { "n", "<leader>mmT" }, cmd = sf("pull_md_type_json"), desc = "Salesforce: Pull metadata type list" },
-      { keys = { "n", "<leader>mmP" }, cmd = sf("set_current_package"), desc = "Salesforce: Set current package" },
-      {
-        keys = { "n", "<leader>mms" },
-        cmd = function()
+        "<leader>mms",
+        function()
           require("sf").refresh_sobjects({ category = "ALL" })
         end,
         desc = "Salesforce: Refresh sObject definitions (Apex completion)",
       },
+      { "<leader>my", sf("copy_apex_name"), desc = "Salesforce: Copy Apex class name" },
+      { "<leader>mxd", sf("delete_current_apex_remote_and_local"), desc = "Salesforce: Delete Apex (remote + local)" },
       {
+        "<leader>mxr",
+        sf("rename_apex_class_remote_and_local"),
+        desc = "Salesforce: Rename Apex class (remote + local)",
+      },
+    },
+    palette = {
+      { desc = "Salesforce: cd terminal to project root", cmd = sf("go_to_sf_root") },
+      {
+        desc = "Salesforce: Refresh custom sObject definitions",
         cmd = function()
           require("sf").refresh_sobjects({ category = "CUSTOM" })
         end,
-        desc = "Salesforce: Refresh custom sObject definitions",
       },
-      -- Misc
-      { keys = { "n", "<leader>my" }, cmd = sf("copy_apex_name"), desc = "Salesforce: Copy Apex class name" },
-      { cmd = "<cmd>SalesforceLspInstall<cr>", desc = "Salesforce: Install/update Apex, Visualforce, Aura LSPs" },
-      { cmd = "<cmd>SalesforceLspStatus<cr>", desc = "Salesforce: Language server versions" },
-      -- Destructive: remote + local (<leader>mx)
-      {
-        keys = { "n", "<leader>mxd" },
-        cmd = sf("delete_current_apex_remote_and_local"),
-        desc = "Salesforce: Delete Apex (remote + local)",
-      },
-      {
-        keys = { "n", "<leader>mxr" },
-        cmd = sf("rename_apex_class_remote_and_local"),
-        desc = "Salesforce: Rename Apex class (remote + local)",
-      },
+      { desc = "Salesforce: Install/update Apex, Visualforce, Aura LSPs", cmd = "SalesforceLspInstall" },
+      { desc = "Salesforce: Language server versions", cmd = "SalesforceLspStatus" },
     },
   },
 }

@@ -4,3 +4,5 @@ vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 4
 vim.bo.tabstop = 4
 vim.opt_local.colorcolumn = "89"
+
+require("util.python_venv").activate()

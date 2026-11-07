@@ -38,17 +38,11 @@ function M.entry(name)
   return vim.uv.fs_stat(path) and path or nil
 end
 
---- Apex jar: the installed one, else the jar bundled in this config
-function M.apex_jar()
-  local bundled = vim.fn.stdpath("config") .. "/lspserver/apex-jorje-lsp.jar"
-  return M.entry("apex") or (vim.uv.fs_stat(bundled) and bundled or nil)
-end
-
 ---@param name "apex"|"visualforce"|"aura"
 ---@return string[]|nil
 function M.cmd(name)
   if name == "apex" then
-    local jar = M.apex_jar()
+    local jar = M.entry("apex")
     return jar
       and {
         "java",
@@ -136,7 +130,7 @@ function M.enable(name)
   end
   local lsp = M.servers[name].lsp
   vim.lsp.config(lsp, { cmd = cmd })
-  vim.lsp.enable(lsp)
+  require("util.lsp_enable").enable({ lsp })
 end
 
 ---@param names? string[]
@@ -170,7 +164,7 @@ function M.status()
     if f then
       f:close()
     end
-    lines[#lines + 1] = ("%-12s %s"):format(name, version or (M.cmd(name) and "bundled" or "not installed"))
+    lines[#lines + 1] = ("%-12s %s"):format(name, version or "not installed")
   end
   table.sort(lines)
   return lines

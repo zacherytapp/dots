@@ -22,7 +22,6 @@ end
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
-vim.g.have_nerd_font = true
 -- Format on save (toggle: <leader>uf buffer, <leader>uF global)
 vim.g.autoformat = true
 
@@ -50,6 +49,5 @@ require("lazy").setup({
 })
 
 require("config.autocmds")
-require("config.python_venv")
 require("config.keymaps")
 vim.cmd.colorscheme("gruvbox-material")

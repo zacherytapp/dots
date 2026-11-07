@@ -1,3 +1,5 @@
+local call = require("util").call
+
 ---@param config {args?:string[]|fun():string[]?}
 local function get_args(config)
   local args = type(config.args) == "function" and (config.args() or {}) or config.args or {}
@@ -99,161 +101,41 @@ return {
         return vim.json.decode(json.json_strip_comments(str))
       end
     end,
-    commander = {
+    keys = {
       {
-        keys = { "n", "<leader>dB" },
-        cmd = function()
+        "<leader>dB",
+        function()
           require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
         end,
         desc = "Breakpoint condition",
       },
+      { "<leader>db", call("dap", "toggle_breakpoint"), desc = "Toggle breakpoint" },
       {
-        keys = { "n", "<leader>db" },
-        cmd = function()
-          require("dap").toggle_breakpoint()
-        end,
-        desc = "Toggle breakpoint",
-      },
-      {
-        keys = { "n", "<leader>dL" },
-        cmd = function()
+        "<leader>dL",
+        function()
           require("dap").set_breakpoint(nil, nil, vim.fn.input("Log message: "))
         end,
         desc = "Log point",
       },
-      {
-        keys = { "n", "<leader>dx" },
-        cmd = function()
-          require("dap").clear_breakpoints()
-        end,
-        desc = "Clear breakpoints",
-      },
-      {
-        keys = { "n", "<leader>dc" },
-        cmd = function()
-          require("dap").continue()
-        end,
-        desc = "Run / continue",
-      },
-      {
-        keys = { "n", "<leader>da" },
-        cmd = function()
-          require("dap").continue({ before = get_args })
-        end,
-        desc = "Run with args",
-      },
-      {
-        keys = { "n", "<leader>dC" },
-        cmd = function()
-          require("dap").run_to_cursor()
-        end,
-        desc = "Run to cursor",
-      },
-      {
-        keys = { "n", "<leader>dg" },
-        cmd = function()
-          require("dap").goto_()
-        end,
-        desc = "Go to line (no execute)",
-      },
-      {
-        keys = { "n", "<leader>di" },
-        cmd = function()
-          require("dap").step_into()
-        end,
-        desc = "Step into",
-      },
-      {
-        keys = { "n", "<leader>dj" },
-        cmd = function()
-          require("dap").down()
-        end,
-        desc = "Down stack frame",
-      },
-      {
-        keys = { "n", "<leader>dk" },
-        cmd = function()
-          require("dap").up()
-        end,
-        desc = "Up stack frame",
-      },
-      {
-        keys = { "n", "<leader>dl" },
-        cmd = function()
-          require("dap").run_last()
-        end,
-        desc = "Run last",
-      },
-      {
-        keys = { "n", "<leader>do" },
-        cmd = function()
-          require("dap").step_out()
-        end,
-        desc = "Step out",
-      },
-      {
-        keys = { "n", "<leader>dO" },
-        cmd = function()
-          require("dap").step_over()
-        end,
-        desc = "Step over",
-      },
-      {
-        keys = { "n", "<leader>dp" },
-        cmd = function()
-          require("dap").pause()
-        end,
-        desc = "Pause",
-      },
-      {
-        keys = { "n", "<leader>dr" },
-        cmd = function()
-          require("dap").repl.toggle()
-        end,
-        desc = "Toggle REPL",
-      },
-      {
-        keys = { "n", "<leader>dR" },
-        cmd = function()
-          require("dap").restart()
-        end,
-        desc = "Restart session",
-      },
-      {
-        keys = { "n", "<leader>ds" },
-        cmd = function()
-          require("dap").session()
-        end,
-        desc = "Session",
-      },
-      {
-        keys = { "n", "<leader>dt" },
-        cmd = function()
-          require("dap").terminate()
-        end,
-        desc = "Terminate",
-      },
-      {
-        keys = { "n", "<leader>dw" },
-        cmd = function()
-          require("dap.ui.widgets").hover()
-        end,
-        desc = "Widgets",
-      },
-      {
-        keys = { "n", "<leader>du" },
-        cmd = function()
-          require("dapui").toggle({})
-        end,
-        desc = "Dap UI",
-      },
-      {
-        keys = { { "n", "x" }, "<leader>de" },
-        cmd = function()
-          require("dapui").eval()
-        end,
-        desc = "Eval",
-      },
+      { "<leader>dx", call("dap", "clear_breakpoints"), desc = "Clear breakpoints" },
+      { "<leader>dc", call("dap", "continue"), desc = "Run / continue" },
+      { "<leader>da", call("dap", "continue", { before = get_args }), desc = "Run with args" },
+      { "<leader>dC", call("dap", "run_to_cursor"), desc = "Run to cursor" },
+      { "<leader>dg", call("dap", "goto_"), desc = "Go to line (no execute)" },
+      { "<leader>di", call("dap", "step_into"), desc = "Step into" },
+      { "<leader>dj", call("dap", "down"), desc = "Down stack frame" },
+      { "<leader>dk", call("dap", "up"), desc = "Up stack frame" },
+      { "<leader>dl", call("dap", "run_last"), desc = "Run last" },
+      { "<leader>do", call("dap", "step_out"), desc = "Step out" },
+      { "<leader>dO", call("dap", "step_over"), desc = "Step over" },
+      { "<leader>dp", call("dap", "pause"), desc = "Pause" },
+      { "<leader>dr", call("dap", "repl.toggle"), desc = "Toggle REPL" },
+      { "<leader>dR", call("dap", "restart"), desc = "Restart session" },
+      { "<leader>ds", call("dap", "session"), desc = "Session" },
+      { "<leader>dt", call("dap", "terminate"), desc = "Terminate" },
+      { "<leader>dw", call("dap.ui.widgets", "hover"), desc = "Widgets" },
+      { "<leader>du", call("dapui", "toggle", {}), desc = "Dap UI" },
+      { "<leader>de", call("dapui", "eval"), mode = { "n", "x" }, desc = "Eval" },
     },
   },
   {

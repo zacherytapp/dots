@@ -73,18 +73,20 @@ function M.format_toggle(buffer)
   })
 end
 
---- Run `fn(client, buf)` whenever an LSP client (optionally by name) attaches
----@param fn fun(client: vim.lsp.Client, buf: integer)
----@param name? string
-function M.on_attach(fn, name)
-  return vim.api.nvim_create_autocmd("LspAttach", {
-    callback = function(args)
-      local client = vim.lsp.get_client_by_id(args.data.client_id)
-      if client and (not name or client.name == name) then
-        fn(client, args.buf)
-      end
-    end,
-  })
+--- Keymap/palette helper: a function that calls `require(mod)[path](...)`.
+--- `path` may be dotted, e.g. call("dap", "repl.toggle").
+---@param mod string
+---@param path string
+---@return fun(): any
+function M.call(mod, path, ...)
+  local args = vim.F.pack_len(...)
+  return function()
+    local fn = require(mod)
+    for key in path:gmatch("[^.]+") do
+      fn = fn[key]
+    end
+    return fn(vim.F.unpack_len(args))
+  end
 end
 
 --- Is `cmd` runnable (on PATH or an absolute executable path)?

@@ -1,3 +1,5 @@
+local call = require("util").call
+
 return {
   "tpope/vim-abolish",
   "tpope/vim-repeat",
@@ -5,7 +7,6 @@ return {
   {
     "folke/which-key.nvim",
     event = "VeryLazy",
-    cond = not vim.g.vscode,
     opts_extend = { "spec" },
     opts = {
       preset = "helix",
@@ -72,19 +73,11 @@ return {
         },
       },
     },
-    commander = {
+    keys = {
+      { "<leader>?", call("which-key", "show", { global = false }), desc = "Buffer keymaps (which-key)" },
       {
-        keys = { "n", "<leader>?" },
-        cmd = function()
-          require("which-key").show({ global = false })
-        end,
-        desc = "Buffer keymaps (which-key)",
-      },
-      {
-        keys = { "n", "<c-w><space>" },
-        cmd = function()
-          require("which-key").show({ keys = "<c-w>", loop = true })
-        end,
+        "<c-w><space>",
+        call("which-key", "show", { keys = "<c-w>", loop = true }),
         desc = "Window hydra mode (which-key)",
       },
     },
@@ -94,88 +87,33 @@ return {
     event = "VeryLazy",
     ---@type Flash.Config
     opts = {},
-    commander = {
-      {
-        keys = { { "n", "x", "o" }, "s" },
-        cmd = function()
-          require("flash").jump()
-        end,
-        desc = "Flash",
-      },
-      {
-        keys = { { "n", "o", "x" }, "S" },
-        cmd = function()
-          require("flash").treesitter()
-        end,
-        desc = "Flash treesitter",
-      },
-      {
-        keys = { "o", "r" },
-        cmd = function()
-          require("flash").remote()
-        end,
-        desc = "Remote flash",
-      },
-      {
-        keys = { { "o", "x" }, "R" },
-        cmd = function()
-          require("flash").treesitter_search()
-        end,
-        desc = "Treesitter search",
-      },
-      {
-        keys = { "c", "<c-s>" },
-        cmd = function()
-          require("flash").toggle()
-        end,
-        desc = "Toggle flash search",
-      },
+    keys = {
+      { "s", call("flash", "jump"), mode = { "n", "x", "o" }, desc = "Flash" },
+      { "S", call("flash", "treesitter"), mode = { "n", "x", "o" }, desc = "Flash treesitter" },
+      { "r", call("flash", "remote"), mode = "o", desc = "Remote flash" },
+      { "R", call("flash", "treesitter_search"), mode = { "o", "x" }, desc = "Treesitter search" },
+      { "<c-s>", call("flash", "toggle"), mode = "c", desc = "Toggle flash search" },
     },
   },
   {
     "folke/persistence.nvim",
     event = "BufReadPre",
     opts = {},
-    commander = {
-      {
-        keys = { "n", "<leader>qs" },
-        cmd = function()
-          require("persistence").load()
-        end,
-        desc = "Restore session",
-      },
-      {
-        keys = { "n", "<leader>qS" },
-        cmd = function()
-          require("persistence").select()
-        end,
-        desc = "Select session",
-      },
-      {
-        keys = { "n", "<leader>ql" },
-        cmd = function()
-          require("persistence").load({ last = true })
-        end,
-        desc = "Restore last session",
-      },
-      {
-        keys = { "n", "<leader>qd" },
-        cmd = function()
-          require("persistence").stop()
-        end,
-        desc = "Don't save current session",
-      },
+    keys = {
+      { "<leader>qs", call("persistence", "load"), desc = "Restore session" },
+      { "<leader>qS", call("persistence", "select"), desc = "Select session" },
+      { "<leader>ql", call("persistence", "load", { last = true }), desc = "Restore last session" },
+      { "<leader>qd", call("persistence", "stop"), desc = "Don't save current session" },
     },
   },
   {
     "MagicDuck/grug-far.nvim",
-    cond = not vim.g.vscode,
     cmd = { "GrugFar", "GrugFarWithin" },
     opts = { headerMaxWidth = 80 },
-    commander = {
+    keys = {
       {
-        keys = { { "n", "x" }, "<leader>sr" },
-        cmd = function()
+        "<leader>sr",
+        function()
           local grug = require("grug-far")
           local ext = vim.bo.buftype == "" and vim.fn.expand("%:e")
           grug.open({
@@ -183,11 +121,12 @@ return {
             prefills = { filesFilter = ext and ext ~= "" and "*." .. ext or nil },
           })
         end,
+        mode = { "n", "x" },
         desc = "Search and replace",
       },
       {
-        keys = { "n", "<leader>sF" },
-        cmd = function()
+        "<leader>sF",
+        function()
           require("grug-far").open({ prefills = { paths = vim.fn.expand("%") } })
         end,
         desc = "Search and replace in file",
@@ -196,13 +135,20 @@ return {
   },
   {
     "stevearc/overseer.nvim",
-    cmd = { "OverseerOpen", "OverseerClose", "OverseerToggle", "OverseerRun", "OverseerShell", "OverseerTaskAction" },
+    cmd = {
+      "OverseerOpen",
+      "OverseerClose",
+      "OverseerToggle",
+      "OverseerRun",
+      "OverseerShell",
+      "OverseerTaskAction",
+    },
     opts = {},
-    commander = {
-      { keys = { "n", "<leader>ow" }, cmd = "<cmd>OverseerToggle<cr>", desc = "Task list" },
-      { keys = { "n", "<leader>oo" }, cmd = "<cmd>OverseerRun<cr>", desc = "Run task" },
-      { keys = { "n", "<leader>os" }, cmd = "<cmd>OverseerShell<cr>", desc = "Run shell command" },
-      { keys = { "n", "<leader>ot" }, cmd = "<cmd>OverseerTaskAction<cr>", desc = "Task action" },
+    keys = {
+      { "<leader>ow", "<cmd>OverseerToggle<cr>", desc = "Task list" },
+      { "<leader>oo", "<cmd>OverseerRun<cr>", desc = "Run task" },
+      { "<leader>os", "<cmd>OverseerShell<cr>", desc = "Run shell command" },
+      { "<leader>ot", "<cmd>OverseerTaskAction<cr>", desc = "Task action" },
     },
   },
   {
@@ -215,14 +161,12 @@ return {
   },
   {
     "andymass/vim-matchup",
-    cond = not vim.g.vscode,
     init = function()
       vim.g.matchup_matchparen_offscreen = { method = "popup" }
     end,
   },
   {
     "itchyny/vim-qfedit",
-    cond = not vim.g.vscode,
     event = "VeryLazy",
   },
   {
@@ -230,37 +174,23 @@ return {
     event = { "BufReadPost", "BufNewFile" },
     cmd = { "TodoTrouble", "TodoFzfLua" },
     opts = {},
-    commander = {
+    keys = {
+      { "]t", call("todo-comments", "jump_next"), desc = "Next todo comment" },
+      { "[t", call("todo-comments", "jump_prev"), desc = "Previous todo comment" },
+      { "<leader>xt", "<cmd>Trouble todo toggle<cr>", desc = "Todo (Trouble)" },
       {
-        keys = { "n", "]t" },
-        cmd = function()
-          require("todo-comments").jump_next()
-        end,
-        desc = "Next todo comment",
-      },
-      {
-        keys = { "n", "[t" },
-        cmd = function()
-          require("todo-comments").jump_prev()
-        end,
-        desc = "Previous todo comment",
-      },
-      { keys = { "n", "<leader>xt" }, cmd = "<cmd>Trouble todo toggle<cr>", desc = "Todo (Trouble)" },
-      {
-        keys = { "n", "<leader>xT" },
-        cmd = "<cmd>Trouble todo toggle filter = {tag = {TODO,FIX,FIXME}}<cr>",
+        "<leader>xT",
+        "<cmd>Trouble todo toggle filter = {tag = {TODO,FIX,FIXME}}<cr>",
         desc = "Todo/Fix/Fixme (Trouble)",
       },
-      { keys = { "n", "<leader>st" }, cmd = "<cmd>TodoFzfLua<cr>", desc = "Todo" },
-      { keys = { "n", "<leader>sT" }, cmd = "<cmd>TodoFzfLua keywords=TODO,FIX,FIXME<cr>", desc = "Todo/Fix/Fixme" },
+      { "<leader>st", "<cmd>TodoFzfLua<cr>", desc = "Todo" },
+      { "<leader>sT", "<cmd>TodoFzfLua keywords=TODO,FIX,FIXME<cr>", desc = "Todo/Fix/Fixme" },
     },
   },
   {
     "mbbill/undotree",
     cmd = "UndotreeToggle",
-    commander = {
-      { keys = { "n", "<leader>su" }, cmd = "<cmd>UndotreeToggle<cr>", desc = "Undo tree" },
-    },
+    keys = { { "<leader>su", "<cmd>UndotreeToggle<cr>", desc = "Undo tree" } },
   },
   {
     "hedyhli/outline.nvim",
@@ -269,9 +199,7 @@ return {
       providers = { priority = { "lsp", "treesitter", "markdown", "norg", "man" } },
       symbol_folding = { autofold_depth = false },
     },
-    commander = {
-      { keys = { "n", "<leader>cs" }, cmd = "<cmd>Outline<cr>", desc = "Symbols outline" },
-    },
+    keys = { { "<leader>cs", "<cmd>Outline<cr>", desc = "Symbols outline" } },
   },
   {
     "windwp/nvim-autopairs",

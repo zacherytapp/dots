@@ -1,31 +1,18 @@
 local M = {}
 
----@enum (key) NisiIcons
 M.icons = {
-  -- system icons
-  linux = " ",
-  macos = " ",
-  windows = " ",
   -- diagnostic icons
-  bug = "",
-  -- error = "",
   error = " ",
   warning = " ",
   info = " ",
-  -- hint = "",
   hint = "󰌶 ",
   lsp = " ",
-  -- lsp = " ",
-  line = "󰍜 ",
   -- git icons
-  git = "",
   conflict = "",
   unstaged = "● ",
   staged = "✓ ",
-  unmerged = " ",
   renamed = "➜ ",
   untracked = " ",
-  -- deleted = " ",
   ignored = "◌ ",
   modified = "● ",
   deleted = " ",
@@ -36,17 +23,25 @@ M.icons = {
   default = " ",
   open = " ",
   empty = " ",
-  empty_open = " ",
-  -- symlink = "",
-  symlink_open = " ",
-  file = " ",
-  symlink = " ",
-  file_readonly = " ",
-  file_modified = " ",
-  -- misc
-  devil = " ",
-  bsd = " ",
-  ghost = " ",
+}
+
+-- Gruvbox Material (dark, medium, "material" foreground): the same palette as
+-- .config/hypr/config/colors.lua and the Noctalia GruvboxMaterial palette
+M.colors = {
+  bg1 = "#32302f",
+  bg3 = "#45403d",
+  bg5 = "#5a524c",
+  fg0 = "#d4be98",
+  grey0 = "#7c6f64",
+  grey1 = "#928374",
+  red = "#ea6962",
+  orange = "#e78a4e",
+  yellow = "#d8a657",
+  green = "#a9b665",
+  aqua = "#89b482",
+  blue = "#7daea3",
+  purple = "#d3869b",
+  salesforce = "#009ddc",
 }
 
 return M

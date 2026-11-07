@@ -1,12 +1,13 @@
+local call = require("util").call
+
 return {
   {
     "tpope/vim-fugitive",
-    cmd = { "Git", "G", "Gread", "Gwrite", "Gdiffsplit", "Gvdiffsplit", "GBrowse" },
-    dependencies = { "tpope/vim-rhubarb" },
-    commander = {
-      { keys = { "n", "<leader>gv" }, cmd = "<cmd>Git<cr>", desc = "Fugitive status" },
-      { cmd = "<cmd>Gread<cr>", desc = "Git: Read file from index (Gread)" },
-      { cmd = "<cmd>Gwrite<cr>", desc = "Git: Stage file (Gwrite)" },
+    cmd = { "Git", "G", "Gread", "Gwrite", "Gdiffsplit", "Gvdiffsplit" },
+    keys = { { "<leader>gv", "<cmd>Git<cr>", desc = "Fugitive status" } },
+    palette = {
+      { desc = "Git: Read file from index (Gread)", cmd = "<cmd>Gread<cr>" },
+      { desc = "Git: Stage file (Gwrite)", cmd = "<cmd>Gwrite<cr>" },
     },
   },
   {
@@ -36,10 +37,10 @@ return {
         changedelete = { text = "▎" },
       },
     },
-    commander = {
+    keys = {
       {
-        keys = { "n", "]h" },
-        cmd = function()
+        "]h",
+        function()
           if vim.wo.diff then
             vim.cmd.normal({ "]c", bang = true })
           else
@@ -49,8 +50,8 @@ return {
         desc = "Next hunk",
       },
       {
-        keys = { "n", "[h" },
-        cmd = function()
+        "[h",
+        function()
           if vim.wo.diff then
             vim.cmd.normal({ "[c", bang = true })
           else
@@ -59,79 +60,18 @@ return {
         end,
         desc = "Prev hunk",
       },
-      {
-        keys = { "n", "]H" },
-        cmd = function()
-          require("gitsigns").nav_hunk("last")
-        end,
-        desc = "Last hunk",
-      },
-      {
-        keys = { "n", "[H" },
-        cmd = function()
-          require("gitsigns").nav_hunk("first")
-        end,
-        desc = "First hunk",
-      },
-      { keys = { { "n", "x" }, "<leader>ghs" }, cmd = ":Gitsigns stage_hunk<cr>", desc = "Stage hunk" },
-      { keys = { { "n", "x" }, "<leader>ghr" }, cmd = ":Gitsigns reset_hunk<cr>", desc = "Reset hunk" },
-      {
-        keys = { "n", "<leader>ghS" },
-        cmd = function()
-          require("gitsigns").stage_buffer()
-        end,
-        desc = "Stage buffer",
-      },
-      {
-        keys = { "n", "<leader>ghu" },
-        cmd = function()
-          require("gitsigns").undo_stage_hunk()
-        end,
-        desc = "Undo stage hunk",
-      },
-      {
-        keys = { "n", "<leader>ghR" },
-        cmd = function()
-          require("gitsigns").reset_buffer()
-        end,
-        desc = "Reset buffer",
-      },
-      {
-        keys = { "n", "<leader>ghp" },
-        cmd = function()
-          require("gitsigns").preview_hunk_inline()
-        end,
-        desc = "Preview hunk inline",
-      },
-      {
-        keys = { "n", "<leader>ghb" },
-        cmd = function()
-          require("gitsigns").blame_line({ full = true })
-        end,
-        desc = "Blame line",
-      },
-      {
-        keys = { "n", "<leader>ghB" },
-        cmd = function()
-          require("gitsigns").blame()
-        end,
-        desc = "Blame buffer",
-      },
-      {
-        keys = { "n", "<leader>ghd" },
-        cmd = function()
-          require("gitsigns").diffthis()
-        end,
-        desc = "Diff this",
-      },
-      {
-        keys = { "n", "<leader>ghD" },
-        cmd = function()
-          require("gitsigns").diffthis("~")
-        end,
-        desc = "Diff this ~",
-      },
-      { keys = { { "o", "x" }, "ih" }, cmd = ":<C-U>Gitsigns select_hunk<cr>", desc = "Select hunk" },
+      { "]H", call("gitsigns", "nav_hunk", "last"), desc = "Last hunk" },
+      { "[H", call("gitsigns", "nav_hunk", "first"), desc = "First hunk" },
+      { "<leader>ghs", ":Gitsigns stage_hunk<cr>", mode = { "n", "x" }, desc = "Stage hunk" },
+      { "<leader>ghr", ":Gitsigns reset_hunk<cr>", mode = { "n", "x" }, desc = "Reset hunk" },
+      { "<leader>ghS", call("gitsigns", "stage_buffer"), desc = "Stage buffer" },
+      { "<leader>ghu", call("gitsigns", "undo_stage_hunk"), desc = "Undo stage hunk" },
+      { "<leader>ghR", call("gitsigns", "reset_buffer"), desc = "Reset buffer" },
+      { "<leader>ghp", call("gitsigns", "preview_hunk_inline"), desc = "Preview hunk inline" },
+      { "<leader>ghB", call("gitsigns", "blame"), desc = "Blame buffer" },
+      { "<leader>ghd", call("gitsigns", "diffthis"), desc = "Diff this" },
+      { "<leader>ghD", call("gitsigns", "diffthis", "~"), desc = "Diff this ~" },
+      { "ih", ":<C-U>Gitsigns select_hunk<cr>", mode = { "o", "x" }, desc = "Select hunk" },
     },
   },
   {
@@ -149,11 +89,11 @@ return {
         win_config = { position = "left", width = 35 },
       },
     },
-    commander = {
-      { keys = { "n", "<leader>gd" }, cmd = "<cmd>DiffviewOpen<cr>", desc = "Diffview (all changes)" },
-      { keys = { "n", "<leader>gD" }, cmd = "<cmd>DiffviewClose<cr>", desc = "Diffview close" },
-      { keys = { "n", "<leader>gf" }, cmd = "<cmd>DiffviewFileHistory %<cr>", desc = "File history (Diffview)" },
-      { keys = { "n", "<leader>gF" }, cmd = "<cmd>DiffviewFileHistory<cr>", desc = "Repo history (Diffview)" },
+    keys = {
+      { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diffview (all changes)" },
+      { "<leader>gD", "<cmd>DiffviewClose<cr>", desc = "Diffview close" },
+      { "<leader>gf", "<cmd>DiffviewFileHistory %<cr>", desc = "File history (Diffview)" },
+      { "<leader>gF", "<cmd>DiffviewFileHistory<cr>", desc = "Repo history (Diffview)" },
     },
   },
   {
@@ -161,13 +101,13 @@ return {
     dependencies = { "nvim-lua/plenary.nvim", "ibhagwan/fzf-lua" },
     cmd = "Octo",
     opts = { picker = "fzf-lua" },
-    commander = {
-      { keys = { "n", "<leader>gpl" }, cmd = "<cmd>Octo pr list<cr>", desc = "List pull requests" },
-      { keys = { "n", "<leader>gpc" }, cmd = "<cmd>Octo pr create<cr>", desc = "Create pull request" },
-      { keys = { "n", "<leader>gpr" }, cmd = "<cmd>Octo review start<cr>", desc = "Start PR review" },
-      { keys = { "n", "<leader>gpR" }, cmd = "<cmd>Octo review submit<cr>", desc = "Submit PR review" },
-      { keys = { "n", "<leader>gil" }, cmd = "<cmd>Octo issue list<cr>", desc = "List issues" },
-      { keys = { "n", "<leader>gic" }, cmd = "<cmd>Octo issue create<cr>", desc = "Create issue" },
+    keys = {
+      { "<leader>gpl", "<cmd>Octo pr list<cr>", desc = "List pull requests" },
+      { "<leader>gpc", "<cmd>Octo pr create<cr>", desc = "Create pull request" },
+      { "<leader>gpr", "<cmd>Octo review start<cr>", desc = "Start PR review" },
+      { "<leader>gpR", "<cmd>Octo review submit<cr>", desc = "Submit PR review" },
+      { "<leader>gil", "<cmd>Octo issue list<cr>", desc = "List issues" },
+      { "<leader>gic", "<cmd>Octo issue create<cr>", desc = "Create issue" },
     },
   },
 }

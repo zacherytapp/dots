@@ -3,6 +3,7 @@ local icons = require("assets").icons
 return {
   {
     "neovim/nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" },
     dependencies = {
       "saghen/blink.cmp",
       "mason-org/mason.nvim",
@@ -69,18 +70,16 @@ return {
         return type(cmd) == "table" and cmd[1] ~= nil and vim.fn.executable(cmd[1]) == 1
       end
 
-      local enabled = {}
+      local lsp_enable = require("util.lsp_enable")
+      local enabled = lsp_enable.enabled
       local function enable_available()
         local ready = {}
         for _, name in ipairs(names) do
           if not enabled[name] and available(name) then
-            enabled[name] = true
             ready[#ready + 1] = name
           end
         end
-        if #ready > 0 then
-          vim.lsp.enable(ready)
-        end
+        lsp_enable.enable(ready)
       end
       enable_available()
 
@@ -170,16 +169,17 @@ return {
         paths = { vim.fn.stdpath("config") .. "/snippets" },
       })
     end,
-    commander = {
+    keys = {
       {
-        keys = { { "i", "s" }, "<C-E>", { silent = true } },
-        cmd = function()
+        "<C-E>",
+        function()
           if require("luasnip").choice_active() then
             require("luasnip").change_choice(1)
           end
         end,
+        mode = { "i", "s" },
+        silent = true,
         desc = "LuaSnip: Next choice",
-        show = false,
       },
     },
   },
@@ -191,21 +191,15 @@ return {
         lsp = { win = { position = "right" } },
       },
     },
-    commander = {
-      { keys = { "n", "<leader>xx" }, cmd = "<cmd>Trouble diagnostics toggle<cr>", desc = "Trouble: Diagnostics" },
-      {
-        keys = { "n", "<leader>xX" },
-        cmd = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
-        desc = "Trouble: Buffer diagnostics",
-      },
-      {
-        keys = { "n", "<leader>cS" },
-        cmd = "<cmd>Trouble lsp toggle<cr>",
-        desc = "Trouble: LSP references/definitions",
-      },
-      { keys = { "n", "<leader>xL" }, cmd = "<cmd>Trouble loclist toggle<cr>", desc = "Trouble: Location list" },
-      { keys = { "n", "<leader>xQ" }, cmd = "<cmd>Trouble qflist toggle<cr>", desc = "Trouble: Quickfix list" },
-      { cmd = "<cmd>Trouble symbols toggle<cr>", desc = "Trouble: Document symbols" },
+    keys = {
+      { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Trouble: Diagnostics" },
+      { "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Trouble: Buffer diagnostics" },
+      { "<leader>cS", "<cmd>Trouble lsp toggle<cr>", desc = "Trouble: LSP references/definitions" },
+      { "<leader>xL", "<cmd>Trouble loclist toggle<cr>", desc = "Trouble: Location list" },
+      { "<leader>xQ", "<cmd>Trouble qflist toggle<cr>", desc = "Trouble: Quickfix list" },
+    },
+    palette = {
+      { desc = "Trouble: Document symbols", cmd = "<cmd>Trouble symbols toggle<cr>" },
     },
   },
 }

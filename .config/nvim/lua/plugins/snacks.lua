@@ -42,7 +42,13 @@ return {
               action = fzf("files", "{ cwd = vim.fn.stdpath('config') }"),
             },
             { icon = "\u{f099b} ", key = "s", desc = "Restore Session", section = "session" },
-            { icon = "󰒲 ", key = "l", desc = "Lazy", action = ":Lazy", enabled = package.loaded.lazy ~= nil },
+            {
+              icon = "󰒲 ",
+              key = "l",
+              desc = "Lazy",
+              action = ":Lazy",
+              enabled = package.loaded.lazy ~= nil,
+            },
             { icon = "\u{f1b3} ", key = "m", desc = "Mason", action = ":Mason" },
             { icon = "\u{f08b} ", key = "q", desc = "Quit", action = ":qa" },
           },
@@ -54,88 +60,89 @@ return {
         },
       },
     },
-    commander = {
+    keys = {
       {
-        keys = { "n", "<leader>." },
-        cmd = function()
+        "<leader>.",
+        function()
           Snacks.scratch()
         end,
         desc = "Toggle scratch buffer",
       },
       {
-        keys = { "n", "<leader>S" },
-        cmd = function()
+        "<leader>S",
+        function()
           Snacks.scratch.select()
         end,
         desc = "Select scratch buffer",
       },
       {
-        keys = { "n", "<leader>cR" },
-        cmd = function()
+        "<leader>cR",
+        function()
           Snacks.rename.rename_file()
         end,
         desc = "Rename file (LSP aware)",
       },
       {
-        keys = { "n", "<leader>un" },
-        cmd = function()
+        "<leader>un",
+        function()
           Snacks.notifier.hide()
         end,
         desc = "Dismiss all notifications",
       },
       {
-        keys = { "n", "<leader>sN" },
-        cmd = function()
+        "<leader>sN",
+        function()
           Snacks.notifier.show_history()
         end,
-        desc = "Notification history",
+        desc = "Show all notifications (history)",
       },
       -- git
       {
-        keys = { "n", "<leader>gg" },
-        cmd = function()
+        "<leader>gg",
+        function()
           Snacks.lazygit({ cwd = require("util").root() })
         end,
         desc = "Lazygit (root dir)",
       },
       {
-        keys = { "n", "<leader>gG" },
-        cmd = function()
+        "<leader>gG",
+        function()
           Snacks.lazygit()
         end,
         desc = "Lazygit (cwd)",
       },
       {
-        keys = { "n", "<leader>gl" },
-        cmd = function()
+        "<leader>gl",
+        function()
           Snacks.lazygit.log({ cwd = require("util").root() })
         end,
         desc = "Lazygit log",
       },
       {
-        keys = { "n", "<leader>gL" },
-        cmd = function()
+        "<leader>gL",
+        function()
           Snacks.lazygit.log_file()
         end,
         desc = "Lazygit current file history",
       },
       {
-        keys = { "n", "<leader>gb" },
-        cmd = function()
+        "<leader>gb",
+        function()
           Snacks.git.blame_line()
         end,
         desc = "Git blame line",
       },
       {
-        keys = { { "n", "x" }, "<leader>gB" },
-        cmd = function()
+        "<leader>gB",
+        function()
           Snacks.gitbrowse()
         end,
+        mode = { "n", "x" },
         desc = "Git browse (open)",
       },
       {
-        keys = { { "n", "x" }, "<leader>gY" },
-        cmd = function()
+        "<leader>gY",
+        function()
           Snacks.gitbrowse({
             open = function(url)
               vim.fn.setreg("+", url)
@@ -143,54 +150,61 @@ return {
             notify = false,
           })
         end,
+        mode = { "n", "x" },
         desc = "Git browse (copy URL)",
       },
       -- terminal
       {
-        keys = { { "n", "t" }, "<c-/>" },
-        cmd = function()
+        "<c-/>",
+        function()
           Snacks.terminal(nil, { cwd = require("util").root() })
         end,
+        mode = { "n", "t" },
         desc = "Terminal (root dir)",
       },
       {
-        keys = { { "n", "t" }, "<c-_>" },
-        cmd = function()
+        "<c-_>",
+        function()
           Snacks.terminal(nil, { cwd = require("util").root() })
         end,
+        mode = { "n", "t" },
         desc = "which_key_ignore",
-        show = false,
       },
       {
-        keys = { "n", "<leader>fT" },
-        cmd = function()
+        "<leader>fT",
+        function()
           Snacks.terminal()
         end,
         desc = "Terminal (cwd)",
       },
       {
-        keys = { "n", "<leader>ft" },
-        cmd = function()
+        "<leader>ft",
+        function()
           Snacks.terminal(nil, { cwd = require("util").root() })
         end,
         desc = "Terminal (root dir)",
       },
       -- references under cursor (LSP document highlight)
       {
-        keys = { { "n", "t" }, "]]" },
-        cmd = function()
+        "]]",
+        function()
           Snacks.words.jump(vim.v.count1)
         end,
+        mode = { "n", "t" },
         desc = "Next reference",
       },
       {
-        keys = { { "n", "t" }, "[[" },
-        cmd = function()
+        "[[",
+        function()
           Snacks.words.jump(-vim.v.count1)
         end,
+        mode = { "n", "t" },
         desc = "Prev reference",
       },
+    },
+    palette = {
       {
+        desc = "Neovim news",
         cmd = function()
           Snacks.win({
             file = vim.api.nvim_get_runtime_file("doc/news.txt", false)[1],
@@ -199,7 +213,6 @@ return {
             wo = { spell = false, wrap = false, signcolumn = "yes", statuscolumn = " ", conceallevel = 3 },
           })
         end,
-        desc = "Neovim news",
       },
     },
     init = function()

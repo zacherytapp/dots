@@ -1,12 +1,7 @@
 -- Python: basedpyright (Pylance-like types, inlay hints) + ruff (lint, fixes,
 -- import sorting, formatting), pytest via neotest, debugpy via nvim-dap-python.
--- Project virtualenvs (.venv / venv) are activated by lua/config/python_venv.lua;
--- <leader>cv picks one manually.
-
--- basedpyright answers hover; ruff's is terse
-require("util").on_attach(function(client)
-  client.server_capabilities.hoverProvider = false
-end, "ruff")
+-- Project virtualenvs (.venv / venv) are auto-activated by lua/util/python_venv.lua
+-- (from after/ftplugin/python.lua); <leader>cv picks one manually.
 
 return {
   {
@@ -41,6 +36,10 @@ return {
           },
         },
         ruff = {
+          -- basedpyright answers hover; ruff's is terse
+          on_attach = function(client)
+            client.server_capabilities.hoverProvider = false
+          end,
           init_options = {
             settings = { logLevel = "error" },
           },

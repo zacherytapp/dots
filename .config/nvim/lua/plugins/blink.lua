@@ -1,12 +1,11 @@
 return {
   {
-
     "saghen/blink.cmp",
+    event = { "InsertEnter", "CmdlineEnter" },
     dependencies = {
       "rafamadriz/friendly-snippets",
       { "L3MON4D3/LuaSnip", version = "v2.*" },
     },
-
     version = "1.*",
     opts = {
       snippets = { preset = "luasnip" },
@@ -25,7 +24,8 @@ return {
       completion = {
         -- Trigger completion automatically
         trigger = {
-          prefetch_on_insert = true,
+          -- off: it fires a request (incl. minuet LLM calls) before anything is typed
+          prefetch_on_insert = false,
           show_in_snippet = true,
           show_on_keyword = true,
           show_on_trigger_character = true,

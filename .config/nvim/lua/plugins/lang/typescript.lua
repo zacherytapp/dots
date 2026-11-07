@@ -17,23 +17,6 @@ local lang_settings = {
   },
 }
 
--- ESLint: apply all fixes before the formatter runs on save
-require("util").on_attach(function(client, buf)
-  vim.api.nvim_create_autocmd("BufWritePre", {
-    group = vim.api.nvim_create_augroup("user_eslint_fix_" .. buf, { clear = true }),
-    buffer = buf,
-    callback = function()
-      if not require("util").autoformat_enabled(buf) then
-        return
-      end
-      client:request_sync("workspace/executeCommand", {
-        command = "eslint.applyAllFixes",
-        arguments = { { uri = vim.uri_from_bufnr(buf), version = vim.lsp.util.buf_versions[buf] } },
-      }, 3000, buf)
-    end,
-  })
-end, "eslint")
-
 return {
   {
     "nvim-treesitter/nvim-treesitter",
@@ -65,6 +48,22 @@ return {
           },
         },
         eslint = {
+          -- apply all fixes before the formatter runs on save
+          on_attach = function(client, buf)
+            vim.api.nvim_create_autocmd("BufWritePre", {
+              group = vim.api.nvim_create_augroup("user_eslint_fix_" .. buf, { clear = true }),
+              buffer = buf,
+              callback = function()
+                if not require("util").autoformat_enabled(buf) then
+                  return
+                end
+                client:request_sync("workspace/executeCommand", {
+                  command = "eslint.applyAllFixes",
+                  arguments = { { uri = vim.uri_from_bufnr(buf), version = vim.lsp.util.buf_versions[buf] } },
+                }, 3000, buf)
+              end,
+            })
+          end,
           settings = {
             workingDirectories = { mode = "auto" },
             format = false,

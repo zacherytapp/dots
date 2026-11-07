@@ -9,14 +9,14 @@ A Neovim configuration for Salesforce, web, Go, Python, Rust and infrastructure 
 - Per-language support for Lua, Go (+ Go templates, templ, Helm), Python (+ Django, Jinja2), Rust, TypeScript/JavaScript (+ React, Next.js), Svelte, HTML/CSS/Tailwind, Salesforce (Apex, LWC, Visualforce, Aura, SOQL), YAML, JSON, Terraform/OpenTofu, Docker, Ansible and Caddy. See [Language Support](#language-support)
 - Tools installed automatically through Mason; servers start as soon as they're installed
 - Format on save (conform.nvim) and linting (nvim-lint), with toggles
-- LazyVim layout: bufferline, lualine, noice, which-key (helix), snacks dashboard/notifier/indent, flash
-- Every keymap in the commander palette (`<leader>k`) and which-key
+- LazyVim layout (no tabline; buffers via the `<leader>,` picker): lualine, noice, which-key (helix), snacks dashboard/notifier/indent, flash
+- Every described keymap in the built-in command palette (`<leader>k`) and which-key
 - Fuzzy finding with fzf-lua
 - Git integration with gitsigns, git-conflict, and lazygit
 - Treesitter syntax highlighting with textobjects
-- Blink completion engine with Copilot integration
+- Blink completion engine with Copilot and minuet (local LLM) integration
 - Salesforce development tools (SFDX, Apex LSP, LWC, Visualforce, PMD linting)
-- AI-assisted coding with GitHub Copilot and OpenCode
+- AI-assisted coding with GitHub Copilot, minuet-ai (LLM completions) and OpenCode
 - Quick file navigation with Harpoon
 - Modern UI with Snacks (dashboard, notifications, zen mode)
 - Obsidian note-taking integration
@@ -105,28 +105,13 @@ sudo apt install -y \
 sudo apt install -y gimp imagemagick ghostscript
 ```
 
-### 2. Lua & LuaRocks Installation
-
-```bash
-# Lua should be installed from step 1, now install LuaRocks
-wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz
-tar zxpf luarocks-3.11.1.tar.gz
-cd luarocks-3.11.1
-./configure && make && sudo make install
-cd ..
-rm -rf luarocks-3.11.1*
-
-# Install required Lua packages
-sudo luarocks install luasocket
-```
-
-### 3. Ruby Gems
+### 2. Ruby Gems
 
 ```bash
 gem install neovim
 ```
 
-### 4. Additional Tools
+### 3. Additional Tools
 
 ```bash
 # Install lazygit (optional but recommended for git integration)
@@ -187,28 +172,13 @@ sudo dnf install -y \
 sudo dnf install -y gimp ImageMagick ghostscript
 ```
 
-### 2. Lua & LuaRocks Installation
-
-```bash
-# Install LuaRocks
-wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz
-tar zxpf luarocks-3.11.1.tar.gz
-cd luarocks-3.11.1
-./configure && make && sudo make install
-cd ..
-rm -rf luarocks-3.11.1*
-
-# Install required Lua packages
-sudo luarocks install luasocket
-```
-
-### 3. Ruby Gems
+### 2. Ruby Gems
 
 ```bash
 gem install neovim
 ```
 
-### 4. Flatpak Setup (Optional)
+### 3. Flatpak Setup (Optional)
 
 ```bash
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -250,7 +220,6 @@ sudo pacman -S --needed \
 # Install language dependencies
 sudo pacman -S --needed \
   lua \
-  luarocks \
   ruby \
   python \
   python-pip \
@@ -260,20 +229,13 @@ sudo pacman -S --needed \
 sudo pacman -S --needed gimp imagemagick ghostscript
 ```
 
-### 2. LuaRocks Setup
-
-```bash
-# LuaRocks should be installed, configure it
-sudo luarocks install luasocket
-```
-
-### 3. Ruby Gems
+### 2. Ruby Gems
 
 ```bash
 gem install neovim
 ```
 
-### 4. AUR Helper (Optional - for yay)
+### 3. AUR Helper (Optional - for yay)
 
 ```bash
 # If you don't have an AUR helper, install yay
@@ -462,7 +424,7 @@ rm -rf neovim
 
 ```bash
 nvim --version
-# Should show version 0.10.0 or higher
+# Should show version 0.11.0 or higher (the config uses vim.lsp.config, vim.hl and vim.diagnostic.jump; tested on 0.12)
 ```
 
 ---
@@ -477,15 +439,18 @@ init.lua                    bootstrap lazy.nvim, load config/*, import plugins +
 lua/config/
   options.lua               editor options (2-space default indent)
   filetypes.lua             filetype detection for every supported language
-  keymaps.lua               global keymaps (commander registry) + keymap convention
+  keymaps.lua               global keymaps (plain vim.keymap.set) + keymap convention
   autocmds.lua              LazyVim-style autocommands
-  python_venv.lua           auto-activate a project's .venv / venv
 lua/util/
   init.lua                  root detection, format toggles, helpers
   salesforce_lsp.lua        :SalesforceLspInstall (Apex / Visualforce / Aura servers)
+  lsp_enable.lua            vim.lsp.enable wrapper shared by lsp.lua and salesforce_lsp.lua (feeds :LspMissing)
+  palette.lua               <leader>k command palette (fzf-lua / vim.ui.select)
+  ai.lua                    Copilot / minuet deny list + minuet health gating
+  python_venv.lua           auto-activate a project's .venv / venv (called from after/ftplugin/python.lua)
 lua/plugins/                core: lsp, formatting (conform), linting (nvim-lint),
                             treesitter, dap, testing (neotest), blink, fzf-lua,
-                            snacks, ui (bufferline, noice, commander), editor
+                            snacks, ui (noice), editor
                             (which-key, flash, grug-far, ...), git, files, ...
 lua/plugins/lang/*.lua      one file per language (see below)
 after/ftplugin/*.lua        per-filetype indent / commentstring
@@ -506,7 +471,8 @@ Each `lua/plugins/lang/<language>.lua` adds to the core specs through lazy.nvim
 | `nvim-dap` | `configurations`, or a language-specific DAP plugin as a dependency |
 
 Servers are only enabled when their command exists, and they start as soon as Mason finishes
-installing them (no restart). `:LspMissing` lists configured servers that aren't
+installing them (no restart). nvim-lspconfig lazy-loads on `BufReadPre`/`BufNewFile` and blink.cmp on
+`InsertEnter`/`CmdlineEnter`, so `:LspMissing` (available once a file is opened) lists configured servers that aren't
 installed, `:LintInfo` shows the linters for the current buffer, and `:ConformInfo`
 shows its formatters.
 
@@ -540,7 +506,7 @@ To add a language, copy the closest `lua/plugins/lang/*.lua` file.
 | Terraform | terraform-ls | terraform fmt (or tofu fmt) | tflint | — | |
 | OpenTofu | tofu-ls | tofu fmt (or terraform fmt) | tflint | — | `.tofu` |
 | Docker | docker-language-server (Dockerfile, Compose, Bake) + yamlls | — | hadolint | — | |
-| Ansible | ansible-language-server | prettierd | ansible-lint (via the LSP) | `<leader>ta` run playbook | playbook/role detection |
+| Ansible | ansible-language-server | prettierd | ansible-lint (via the LSP) | `<leader>tp` run playbook | playbook/role detection |
 | Caddy | — (no Caddyfile LSP exists) | caddy fmt | caddy adapt | — | tabs, 4 wide |
 
 Indentation: 2 spaces everywhere except Go, Caddy and templ (tabs, as their
@@ -585,8 +551,8 @@ extensions. Install or update them from Open VSX with:
 ```
 
 They're unpacked into `~/.local/share/nvim/salesforce-lsp/` and start
-immediately; no restart needed. Until the Apex server is installed there,
-the jar bundled in `lspserver/apex-jorje-lsp.jar` is used. The LWC server
+immediately; no restart needed. The Apex, Visualforce and Aura servers come only
+from `:SalesforceLspInstall` (nothing is bundled in the repo). The LWC server
 comes from npm (`npm i -g @salesforce/lwc-language-server`). All Salesforce servers
 attach only inside an sfdx project (`sfdx-project.json`).
 
@@ -606,8 +572,8 @@ pmd --version
 ```
 
 PMD runs through nvim-lint on open/save of Apex files (files over 10,000 lines
-are skipped). It uses `~/.config/apex/apex_ruleset.xml` when present and PMD's
-bundled `rulesets/apex/quickstart.xml` otherwise.
+are skipped). It uses the repo's `pmd/apex.xml` ruleset and falls back to PMD's
+bundled `rulesets/apex/quickstart.xml`.
 
 ### Prettier Plugin for Apex
 
@@ -641,8 +607,8 @@ This configuration is part of a larger dotfiles repository managed
 with [GNU Stow](https://www.gnu.org/software/stow/):
 
 ```bash
-git clone git@github.com:zacherytapp/dots.git ~/projects/dots
-cd ~/projects/dots
+git clone git@github.com:zacherytapp/dots.git ~/Projects/dots
+cd ~/Projects/dots
 stow .
 ```
 
@@ -729,7 +695,7 @@ nvim +checkhealth
 - ✅ fzf-lua - fzf, ripgrep and fd found
 - ✅ mason - All core utils found
 - ✅ vim.lsp - No errors
-- ✅ clipboard - xclip found
+- ✅ clipboard - wl-copy found (OSC 52 over SSH)
 
 **Expected Warnings (Safe to Ignore):**
 
@@ -877,16 +843,16 @@ sudo ln -s $(which fdfind) /usr/local/bin/fd
 `<leader>` is `Space`. The layout follows [LazyVim's keymaps](https://www.lazyvim.org/keymaps).
 Every binding appears in two places:
 
-- **`<leader>k`**: commander palette (fuzzy search over every keymap and palette-only command)
+- **`<leader>k`**: command palette (fuzzy search over every described normal-mode keymap, global and buffer-local, including lazy `keys` of plugins not yet loaded, plus palette-only commands)
 - **which-key**: press `<leader>` (or `g`, `[`, `]`, `z`, ...) and wait; `<leader>?` shows buffer-local keys
 
-How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
+How keymaps are declared is documented at the top of `lua/config/keymaps.lua`. Plugin keys are lazy.nvim `keys = {}` on each spec (which also lazy-loads the plugin); palette-only commands are declared on specs as `palette = { { desc, cmd } }`.
 
 ### General
 
 | Key | Action |
 | --- | --- |
-| `<leader>k` | Command palette (commander) |
+| `<leader>k` | Command palette |
 | `<C-s>` | Save file |
 | `<Esc>` | Clear search highlight |
 | `<C-h/j/k/l>` | Move between windows |
@@ -900,6 +866,7 @@ How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
 | `-` | Oil: parent directory |
 | `<leader>p` (visual) | Paste without yanking the selection |
 | `<leader>y` / `<leader>Y` | Yank to system clipboard |
+| Mouse drag (visual) | Copy the selection to the system clipboard on release |
 | `<leader>l` | Lazy |
 | `<leader>cm` | Mason |
 | `<leader>.` / `<leader>S` | Scratch buffer / select scratch |
@@ -914,21 +881,17 @@ How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
 | `<leader>ff` / `<leader>fF` | Find files (root dir / cwd) |
 | `<leader>fr` / `<leader>fR` | Recent files (all / cwd) |
 | `<leader>fg` | Git files |
-| `<leader>fb` / `<leader>,` | Buffers |
+| `<leader>,`, `<leader>fb` | Search open buffers |
 | `<leader>fc` | Config files |
-| `<leader>fp` | Files in `~/projects` |
+| `<leader>fp` | Files in `~/Projects` |
 | `<leader>fn` | New file |
-| `<leader>fe` / `<leader>fE` | Neo-tree (root dir / cwd), also `<leader>e` / `<leader>E` |
+| `<leader>e` / `<leader>E` | Neo-tree (root dir / cwd) |
 | `<leader>fo` | Oil (float, cwd) |
 | `<leader>ft` / `<leader>fT` | Terminal (root dir / cwd) |
 | `<S-h>` / `<S-l>`, `[b` / `]b` | Previous / next buffer |
-| `[B` / `]B` | Move buffer left / right |
-| `<leader>bb`, ``<leader>` `` | Alternate buffer |
+| `<leader>bb` | Alternate buffer |
 | `<leader>bd` / `<leader>bD` | Delete buffer / buffer and window |
 | `<leader>bo` | Delete other buffers |
-| `<leader>bp` / `<leader>bP` | Pin buffer / delete unpinned buffers |
-| `<leader>br` / `<leader>bl` | Delete buffers to the right / left |
-| `<leader>bj` | Pick buffer |
 | `<leader>be` | Buffer explorer |
 | `<leader>-` / `<leader>\|` | Split below / right |
 | `<leader>wd` | Close window |
@@ -957,14 +920,14 @@ How keymaps are declared is documented at the top of `lua/config/keymaps.lua`.
 | `<leader>sr` | Search and replace (grug-far, visual selection too) |
 | `<leader>sF` | Search and replace in the current file |
 | `<leader>sh` / `<leader>sk` / `<leader>sC` | Help / keymaps / commands |
-| `<leader>:`, `<leader>sc` | Command history |
+| `<leader>:` | Command history |
 | `<leader>sj` / `<leader>sm` / `<leader>s"` | Jumps / marks / registers |
 | `<leader>sq` / `<leader>sl` | Quickfix / location list |
 | `<leader>sR` | Resume last picker |
 | `<leader>st` / `<leader>sT` | Todo comments (all / TODO,FIX,FIXME) |
 | `<leader>su` | Undo tree |
-| `<leader>sN` | Notification history |
-| `<leader>snl` `snh` `sna` `snd` `snt` | Noice: last / history / all / dismiss / picker |
+| `<leader>sN` | Show all notifications (history) |
+| `<leader>snl` `snh` `sna` `snt` | Noice: last / history / all / picker |
 | `<leader>sH` / `<leader>sa` / `<leader>sM` | Highlights / autocommands / man pages |
 | `<leader>uC` | Colorschemes |
 
@@ -1003,9 +966,9 @@ Language-specific (buffer-local):
 | `<leader>cn…` | package.json | npm: `s` show versions, `u` update, `d` delete, `i` install, `v` change version |
 | `<leader>cgt` `cgT` `cge` `cgi` `cgg` `cgG` `cgm` | Go | Tags add/remove, if err, implement interface, generate tests, mod tidy |
 | `<leader>cv` | Python | Select virtualenv |
-| `<leader>cR` / `<leader>ce` / `<leader>cE` / `<leader>cX` | Rust | Grouped code action / expand macro / explain error / runnables |
-| `<leader>dr` | Rust | Debuggables |
-| `<leader>ta` | Ansible | Run playbook / role |
+| `<leader>ca` / `<leader>ce` / `<leader>cE` / `<leader>cX` | Rust | Grouped code action / expand macro / explain error / runnables |
+| `<leader>dd` | Rust | Debuggables |
+| `<leader>tp` | Ansible | Run playbook / role |
 
 ### Diagnostics / quickfix
 
@@ -1036,7 +999,7 @@ Language-specific (buffer-local):
 | `]h` / `[h`, `]H` / `[H` | Next / previous hunk, last / first hunk |
 | `<leader>ghs` / `<leader>ghr` | Stage / reset hunk (visual: selection) |
 | `<leader>ghS` / `<leader>ghR` / `<leader>ghu` | Stage buffer / reset buffer / undo stage |
-| `<leader>ghp` / `<leader>ghb` / `<leader>ghB` | Preview hunk / blame line / blame buffer |
+| `<leader>ghp` / `<leader>ghB` | Preview hunk / blame buffer (blame line: `<leader>gb`) |
 | `<leader>ghd` / `<leader>ghD` | Diff this / diff against `~` |
 | `ih` | Hunk textobject |
 | `<leader>gpl` `gpc` `gpr` `gpR` | Octo: list / create PR, start / submit review |
@@ -1104,9 +1067,28 @@ refresh custom sObjects, `cd` terminal to project root.
 | Key | Action |
 | --- | --- |
 | `<C-l>` / `<C-u>` (insert) | Copilot: accept / dismiss suggestion |
+| `<leader>uM` | Toggle minuet completions off / on |
+| `:MinuetProbe` / `:Minuet change_model` | Check the minuet backend now (notifies) / change model |
 | `<leader>aa` / `<leader>a+` | OpenCode: ask about this / add this to the prompt |
 | `<leader>as` / `<leader>ac` | OpenCode: select prompt / command |
 | `<leader>at` / `<leader>an` / `<leader>ai` / `<leader>aA` | OpenCode: toggle / new session / interrupt / cycle agent |
+
+minuet-ai.nvim adds LLM completions to the blink.cmp menu (source `minuet`) from an
+OpenAI-compatible FIM endpoint. By default that is LM Studio at
+`http://100.89.33.66:1234` (Tailscale host `incubus`) with model
+`qwen2.5-coder-7b-instruct`. Override with the env vars `MINUET_BASE_URL`,
+`MINUET_MODEL` and `MINUET_BACKEND_KIND` (`lmstudio` requires the model to be
+loaded, checked via `/api/v1/models`; `openai` checks `/v1/models`).
+
+Health gating (`lua/util/ai.lua`): minuet only runs while the backend is up. While
+it is down, one probe is made per backoff window (30s doubling to 10 min),
+triggered on `InsertEnter`; 3 consecutive timed-out requests mark it down. The
+statusline shows `󰚩 down` while it is down.
+
+Copilot (loads on `InsertEnter`) and minuet share one deny list
+(`util.ai.allowed`): `.env`, `tfvars`, keys/certs, `~/.ssh`, `~/.aws`, the password
+store, the notes vault (`~/Documents/brain`) and paths containing `secret` or
+`credential`.
 
 ### Notes (Obsidian, `<leader>n`)
 
@@ -1133,7 +1115,7 @@ refresh custom sObjects, `cd` terminal to project root.
 | `<leader>us` / `<leader>uw` | Spelling / wrap |
 | `<leader>ul` / `<leader>uL` | Line numbers / relative numbers |
 | `<leader>ug` / `<leader>ut` | Indent guides / treesitter context |
-| `<leader>uc` / `<leader>uA` | Conceal / tabline |
+| `<leader>uc` / `<leader>uA` | Conceal / tabline (hidden by default) |
 | `<leader>uT` / `<leader>uG` | Treesitter highlighting / git signs |
 | `<leader>ub` / `<leader>uD` | Dark background / dim inactive code |
 | `<leader>uz` / `<leader>uZ` / `<leader>uS` | Zen / zoom / smooth scroll |

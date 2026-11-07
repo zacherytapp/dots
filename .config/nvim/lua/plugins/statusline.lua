@@ -1,4 +1,5 @@
 local icons = require("assets").icons
+local c = require("assets").colors
 
 local function sf_org()
   local ok, sf = pcall(require, "sf")
@@ -75,18 +76,18 @@ return {
         sections = {
           lualine_a = {
             "mode",
-            { recording, color = { fg = "#ea6962" } },
+            { recording, color = { fg = c.red } },
           },
           lualine_b = { "branch" },
           lualine_c = {
-            { root_dir, color = { fg = "#928374" } },
+            { root_dir, color = { fg = c.grey1 } },
             {
               "diagnostics",
               symbols = { error = icons.error, warn = icons.warning, info = icons.info, hint = icons.hint },
             },
             { "filetype", icon_only = true, separator = "", padding = { left = 1, right = 0 } },
             { "filename", path = 1, symbols = { modified = " ●", readonly = " \u{f023}", unnamed = "" } },
-            { sf_org, icon = { "󰢎", color = { fg = "#009ddc" } } },
+            { sf_org, icon = { "󰢎", color = { fg = c.salesforce } } },
             { symbols.get, cond = symbols.has },
           },
           lualine_x = {
@@ -97,7 +98,7 @@ return {
               cond = function()
                 return package.loaded["noice"] and require("noice").api.status.command.has()
               end,
-              color = { fg = "#d3869b" },
+              color = { fg = c.purple },
             },
             {
               function()
@@ -106,7 +107,7 @@ return {
               cond = function()
                 return package.loaded["noice"] and require("noice").api.status.mode.has()
               end,
-              color = { fg = "#e78a4e" },
+              color = { fg = c.orange },
             },
             {
               function()
@@ -115,14 +116,23 @@ return {
               cond = function()
                 return package.loaded["dap"] and require("dap").status() ~= ""
               end,
-              color = { fg = "#ea6962" },
+              color = { fg = c.red },
             },
             {
               require("lazy.status").updates,
               cond = require("lazy.status").has_updates,
-              color = { fg = "#e78a4e" },
+              color = { fg = c.orange },
             },
-            { lsp_clients, color = { fg = "#7daea3" } },
+            {
+              function()
+                return require("util.ai").status()
+              end,
+              cond = function()
+                return package.loaded["util.ai"] ~= nil
+              end,
+              color = { fg = c.grey1 },
+            },
+            { lsp_clients, color = { fg = c.blue } },
             {
               "diff",
               symbols = { added = icons.added, modified = icons.modified, removed = icons.deleted },
@@ -163,6 +173,16 @@ return {
       lualine.setup(opts)
       vim.api.nvim_create_autocmd({ "RecordingEnter", "RecordingLeave" }, {
         group = vim.api.nvim_create_augroup("user_lualine_recording", { clear = true }),
+        callback = function()
+          vim.schedule(function()
+            lualine.refresh({ place = { "statusline" } })
+          end)
+        end,
+      })
+      -- util.ai probes the backend asynchronously; redraw as soon as it flips.
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "AiBackendChanged",
+        group = vim.api.nvim_create_augroup("user_lualine_ai", { clear = true }),
         callback = function()
           vim.schedule(function()
             lualine.refresh({ place = { "statusline" } })

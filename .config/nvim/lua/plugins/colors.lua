@@ -1,20 +1,6 @@
--- Gruvbox Material (dark, medium contrast, "material" foreground): the same
--- palette as .config/hypr/config/colors.lua and the Noctalia GruvboxMaterial
--- palette, so the editor matches the rest of the desktop.
-local p = {
-  bg1 = "#32302f",
-  bg3 = "#45403d",
-  bg5 = "#5a524c",
-  fg0 = "#d4be98",
-  grey0 = "#7c6f64",
-  grey1 = "#928374",
-  red = "#ea6962",
-  orange = "#e78a4e",
-  yellow = "#d8a657",
-  green = "#a9b665",
-  aqua = "#89b482",
-  blue = "#7daea3",
-}
+-- Highlight overrides on top of gruvbox-material; the palette lives in
+-- lua/assets.lua so the statusline and other specs can share it.
+local p = require("assets").colors
 
 local overrides = {
   -- Floats & popups (transparent)

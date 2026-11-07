@@ -1,3 +1,5 @@
+local call = require("util").call
+
 -- Adapters are contributed by lua/plugins/lang/*.lua as
 --   opts.adapters = { ["neotest-foo"] = { ...adapter config } }
 -- (Apex tests run through sf.nvim on <leader>mt*.)
@@ -56,84 +58,36 @@ return {
       opts.adapters = adapters
       require("neotest").setup(opts)
     end,
-    commander = {
+    keys = {
+      { "<leader>ta", call("neotest", "run.attach"), desc = "Attach to test" },
       {
-        keys = { "n", "<leader>ta" },
-        cmd = function()
-          require("neotest").run.attach()
-        end,
-        desc = "Attach to test",
-      },
-      {
-        keys = { "n", "<leader>tt" },
-        cmd = function()
+        "<leader>tt",
+        function()
           require("neotest").run.run(vim.fn.expand("%"))
         end,
         desc = "Run file",
       },
       {
-        keys = { "n", "<leader>tT" },
-        cmd = function()
+        "<leader>tT",
+        function()
           require("neotest").run.run(vim.uv.cwd())
         end,
         desc = "Run all test files",
       },
+      { "<leader>tr", call("neotest", "run.run"), desc = "Run nearest" },
+      { "<leader>tl", call("neotest", "run.run_last"), desc = "Run last" },
+      { "<leader>ts", call("neotest", "summary.toggle"), desc = "Toggle summary" },
+      { "<leader>to", call("neotest", "output.open", { enter = true, auto_close = true }), desc = "Show output" },
+      { "<leader>tO", call("neotest", "output_panel.toggle"), desc = "Toggle output panel" },
+      { "<leader>tS", call("neotest", "run.stop"), desc = "Stop" },
       {
-        keys = { "n", "<leader>tr" },
-        cmd = function()
-          require("neotest").run.run()
-        end,
-        desc = "Run nearest",
-      },
-      {
-        keys = { "n", "<leader>tl" },
-        cmd = function()
-          require("neotest").run.run_last()
-        end,
-        desc = "Run last",
-      },
-      {
-        keys = { "n", "<leader>ts" },
-        cmd = function()
-          require("neotest").summary.toggle()
-        end,
-        desc = "Toggle summary",
-      },
-      {
-        keys = { "n", "<leader>to" },
-        cmd = function()
-          require("neotest").output.open({ enter = true, auto_close = true })
-        end,
-        desc = "Show output",
-      },
-      {
-        keys = { "n", "<leader>tO" },
-        cmd = function()
-          require("neotest").output_panel.toggle()
-        end,
-        desc = "Toggle output panel",
-      },
-      {
-        keys = { "n", "<leader>tS" },
-        cmd = function()
-          require("neotest").run.stop()
-        end,
-        desc = "Stop",
-      },
-      {
-        keys = { "n", "<leader>tw" },
-        cmd = function()
+        "<leader>tw",
+        function()
           require("neotest").watch.toggle(vim.fn.expand("%"))
         end,
         desc = "Toggle watch",
       },
-      {
-        keys = { "n", "<leader>td" },
-        cmd = function()
-          require("neotest").run.run({ strategy = "dap" })
-        end,
-        desc = "Debug nearest",
-      },
+      { "<leader>td", call("neotest", "run.run", { strategy = "dap" }), desc = "Debug nearest" },
     },
   },
 }

@@ -59,14 +59,11 @@ autocmd("FileType", {
     "gitsigns-blame",
     "grug-far",
     "help",
-    "lspinfo",
     "neotest-output",
     "neotest-output-panel",
     "neotest-summary",
-    "notify",
     "qf",
     "startuptime",
-    "tsplayground",
   },
   callback = function(event)
     vim.bo[event.buf].buflisted = false

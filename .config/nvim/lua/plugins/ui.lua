@@ -1,67 +1,11 @@
-local icons = require("assets").icons
+local call = require("util").call
 
+-- No tabline: buffers are switched with the fzf-lua picker (<leader>, / <leader>fb)
+-- and cycled with <S-h>/<S-l> (lua/config/keymaps.lua); showtabline = 0 in options.lua.
 return {
-  {
-    "akinsho/bufferline.nvim",
-    event = "VeryLazy",
-    cond = not vim.g.vscode,
-    opts = {
-      options = {
-        close_command = function(n)
-          Snacks.bufdelete(n)
-        end,
-        right_mouse_command = function(n)
-          Snacks.bufdelete(n)
-        end,
-        diagnostics = "nvim_lsp",
-        always_show_bufferline = false,
-        diagnostics_indicator = function(_, _, diag)
-          local ret = (diag.error and icons.error .. diag.error .. " " or "")
-            .. (diag.warning and icons.warning .. diag.warning or "")
-          return vim.trim(ret)
-        end,
-        offsets = {
-          { filetype = "neo-tree", text = "Neo-tree", highlight = "Directory", text_align = "left" },
-          { filetype = "snacks_layout_box" },
-        },
-        get_element_icon = function(opts)
-          return require("mini.icons").get("filetype", opts.filetype)
-        end,
-      },
-    },
-    config = function(_, opts)
-      require("bufferline").setup(opts)
-      -- Fix bufferline when restoring a session
-      vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete" }, {
-        callback = function()
-          vim.schedule(function()
-            pcall(nvim_bufferline)
-          end)
-        end,
-      })
-    end,
-    commander = {
-      { keys = { "n", "<S-h>" }, cmd = "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
-      { keys = { "n", "<S-l>" }, cmd = "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
-      { keys = { "n", "[b" }, cmd = "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
-      { keys = { "n", "]b" }, cmd = "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
-      { keys = { "n", "[B" }, cmd = "<cmd>BufferLineMovePrev<cr>", desc = "Move buffer prev" },
-      { keys = { "n", "]B" }, cmd = "<cmd>BufferLineMoveNext<cr>", desc = "Move buffer next" },
-      { keys = { "n", "<leader>bp" }, cmd = "<cmd>BufferLineTogglePin<cr>", desc = "Toggle pin" },
-      {
-        keys = { "n", "<leader>bP" },
-        cmd = "<cmd>BufferLineGroupClose ungrouped<cr>",
-        desc = "Delete non-pinned buffers",
-      },
-      { keys = { "n", "<leader>br" }, cmd = "<cmd>BufferLineCloseRight<cr>", desc = "Delete buffers to the right" },
-      { keys = { "n", "<leader>bl" }, cmd = "<cmd>BufferLineCloseLeft<cr>", desc = "Delete buffers to the left" },
-      { keys = { "n", "<leader>bj" }, cmd = "<cmd>BufferLinePick<cr>", desc = "Pick buffer" },
-    },
-  },
   {
     "folke/noice.nvim",
     event = "VeryLazy",
-    cond = not vim.g.vscode,
     dependencies = { "MunifTanjim/nui.nvim" },
     opts = {
       lsp = {
@@ -100,82 +44,42 @@ return {
       end
       require("noice").setup(opts)
     end,
-    commander = {
+    keys = {
       {
-        keys = { "c", "<S-Enter>" },
-        cmd = function()
+        "<S-Enter>",
+        function()
           require("noice").redirect(vim.fn.getcmdline())
         end,
+        mode = "c",
         desc = "Redirect cmdline",
       },
+      { "<leader>snl", call("noice", "cmd", "last"), desc = "Noice last message" },
+      { "<leader>snh", call("noice", "cmd", "history"), desc = "Noice history" },
+      { "<leader>sna", call("noice", "cmd", "all"), desc = "Noice all" },
+      { "<leader>snt", call("noice", "cmd", "pick"), desc = "Noice picker" },
       {
-        keys = { "n", "<leader>snl" },
-        cmd = function()
-          require("noice").cmd("last")
-        end,
-        desc = "Noice last message",
-      },
-      {
-        keys = { "n", "<leader>snh" },
-        cmd = function()
-          require("noice").cmd("history")
-        end,
-        desc = "Noice history",
-      },
-      {
-        keys = { "n", "<leader>sna" },
-        cmd = function()
-          require("noice").cmd("all")
-        end,
-        desc = "Noice all",
-      },
-      {
-        keys = { "n", "<leader>snd" },
-        cmd = function()
-          require("noice").cmd("dismiss")
-        end,
-        desc = "Dismiss all",
-      },
-      {
-        keys = { "n", "<leader>snt" },
-        cmd = function()
-          require("noice").cmd("pick")
-        end,
-        desc = "Noice picker",
-      },
-      {
-        keys = { { "i", "n", "s" }, "<c-f>", { silent = true, expr = true } },
-        cmd = function()
+        "<c-f>",
+        function()
           if not require("noice.lsp").scroll(4) then
             return "<c-f>"
           end
         end,
+        mode = { "i", "n", "s" },
+        expr = true,
+        silent = true,
         desc = "Scroll forward (LSP docs)",
-        show = false,
       },
       {
-        keys = { { "i", "n", "s" }, "<c-b>", { silent = true, expr = true } },
-        cmd = function()
+        "<c-b>",
+        function()
           if not require("noice.lsp").scroll(-4) then
             return "<c-b>"
           end
         end,
+        mode = { "i", "n", "s" },
+        expr = true,
+        silent = true,
         desc = "Scroll backward (LSP docs)",
-        show = false,
-      },
-    },
-  },
-  {
-    "FeiyouG/commander.nvim",
-    lazy = true,
-    opts = {
-      components = { "DESC", "KEYS", "CAT" },
-      sort_by = { "DESC", "KEYS", "CAT", "CMD" },
-      prompt_title = "Commander",
-      integration = {
-        lazy = { enable = true, set_plugin_name_as_cat = true },
-        -- fzf-lua renders the palette through vim.ui.select
-        telescope = { enable = false },
       },
     },
   },

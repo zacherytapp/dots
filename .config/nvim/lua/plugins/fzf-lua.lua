@@ -25,7 +25,7 @@ return {
     "ibhagwan/fzf-lua",
     cmd = "FzfLua",
     init = function()
-      -- fzf-lua owns vim.ui.select (commander's palette uses it too)
+      -- fzf-lua owns vim.ui.select (the <leader>k command palette uses it too)
       ---@diagnostic disable-next-line: duplicate-set-field
       vim.ui.select = function(...)
         require("lazy").load({ plugins = { "fzf-lua" } })
@@ -68,7 +68,7 @@ return {
           code_actions = { previewer = vim.fn.executable("delta") == 1 and "codeaction_native" or nil },
         },
         ui_select = function(fzf_opts, items)
-          -- Wider prompt for commander's palette and code actions
+          -- Wider prompt for the command palette and code actions
           return vim.tbl_deep_extend("force", fzf_opts, {
             prompt = " ",
             winopts = {
@@ -93,92 +93,76 @@ return {
       require("fzf-lua").setup(opts)
       require("fzf-lua").register_ui_select(ui_select)
     end,
-    commander = {
+    keys = {
       -- Top level
-      { keys = { "n", "<leader><space>" }, cmd = pick("files"), desc = "Find files (root dir)" },
-      { keys = { "n", "<leader>/" }, cmd = pick("live_grep"), desc = "Grep (root dir)" },
-      {
-        keys = { "n", "<leader>," },
-        cmd = pick_cwd("buffers", { sort_mru = true, sort_lastused = true }),
-        desc = "Switch buffer",
-      },
-      { keys = { "n", "<leader>:" }, cmd = "<cmd>FzfLua command_history<cr>", desc = "Command history" },
+      { "<leader><space>", pick("files"), desc = "Find files (root dir)" },
+      { "<leader>/", pick("live_grep"), desc = "Grep (root dir)" },
+      { "<leader>,", pick_cwd("buffers", { sort_mru = true, sort_lastused = true }), desc = "Switch buffer" },
+      { "<leader>:", "<cmd>FzfLua command_history<cr>", desc = "Command history" },
       -- Find
+      { "<leader>fb", pick_cwd("buffers", { sort_mru = true, sort_lastused = true }), desc = "Find buffers" },
+      { "<leader>fc", pick("files", { cwd = vim.fn.stdpath("config") }), desc = "Find config file" },
+      { "<leader>ff", pick("files"), desc = "Find files (root dir)" },
+      { "<leader>fF", pick_cwd("files"), desc = "Find files (cwd)" },
+      { "<leader>fg", pick("git_files"), desc = "Find files (git)" },
+      { "<leader>fr", pick_cwd("oldfiles"), desc = "Recent files" },
+      { "<leader>fR", pick_cwd("oldfiles", { cwd_only = true }), desc = "Recent files (cwd)" },
       {
-        keys = { "n", "<leader>fb" },
-        cmd = pick_cwd("buffers", { sort_mru = true, sort_lastused = true }),
-        desc = "Buffers",
-      },
-      {
-        keys = { "n", "<leader>fc" },
-        cmd = pick("files", { cwd = vim.fn.stdpath("config") }),
-        desc = "Find config file",
-      },
-      { keys = { "n", "<leader>ff" }, cmd = pick("files"), desc = "Find files (root dir)" },
-      { keys = { "n", "<leader>fF" }, cmd = pick_cwd("files"), desc = "Find files (cwd)" },
-      { keys = { "n", "<leader>fg" }, cmd = pick("git_files"), desc = "Find files (git)" },
-      { keys = { "n", "<leader>fr" }, cmd = pick_cwd("oldfiles"), desc = "Recent files" },
-      { keys = { "n", "<leader>fR" }, cmd = pick_cwd("oldfiles", { cwd_only = true }), desc = "Recent files (cwd)" },
-      {
-        keys = { "n", "<leader>fp" },
-        cmd = pick("files", { cwd = vim.fn.expand("~/projects") }),
-        desc = "Find in ~/projects",
+        "<leader>fp",
+        pick("files", { cwd = vim.env.XDG_PROJECTS_DIR or vim.fn.expand("~/Projects") }),
+        desc = "Find in ~/Projects",
       },
       -- Git
-      { keys = { "n", "<leader>gc" }, cmd = pick("git_commits"), desc = "Git commits" },
-      { keys = { "n", "<leader>gC" }, cmd = pick("git_bcommits"), desc = "Git commits (buffer)" },
-      { keys = { "n", "<leader>gs" }, cmd = pick("git_status"), desc = "Git status" },
-      { keys = { "n", "<leader>gS" }, cmd = pick("git_stash"), desc = "Git stash" },
-      { keys = { "n", "<leader>gr" }, cmd = pick("git_branches"), desc = "Git branches" },
+      { "<leader>gc", pick("git_commits"), desc = "Git commits" },
+      { "<leader>gC", pick("git_bcommits"), desc = "Git commits (buffer)" },
+      { "<leader>gs", pick("git_status"), desc = "Git status" },
+      { "<leader>gS", pick("git_stash"), desc = "Git stash" },
+      { "<leader>gr", pick("git_branches"), desc = "Git branches" },
       -- Search
-      { keys = { "n", '<leader>s"' }, cmd = "<cmd>FzfLua registers<cr>", desc = "Registers" },
-      { keys = { "n", "<leader>sa" }, cmd = "<cmd>FzfLua autocmds<cr>", desc = "Auto commands" },
-      { keys = { "n", "<leader>sb" }, cmd = "<cmd>FzfLua lgrep_curbuf<cr>", desc = "Buffer lines" },
-      { keys = { "n", "<leader>sc" }, cmd = "<cmd>FzfLua command_history<cr>", desc = "Command history" },
-      { keys = { "n", "<leader>sC" }, cmd = "<cmd>FzfLua commands<cr>", desc = "Commands" },
-      { keys = { "n", "<leader>sd" }, cmd = "<cmd>FzfLua diagnostics_document<cr>", desc = "Diagnostics (buffer)" },
-      { keys = { "n", "<leader>sD" }, cmd = "<cmd>FzfLua diagnostics_workspace<cr>", desc = "Diagnostics (workspace)" },
-      { keys = { "n", "<leader>sg" }, cmd = pick("live_grep"), desc = "Grep (root dir)" },
-      { keys = { "n", "<leader>sG" }, cmd = pick_cwd("live_grep"), desc = "Grep (cwd)" },
-      { keys = { "n", "<leader>sh" }, cmd = "<cmd>FzfLua help_tags<cr>", desc = "Help pages" },
-      { keys = { "n", "<leader>sH" }, cmd = "<cmd>FzfLua highlights<cr>", desc = "Highlight groups" },
-      { keys = { "n", "<leader>sj" }, cmd = "<cmd>FzfLua jumps<cr>", desc = "Jumplist" },
-      { keys = { "n", "<leader>sk" }, cmd = "<cmd>FzfLua keymaps<cr>", desc = "Keymaps" },
-      { keys = { "n", "<leader>sl" }, cmd = "<cmd>FzfLua loclist<cr>", desc = "Location list" },
-      { keys = { "n", "<leader>sM" }, cmd = "<cmd>FzfLua manpages<cr>", desc = "Man pages" },
-      { keys = { "n", "<leader>sm" }, cmd = "<cmd>FzfLua marks<cr>", desc = "Marks" },
-      { keys = { "n", "<leader>sR" }, cmd = "<cmd>FzfLua resume<cr>", desc = "Resume last picker" },
-      { keys = { "n", "<leader>sq" }, cmd = "<cmd>FzfLua quickfix<cr>", desc = "Quickfix list" },
-      { keys = { "n", "<leader>sw" }, cmd = pick("grep_cword"), desc = "Word under cursor (root dir)" },
-      { keys = { "n", "<leader>sW" }, cmd = pick_cwd("grep_cword"), desc = "Word under cursor (cwd)" },
-      { keys = { "x", "<leader>sw" }, cmd = pick("grep_visual"), desc = "Selection (root dir)" },
-      { keys = { "x", "<leader>sW" }, cmd = pick_cwd("grep_visual"), desc = "Selection (cwd)" },
-      { keys = { "n", "<leader>uC" }, cmd = "<cmd>FzfLua colorschemes<cr>", desc = "Colorscheme with preview" },
-      { keys = { "n", "<leader>ss" }, cmd = "<cmd>FzfLua lsp_document_symbols<cr>", desc = "LSP symbols (buffer)" },
-      {
-        keys = { "n", "<leader>sS" },
-        cmd = "<cmd>FzfLua lsp_live_workspace_symbols<cr>",
-        desc = "LSP symbols (workspace)",
-      },
+      { '<leader>s"', "<cmd>FzfLua registers<cr>", desc = "Registers" },
+      { "<leader>sa", "<cmd>FzfLua autocmds<cr>", desc = "Auto commands" },
+      { "<leader>sb", "<cmd>FzfLua lgrep_curbuf<cr>", desc = "Buffer lines" },
+      { "<leader>sC", "<cmd>FzfLua commands<cr>", desc = "Commands" },
+      { "<leader>sd", "<cmd>FzfLua diagnostics_document<cr>", desc = "Diagnostics (buffer)" },
+      { "<leader>sD", "<cmd>FzfLua diagnostics_workspace<cr>", desc = "Diagnostics (workspace)" },
+      { "<leader>sg", pick("live_grep"), desc = "Grep (root dir)" },
+      { "<leader>sG", pick_cwd("live_grep"), desc = "Grep (cwd)" },
+      { "<leader>sh", "<cmd>FzfLua help_tags<cr>", desc = "Help pages" },
+      { "<leader>sH", "<cmd>FzfLua highlights<cr>", desc = "Highlight groups" },
+      { "<leader>sj", "<cmd>FzfLua jumps<cr>", desc = "Jumplist" },
+      { "<leader>sk", "<cmd>FzfLua keymaps<cr>", desc = "Keymaps" },
+      { "<leader>sl", "<cmd>FzfLua loclist<cr>", desc = "Location list" },
+      { "<leader>sM", "<cmd>FzfLua manpages<cr>", desc = "Man pages" },
+      { "<leader>sm", "<cmd>FzfLua marks<cr>", desc = "Marks" },
+      { "<leader>sR", "<cmd>FzfLua resume<cr>", desc = "Resume last picker" },
+      { "<leader>sq", "<cmd>FzfLua quickfix<cr>", desc = "Quickfix list" },
+      { "<leader>sw", pick("grep_cword"), desc = "Word under cursor (root dir)" },
+      { "<leader>sW", pick_cwd("grep_cword"), desc = "Word under cursor (cwd)" },
+      { "<leader>sw", pick("grep_visual"), mode = "x", desc = "Selection (root dir)" },
+      { "<leader>sW", pick_cwd("grep_visual"), mode = "x", desc = "Selection (cwd)" },
+      { "<leader>uC", "<cmd>FzfLua colorschemes<cr>", desc = "Colorscheme with preview" },
+      { "<leader>ss", "<cmd>FzfLua lsp_document_symbols<cr>", desc = "LSP symbols (buffer)" },
+      { "<leader>sS", "<cmd>FzfLua lsp_live_workspace_symbols<cr>", desc = "LSP symbols (workspace)" },
       -- LSP goto
       {
-        keys = { "n", "gd" },
-        cmd = "<cmd>FzfLua lsp_definitions jump1=true ignore_current_line=true<cr>",
+        "gd",
+        "<cmd>FzfLua lsp_definitions jump1=true ignore_current_line=true<cr>",
         desc = "LSP: Goto definition",
       },
       {
-        keys = { "n", "gr", { nowait = true } },
-        cmd = "<cmd>FzfLua lsp_references jump1=true ignore_current_line=true includeDeclaration=false<cr>",
+        "gr",
+        "<cmd>FzfLua lsp_references jump1=true ignore_current_line=true includeDeclaration=false<cr>",
+        nowait = true,
         desc = "LSP: References",
       },
       {
-        keys = { "n", "gI" },
-        cmd = "<cmd>FzfLua lsp_implementations jump1=true ignore_current_line=true<cr>",
+        "gI",
+        "<cmd>FzfLua lsp_implementations jump1=true ignore_current_line=true<cr>",
         desc = "LSP: Goto implementation",
       },
       {
-        keys = { "n", "gy" },
-        cmd = "<cmd>FzfLua lsp_typedefs jump1=true ignore_current_line=true<cr>",
+        "gy",
+        "<cmd>FzfLua lsp_typedefs jump1=true ignore_current_line=true<cr>",
         desc = "LSP: Goto type definition",
       },
     },
