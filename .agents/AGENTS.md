@@ -43,6 +43,7 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `sf-implement` — implement Salesforce work
 - `sf-logs-debug` — diagnose Salesforce debug logs
 - `sf-org-manage` — create, snapshot, and open Salesforce orgs
+- `sf-quality-gate` — final read-only Salesforce deploy-readiness verdict
 - `sf-review-code` — review Salesforce code
 - `sf-review-issue` — review Salesforce issues/specs
 - `sf-scratch-org-cleanup` — prune scratch orgs
