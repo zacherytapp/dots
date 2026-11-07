@@ -1,11 +1,12 @@
 FROM fedora:44
 
-# bootstrap only: run.sh is responsible for everything else
+# bootstrap only: install.sh is responsible for everything else
 RUN dnf install -y sudo ncurses shadow-utils && dnf clean all \
   && useradd -m -s /bin/bash tester \
   && echo 'tester ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/tester \
   && chmod 440 /etc/sudoers.d/tester
 
+# the build context is the whole repo (test/run.ts streams the tracked files)
 COPY --chown=tester:tester . /home/tester/setup
 
 ENV DISTRO=fedora \
@@ -16,4 +17,4 @@ ENV DISTRO=fedora \
   TERM=xterm-256color
 
 USER tester
-WORKDIR /home/tester/setup
+WORKDIR /home/tester/setup/.local/bin/config

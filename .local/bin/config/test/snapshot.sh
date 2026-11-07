@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prints the state run.sh touches, one line per item, so two runs can be diffed.
+# Prints the state install.sh touches, one line per item, so two runs can be diffed.
 # Run as the test user inside the container:  ./test/snapshot.sh >/tmp/snap
 #
 #   /etc and flatpak overrides   content hash (rewriting identical content is fine)
