@@ -11,6 +11,7 @@
 ^/SPEC\.md
 ^/\.github
 ^/\.gitleaks\.toml
+^/\.gitleaksignore
 ^/LICENSE.*
 ^/docs
 ^/\.local/bin/config

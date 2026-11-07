@@ -15,6 +15,8 @@ const noise = (n: number, alphabet = "A1b2C3d4E5f6G7h8") =>
   Array.from({ length: n }, (_, i) => alphabet[(i * 7) % alphabet.length]).join("");
 const upper = (n: number) => noise(n, "QWERTYUIOPASDFGHJKLZXCVBNM234567");
 const hex = (n: number) => noise(n, "0123456789abcdef");
+/** A PEM armor line, assembled so scanners like gitleaks don't read the fixtures as a key. */
+const pem = (label: string) => `-----BEGIN ${label}-----`;
 
 const ids = (text: string, scope: "prompt" | "commit" = "prompt") =>
   findSecrets(text, scope).map((f) => f.id);
@@ -36,9 +38,9 @@ describe("detects credentials", () => {
     ["npm-token", `${"npm"}_${noise(36)}`],
     ["digitalocean-token", `${"dop"}_v1_${hex(64)}`],
     ["age-secret-key", `AGE-SECRET-KEY-1${upper(58)}`],
-    ["pem-private-key", "-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl"],
-    ["pem-private-key", "-----BEGIN PRIVATE KEY-----"],
-    ["pem-private-key", "-----BEGIN PGP PRIVATE KEY BLOCK-----"],
+    ["pem-private-key", `${pem("OPENSSH PRIVATE KEY")}\nb3Bl`],
+    ["pem-private-key", pem("PRIVATE KEY")],
+    ["pem-private-key", pem("PGP PRIVATE KEY BLOCK")],
     ["quoted-assignment", `const config = { apiKey: "${noise(32)}" };`],
     ["env-assignment", `export DATABASE_PASSWORD=${noise(20)}`],
   ];

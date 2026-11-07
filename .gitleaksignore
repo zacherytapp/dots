@@ -1,0 +1,3 @@
+# Reviewed false positives, by gitleaks fingerprint (commit:file:rule:line).
+# Synthetic PEM headers in the secret-guard tests, before they were built at runtime.
+9fc374035143e9619ffa6085ef9e14be7f80fe76:.claude/hooks/secret-guard.test.ts:private-key:39
