@@ -1,14 +1,20 @@
 #!/usr/bin/env node
+// Validates .agents/skills: metadata, size, links and anchors, skill and hook
+// references, the vendored-skill lock and the local inventory in AGENTS.md.
 
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
+// The .agents directory, wherever the script is run from (repo root or ~/.agents)
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillsRoot = path.join(root, "skills");
-const failures = [];
-const fail = (message) => failures.push(message);
-const lock = JSON.parse(fs.readFileSync(path.join(root, ".skill-lock.json"), "utf8"));
+const failures: string[] = [];
+const fail = (message: string) => failures.push(message);
+const lock = JSON.parse(fs.readFileSync(path.join(root, ".skill-lock.json"), "utf8")) as {
+  skills?: Record<string, unknown>;
+};
 const locked = new Set(Object.keys(lock.skills ?? {}));
 
 const skillNames = fs
@@ -24,8 +30,8 @@ const installedHooks = new Set(
     .map((entry) => entry.name.replace(/\.(?:md|sh|json)$/, "")),
 );
 
-function markdownFiles(directory) {
-  const files = [];
+function markdownFiles(directory: string): string[] {
+  const files: string[] = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...markdownFiles(fullPath));
@@ -34,7 +40,7 @@ function markdownFiles(directory) {
   return files;
 }
 
-function contentOutsideFences(content) {
+function contentOutsideFences(content: string): string {
   let fenced = false;
   return content
     .split("\n")
@@ -48,12 +54,14 @@ function contentOutsideFences(content) {
     .join("\n");
 }
 
-function headingAnchors(content) {
-  const anchors = new Set();
-  const counts = new Map();
+function headingAnchors(content: string): Set<string> {
+  const anchors = new Set<string>();
+  const counts = new Map<string, number>();
   for (const line of contentOutsideFences(content).split("\n")) {
-    const explicit = [...line.matchAll(/<(?:a|[a-z][a-z0-9-]*)\s+(?:[^>]*\s)?(?:id|name)=["']([^"']+)["']/gi)];
-    for (const match of explicit) anchors.add(match[1]);
+    const explicit = [
+      ...line.matchAll(/<(?:a|[a-z][a-z0-9-]*)\s+(?:[^>]*\s)?(?:id|name)=["']([^"']+)["']/gi),
+    ];
+    for (const match of explicit) if (match[1]) anchors.add(match[1]);
 
     const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/)?.[1];
     if (!heading) continue;
@@ -72,8 +80,8 @@ function headingAnchors(content) {
   return anchors;
 }
 
-function referencedSkillNames(content) {
-  const names = new Set();
+function referencedSkillNames(content: string): Set<string> {
+  const names = new Set<string>();
   const prose = contentOutsideFences(content).replace(/<!--[\s\S]*?-->/g, "");
   const patterns = [
     /`([a-z][a-z0-9-]+)`\s+(?:skill|subagent)\b/g,
@@ -81,7 +89,7 @@ function referencedSkillNames(content) {
     /\b(?:run|use|invoke|follow|with)\s+(?:an?\s+|the\s+)?`?\/([a-z][a-z0-9-]+)`?/gi,
   ];
   for (const pattern of patterns) {
-    for (const match of prose.matchAll(pattern)) names.add(match[1]);
+    for (const match of prose.matchAll(pattern)) if (match[1]) names.add(match[1]);
   }
   return names;
 }
@@ -106,9 +114,12 @@ for (const skillName of skillNames) {
   } else {
     const name = frontmatter[1].match(/^name:\s*["']?([^\n"']+)["']?\s*$/m)?.[1];
     const description = frontmatter[1].match(/^description:\s*(.+)$/m)?.[1] ?? "";
-    if (name !== skillName) fail(`skills/${skillName}/SKILL.md: frontmatter name is ${name ?? "missing"}`);
+    if (name !== skillName)
+      fail(`skills/${skillName}/SKILL.md: frontmatter name is ${name ?? "missing"}`);
     if (!locked.has(skillName) && !/^[^.]+\. Use when\b/.test(description)) {
-      fail(`skills/${skillName}/SKILL.md: description must state a capability, then a sentence beginning "Use when"`);
+      fail(
+        `skills/${skillName}/SKILL.md: description must state a capability, then a sentence beginning "Use when"`,
+      );
     }
     if (!locked.has(skillName) && description.length > 1024) {
       fail(`skills/${skillName}/SKILL.md: description exceeds 1024 characters`);
@@ -117,13 +128,17 @@ for (const skillName of skillNames) {
 }
 
 const markdown = markdownFiles(skillsRoot);
-const anchorCache = new Map();
+const anchorCache = new Map<string, Set<string>>();
 for (const file of markdown) {
   const relativeFile = path.relative(root, file);
   const rawContent = fs.readFileSync(file, "utf8");
   const content = contentOutsideFences(rawContent);
+  // Vendored skills keep upstream prose, so only local skills get the dependency checks below
+  const vendored = locked.has(path.relative(skillsRoot, file).split(path.sep)[0]);
+  // Inline code holds example syntax like `[the mock](mock.html)`, not real links
+  const linkable = content.replace(/`[^`\n]+`/g, "");
   const linkPattern = /\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
-  for (const match of content.matchAll(linkPattern)) {
+  for (const match of linkable.matchAll(linkPattern)) {
     const target = match[1].replace(/^<|>$/g, "");
     if (/^[a-z]+:/i.test(target)) continue;
     const hashIndex = target.indexOf("#");
@@ -135,20 +150,24 @@ for (const file of markdown) {
       continue;
     }
     if (fragment && targetFile.endsWith(".md")) {
-      const anchors = anchorCache.get(targetFile) ?? headingAnchors(fs.readFileSync(targetFile, "utf8"));
+      const anchors =
+        anchorCache.get(targetFile) ?? headingAnchors(fs.readFileSync(targetFile, "utf8"));
       anchorCache.set(targetFile, anchors);
       if (!anchors.has(fragment)) fail(`${relativeFile}: broken Markdown anchor ${target}`);
     }
   }
 
-  for (const dependency of referencedSkillNames(rawContent)) {
-    if (!installed.has(dependency)) fail(`${relativeFile}: references absent skill ${dependency}`);
-  }
+  if (!vendored) {
+    for (const dependency of referencedSkillNames(rawContent)) {
+      if (!installed.has(dependency))
+        fail(`${relativeFile}: references absent skill ${dependency}`);
+    }
 
-  const prose = content.replace(/<!--[\s\S]*?-->/g, "");
-  for (const hook of prose.matchAll(/\b([a-z][a-z0-9]*-[a-z0-9-]+) hook\b/g)) {
-    if (!installedHooks.has(hook[1]) && !installedHooks.has(`${hook[1]}-hook`)) {
-      fail(`${relativeFile}: references absent hook ${hook[1]}`);
+    const prose = content.replace(/<!--[\s\S]*?-->/g, "");
+    for (const hook of prose.matchAll(/\b([a-z][a-z0-9]*-[a-z0-9-]+) hook\b/g)) {
+      if (!installedHooks.has(hook[1]) && !installedHooks.has(`${hook[1]}-hook`)) {
+        fail(`${relativeFile}: references absent hook ${hook[1]}`);
+      }
     }
   }
 
@@ -168,13 +187,55 @@ for (const file of markdown) {
 
   for (const marker of content.matchAll(/<!--\s*([a-z][a-z0-9-]+):(ledger|review)\b/g)) {
     if (marker[1] !== "review-code") {
-      fail(`${relativeFile}: incompatible review marker ${marker[1]}:${marker[2]}; use review-code markers`);
+      fail(
+        `${relativeFile}: incompatible review marker ${marker[1]}:${marker[2]}; use review-code markers`,
+      );
     }
   }
 }
 
 for (const skillName of locked) {
-  if (!installed.has(skillName)) fail(`.skill-lock.json: receipt references absent skill ${skillName}`);
+  if (!installed.has(skillName))
+    fail(`.skill-lock.json: receipt references absent skill ${skillName}`);
+}
+
+// Host skill links (.claude/skills) must not dangle; absent when run from ~/.agents
+const hostSkills = path.resolve(root, "..", ".claude", "skills");
+if (fs.existsSync(hostSkills)) {
+  for (const entry of fs.readdirSync(hostSkills, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() && !fs.existsSync(path.join(hostSkills, entry.name, "SKILL.md"))) {
+      fail(`.claude/skills/${entry.name}: dangling or non-skill symlink`);
+    }
+  }
+  // Claude Code doesn't read ~/.agents/skills, so every local skill needs a link
+  for (const name of skillNames.filter((skill) => !locked.has(skill))) {
+    if (!fs.existsSync(path.join(hostSkills, name))) {
+      fail(`.claude/skills/${name}: missing link (ln -s ../../.agents/skills/${name})`);
+    }
+  }
+}
+
+// Pi loads ~/.agents/skills itself; links in its own skill dir load them twice
+const piSkills = path.resolve(root, "..", ".pi", "agent", "skills");
+if (fs.existsSync(piSkills)) {
+  for (const name of fs.readdirSync(piSkills)) {
+    if (installed.has(name)) fail(`.pi/agent/skills/${name}: duplicates ~/.agents/skills/${name}`);
+  }
+}
+
+// Vendored skills must be exactly the ones .prettierignore (shared by markdownlint) skips;
+// absent when run from ~/.agents
+const prettierIgnore = path.resolve(root, "..", ".prettierignore");
+if (fs.existsSync(prettierIgnore)) {
+  const ignored = [
+    ...fs.readFileSync(prettierIgnore, "utf8").matchAll(/^\.agents\/skills\/([^/\s]+)\/$/gm),
+  ]
+    .map((match) => match[1])
+    .sort();
+  const expected = [...locked].sort();
+  if (JSON.stringify(ignored) !== JSON.stringify(expected)) {
+    fail(`.prettierignore: vendored skill list drift (expected: ${expected.join(", ")})`);
+  }
 }
 
 const expectedLocal = skillNames.filter((name) => !locked.has(name));

@@ -1,0 +1,31 @@
+{
+  "name": "dots",
+  "private": true,
+  "type": "module",
+  "description": "Repo-wide dev tooling for the dotfiles: Prettier formatting, Claude hook type checks and tests, agent skill/hook validation, Markdown linting. Never stowed into $HOME.",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:json && pnpm check:skills && pnpm check:shell && pnpm check:install && pnpm check:herdr",
+    "lint": "prettier --check . && markdownlint --ignore-path .prettierignore \"**/*.md\"",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \".claude/hooks/*.test.ts\" \".agents/hooks/*.test.ts\" \".local/bin/config/src/**/*.test.ts\" \".config/herdr-app/src/**/*.test.ts\"",
+    "check:json": "jq empty package.json .claude/settings.json .agents/hooks/hooks.json .agents/.skill-lock.json .claude/hooks/patterns/secrets.json .config/herdr-app/*.json .config/herdr-app/layouts/*.json .config/herdr-app/themes/*.json .config/herdr-app/mods/*/mod.json .config/herdr-app/src/mods/*/mod.json",
+    "check:skills": "node .agents/scripts/validate-skills.ts",
+    "check:shell": "bash -n .config/herdr/scripts/*.sh .config/herdr-app/scripts/*.sh .config/hypr/scripts/*.sh .local/bin/tmux-cht.sh && find .agents/skills -type f -name '*.sh' -print0 | xargs -0 -r bash -n && shellcheck -x .config/herdr/scripts/*.sh .config/herdr-app/scripts/*.sh .config/hypr/scripts/*.sh .local/bin/tmux-cht.sh && find .agents/skills -type f -name '*.sh' -print0 | xargs -0 -r shellcheck",
+    "check:install": "bash -n .local/bin/config/install.sh .local/bin/config/test/*.sh && shellcheck .local/bin/config/install.sh .local/bin/config/test/*.sh",
+    "test:install": "node --disable-warning=ExperimentalWarning .local/bin/config/test/run.ts",
+    "build:herdr": "node --disable-warning=ExperimentalWarning .config/herdr-app/src/build.ts",
+    "check:herdr": "node --disable-warning=ExperimentalWarning .config/herdr-app/src/build.ts --check"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "markdownlint-cli": "^0.49.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2"
+  }
+}

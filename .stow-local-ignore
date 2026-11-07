@@ -7,10 +7,28 @@
 \.stow-local-ignore
 ^/README.*
 ^/AGENTS\.md
+^/CLAUDE\.md
 ^/SPEC\.md
 ^/\.github
 ^/\.gitleaks\.toml
 ^/LICENSE.*
 ^/\.local/bin/config
-^/\.agents/node_modules
 ^/\.claude/worktrees
+^/tmp
+^/\.claude/settings\.local\.json
+^/\.claude/hooks/.*\.test\.ts
+^/\.agents/hooks/.*\.test\.ts
+# Repo-wide dev tooling; must not leak into $HOME as global defaults
+node_modules
+__pycache__
+# Editor/app backups (settings.json.bak-*, *.orig) left beside linked files
+.*\.bak([.-].*)?
+.*\.orig
+^/package\.json
+^/pnpm-lock\.yaml
+^/tsconfig\.json
+^/\.prettierrc\.json
+^/\.prettierignore
+^/\.markdownlint\.json
+# Herdr mod sources: built into .config/herdr-app/mods/ by `pnpm build:herdr`
+^/\.config/herdr-app/src

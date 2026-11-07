@@ -1,5 +1,6 @@
 # Editor/app backups that should never be committed
 *.bak
+*.bak[.-]*
 *.orig
 *.pre-*
 *.prebnet
@@ -10,14 +11,24 @@
 .config/herdr/session.json
 .config/herdr/.plugins.lock
 
-# Claude Code scratch worktrees
+# Claude Code scratch worktrees and per-machine project settings
 .claude/worktrees/
+.claude/settings.local.json
 
 # Private ssh hosts belong in ~/.ssh/config.d, never here
 .ssh/config.d/
 
-# Local-only agent instructions and planning docs
-/AGENTS.md
+# Local-only planning docs
 /SPEC.md
-/.agents/AGENTS.md
-/.agents/CLAUDE.md
+
+# Repo dev tooling (root package.json): dependencies and caches
+node_modules/
+__pycache__/
+
+# Transient agent state
+.agents/.pi/tasks/
+.worktree/
+.worktrees/
+
+# Agent scratch space (see ~/.claude/rules/file-organization.md)
+/tmp/
