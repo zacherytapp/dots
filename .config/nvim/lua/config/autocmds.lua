@@ -3,7 +3,6 @@ local function augroup(name)
   return vim.api.nvim_create_augroup("user_" .. name, { clear = true })
 end
 
--- Reload files changed outside of Neovim
 autocmd({ "FocusGained", "TermClose", "TermLeave" }, {
   group = augroup("checktime"),
   callback = function()
@@ -13,7 +12,6 @@ autocmd({ "FocusGained", "TermClose", "TermLeave" }, {
   end,
 })
 
--- Highlight on yank
 autocmd("TextYankPost", {
   group = augroup("highlight_yank"),
   callback = function()
@@ -21,7 +19,6 @@ autocmd("TextYankPost", {
   end,
 })
 
--- Equalize splits when the terminal is resized
 autocmd("VimResized", {
   group = augroup("resize_splits"),
   callback = function()
@@ -31,7 +28,6 @@ autocmd("VimResized", {
   end,
 })
 
--- Return to the last cursor position when reopening a buffer
 autocmd("BufReadPost", {
   group = augroup("last_loc"),
   callback = function(event)
@@ -49,7 +45,6 @@ autocmd("BufReadPost", {
   end,
 })
 
--- Close helper windows with <q>
 autocmd("FileType", {
   group = augroup("close_with_q"),
   pattern = {
@@ -76,7 +71,6 @@ autocmd("FileType", {
   end,
 })
 
--- Man pages opened inline shouldn't clutter the buffer list
 autocmd("FileType", {
   group = augroup("man_unlisted"),
   pattern = { "man" },
@@ -85,7 +79,6 @@ autocmd("FileType", {
   end,
 })
 
--- Prose: wrap and spell check
 autocmd("FileType", {
   group = augroup("wrap_spell"),
   pattern = { "text", "plaintex", "typst", "gitcommit", "markdown" },
@@ -95,7 +88,6 @@ autocmd("FileType", {
   end,
 })
 
--- Markdown: no hard wrapping, keep prose structure
 autocmd("FileType", {
   group = augroup("markdown_settings"),
   pattern = "markdown",
@@ -105,7 +97,6 @@ autocmd("FileType", {
   end,
 })
 
--- JSON: show quotes
 autocmd("FileType", {
   group = augroup("json_conceal"),
   pattern = { "json", "jsonc", "json5" },
@@ -114,7 +105,6 @@ autocmd("FileType", {
   end,
 })
 
--- Create missing parent directories on save
 autocmd("BufWritePre", {
   group = augroup("auto_create_dir"),
   callback = function(event)
@@ -126,7 +116,6 @@ autocmd("BufWritePre", {
   end,
 })
 
--- Auto-open the quickfix window after :grep / :make
 autocmd("QuickFixCmdPost", {
   group = augroup("quickfix_open"),
   pattern = "[^l]*",

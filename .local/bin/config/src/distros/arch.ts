@@ -34,7 +34,13 @@ import {
   hardenSshd,
   randomizeMac,
 } from "../steps/security.ts";
-import { installNode, installRust } from "../steps/toolchains.ts";
+import {
+  goToolBin,
+  installGoTools,
+  installNode,
+  installRust,
+  installTask,
+} from "../steps/toolchains.ts";
 import { verifyCommon } from "../verify/common.ts";
 import type { Context } from "../lib/context.ts";
 import type { Distro } from "./types.ts";
@@ -61,6 +67,8 @@ const BASE = [
   "duf",
   "glances",
   "plocate",
+  "htop",
+  "cpupower",
   "pacman-contrib",
   "reflector",
   "networkmanager",
@@ -97,6 +105,7 @@ const SHELL_TOOLS = [
   "wl-clipboard",
   "xclip",
   "shellcheck",
+  "tea",
 ];
 
 // jdk-openjdk is the current release (17+ for the Apex LSP, PMD and Code Analyzer)
@@ -145,6 +154,8 @@ const APPS = [
   "vlc",
   "vlc-plugins-all",
   "gpu-screen-recorder",
+  "obs-studio",
+  "proton-vpn-gtk-app",
   "flatpak",
 ];
 
@@ -191,10 +202,15 @@ const CACHY_ONLY = [
   "dmemcg-booster",
   "appmenu-gtk-module",
   "libdbusmenu-glib",
+  // AUR-only on plain Arch
+  "opendeck",
+  "winboat",
 ];
 
 const AUR = [
   "1password",
+  "1password-cli",
+  "lmstudio-bin",
   "google-chrome",
   "slack-desktop",
   "spotify",
@@ -204,7 +220,10 @@ const AUR = [
   "maplemono-ttf",
 ];
 
-const FLATPAKS = ["com.github.tchx84.Flatseal"];
+const FLATPAKS = ["com.github.tchx84.Flatseal", "app.bluebubbles.BlueBubbles"];
+
+// the forgejo MCP server the agents' MCP configs launch
+const GO_TOOLS = ["git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest"];
 
 const GAMING_CACHY = ["cachyos-gaming-meta", "cachyos-gaming-applications", "protonup-qt"];
 const GAMING_ARCH = [
@@ -287,6 +306,7 @@ function services(ctx: Context): void {
   enableService(ctx, "cups.socket");
   enableService(ctx, "tailscaled.service");
   enableService(ctx, "reflector.timer");
+  sshAgentSocket(ctx);
   if (!isCachy(ctx)) return;
   // cachy-update's user timer (update checks + tray notifier). Linked by hand
   // because systemctl --user needs the user's session bus, which sudo lacks
@@ -296,6 +316,21 @@ function services(ctx: Context): void {
   if (isLinkTo(link, target)) return;
   ctx.user.mkdir(wants);
   ctx.user.run("ln", ["-sfn", target, link]);
+}
+
+const SSH_AGENT_SOCKET = "/usr/lib/systemd/user/ssh-agent.socket";
+
+/**
+ * openssh's user ssh-agent, which .zshrc points SSH_AUTH_SOCK at. Linked by
+ * hand for the same reason as the arch-update timer.
+ */
+function sshAgentSocket(ctx: Context): void {
+  if (!existsSync(SSH_AGENT_SOCKET)) return note("no ssh-agent.socket user unit in openssh");
+  const wants = ctx.user.path(".config", "systemd", "user", "sockets.target.wants");
+  const link = join(wants, "ssh-agent.socket");
+  if (isLinkTo(link, SSH_AGENT_SOCKET)) return;
+  ctx.user.mkdir(wants);
+  ctx.user.run("ln", ["-sfn", SSH_AGENT_SOCKET, link]);
 }
 
 function isLinkTo(path: string, target: string): boolean {
@@ -317,20 +352,31 @@ function paclistHook(ctx: Context): void {
   if (template === null) throw new Error("cachy/config/hooks/96-paclist.hook is missing");
   ensureFile(
     "/etc/pacman.d/hooks/96-paclist.hook",
-    renderPaclistHook(template, setupPath("cachy"), ctx.user.name),
+    renderPaclistHook(template, setupPath("cachy"), ctx.user.name, ctx.user.home),
   );
 }
 
 /**
- * The dir is the sh script's $1, never part of the script text, so the shell
- * doesn't parse it. pacman splits Exec into words itself, honouring quotes:
- * double quotes keep spaces and single quotes; `"`, `\` and newlines can't be
- * passed safely, so those are refused.
+ * The dir and home are the sh script's $1 and $2 (home holds
+ * ~/.config/cachy/pkglist.ignore, the packages left out of the lists), never
+ * part of the script text, so the shell doesn't parse them. pacman splits Exec
+ * into words itself, honouring quotes: double quotes keep spaces and single
+ * quotes; `"`, `\` and newlines can't be passed safely, so those are refused.
  */
-export function renderPaclistHook(template: string, dir: string, user: string): string {
-  if (/["\\\n]/.test(dir)) throw new Error(`can't put ${dir} in a pacman hook Exec line`);
+export function renderPaclistHook(
+  template: string,
+  dir: string,
+  user: string,
+  home: string,
+): string {
+  for (const path of [dir, home]) {
+    if (/["\\\n]/.test(path)) throw new Error(`can't put ${path} in a pacman hook Exec line`);
+  }
   if (!/^[a-z_][a-z0-9_-]*\$?$/i.test(user)) throw new Error(`unexpected user name ${user}`);
-  return template.replaceAll("@DIR@", `"${dir}"`).replaceAll("@USER@", user);
+  return template
+    .replaceAll("@DIR@", `"${dir}"`)
+    .replaceAll("@HOME@", `"${home}"`)
+    .replaceAll("@USER@", user);
 }
 
 function flatpak(ctx: Context): void {
@@ -428,6 +474,8 @@ export const arch: Distro = {
           installNode(c),
         ),
         step("pmd", "PMD 7 in /opt/pmd", installPmd),
+        step("go", "go tools: the forgejo MCP server", (c) => installGoTools(c, GO_TOOLS)),
+        step("task", "Task (taskfile.dev) as task in ~/.local/bin", installTask),
         step(
           "salesforce",
           "Apex/Visualforce/Aura language servers, sf code-analyzer",
@@ -452,7 +500,11 @@ export const arch: Distro = {
           },
         ),
         step("docker", "docker group and service", docker),
-        step("services", "networkmanager, sshd, bluetooth, cups, tailscale, reflector", services),
+        step(
+          "services",
+          "networkmanager, sshd, bluetooth, cups, tailscale, reflector, ssh-agent",
+          services,
+        ),
         ...(cachy
           ? [step("hooks", "pacman hook writing the package lists into the repo", paclistHook)]
           : []),
@@ -535,7 +587,16 @@ export const arch: Distro = {
       "ssh-keygen",
       "flatpak",
       "luarocks",
+      "op",
+      "tea",
+      "htop",
+      "cpupower",
+      "task",
+      "obs",
+      "with-secrets",
+      ...GO_TOOLS.map(goToolBin),
     );
+    if (cachy) v.commands("opendeck");
     verifyCommon(ctx, v);
 
     v.section("distro config");
@@ -559,6 +620,12 @@ export const arch: Distro = {
       /JetBrainsMono Nerd/i.test(capture("fc-list").stdout),
     );
     v.check("bibata cursor", () => existsSync("/usr/share/icons/Bibata-Modern-Ice"));
+    v.check("ssh-agent socket enabled", () =>
+      isLinkTo(
+        ctx.user.path(".config", "systemd", "user", "sockets.target.wants", "ssh-agent.socket"),
+        SSH_AGENT_SOCKET,
+      ),
+    );
     v.check("in docker group", () =>
       capture("id", ["-nG", ctx.user.name]).stdout.split(/\s+/).includes("docker"),
     );

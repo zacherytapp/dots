@@ -22,7 +22,6 @@ local function recording()
   return reg ~= "" and ("Recording @" .. reg) or ""
 end
 
---- Project root name when it differs from the cwd
 local function root_dir()
   local root = require("util").root()
   local cwd = vim.uv.cwd() or ""
@@ -48,7 +47,7 @@ return {
     init = function()
       vim.g.lualine_laststatus = vim.o.laststatus
       if vim.fn.argc(-1) > 0 then
-        vim.o.statusline = " " -- blank statusline until lualine loads
+        vim.o.statusline = " "
       else
         vim.o.laststatus = 0 -- hide on the dashboard
       end

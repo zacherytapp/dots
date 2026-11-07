@@ -115,6 +115,33 @@ Editing a linked file edits the repo. Some apps (GUI settings panels, Noctalia, 
 installers) save by replacing the symlink with a regular file. If `git status` stays clean after
 you change a setting, run `stow --adopt .` to pull the file back into the repo.
 
+## Machine-specific settings
+
+Things that only fit one machine stay out of the repo. The shared configs load them from files
+that live only in `$HOME` (with `--no-folding` these directories are real, so nothing lands in
+the repo):
+
+- `~/.config/shell/local.sh`: sourced last by `.profile`, `.bashrc` and `.zshrc` (`.bash_profile`
+  gets it through `.profile`); POSIX sh. Move PATH lines that installers append to the rc files
+  (LM Studio's `lms`, for example) here.
+- `~/.config/hypr/local/variables.lua`: loaded at the end of `config/variables.lua`, for
+  `MONITOR1..3`, `PRIMARY_MONITOR` and `MONITOR_SCALE` (monitor descriptions carry serial
+  numbers).
+- `~/.config/hypr/local/monitors.lua`: replaces the default rule in `config/monitors.lua` with
+  this machine's monitor layout.
+- `~/.config/cachy/pkglist.ignore`: packages the pacman hook leaves out of the pkglists, one per
+  line.
+
+Some apps write machine-local keys into stowed JSON files: `autoMode` in
+`~/.claude/settings.json` (from `/auto-mode-setup`), and pi's provider, model and changelog state
+in `~/.pi/agent/settings.json`. `.gitattributes` runs both through `local-keys.sh`, a git filter
+that keeps those keys on disk but out of diffs and commits (for pi, only `packages` is shared),
+and puts them back after a checkout or pull. The filter is per clone: the installer's dotfiles
+step registers it, and after a manual clone run `.local/bin/config/local-keys.sh install`. If
+`git status` lists one of these files while `git diff` is empty, only local keys changed: `git
+add` it to refresh the index (nothing gets staged). To cover another file, add it to
+`.gitattributes` and to `shared()` in the script.
+
 ## Repo tooling
 
 The dev tooling lives at the repo root and isn't stowed: one pnpm `package.json`, TypeScript,

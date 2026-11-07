@@ -1,5 +1,3 @@
--- Go: gopls, gofumpt + goimports, golangci-lint, gopher helpers, neotest-golang,
--- delve (nvim-dap-go), coverage. Go templates (gotmpl) are served by gopls.
 return {
   {
     "nvim-treesitter/nvim-treesitter",

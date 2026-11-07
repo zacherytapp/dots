@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# Shows what the Noctalia settings window changed that isn't in the dots repo.
-#
-# Noctalia merges ~/.config/noctalia/*.toml, then applies GUI changes from
-# ~/.local/state/noctalia/settings.toml on top. Only the first part is stowed,
-# so GUI changes silently drift from the repo.
+# Shows Noctalia GUI settings changes missing from the repo: noctalia layers
+# ~/.local/state/noctalia/settings.toml (unstowed) over ~/.config/noctalia/*.toml.
 #
 #   noctalia-sync          diff: repo config alone -> what noctalia is running
-#   noctalia-sync --clear  after copying the changes into config.toml, archive
-#                          settings.toml so config.toml is the only source again
+#   noctalia-sync --clear  archive settings.toml once its changes are in config.toml
 set -euo pipefail
 
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia"

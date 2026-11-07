@@ -1,5 +1,3 @@
--- YAML: yamlls with SchemaStore (GitHub workflows, compose, k8s, ...),
--- prettierd, actionlint for GitHub Actions, yamllint when a project configures it.
 local function yamllint_config(dirname)
   return vim.fs.find({ ".yamllint", ".yamllint.yaml", ".yamllint.yml" }, { upward = true, path = dirname })[1]
 end
@@ -9,7 +7,6 @@ return {
     "nvim-treesitter/nvim-treesitter",
     opts = {
       ensure_installed = { "yaml" },
-      -- compound filetypes set by lua/config/filetypes.lua
       register = {
         ["yaml.docker-compose"] = "yaml",
         ["yaml.ansible"] = "yaml",
@@ -27,7 +24,6 @@ return {
     opts = {
       servers = {
         yamlls = {
-          -- schemastore.nvim is loaded when the server starts
           before_init = function(_, config)
             config.settings.yaml.schemas =
               vim.tbl_deep_extend("force", config.settings.yaml.schemas or {}, require("schemastore").yaml.schemas())

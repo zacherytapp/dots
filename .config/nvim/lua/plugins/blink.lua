@@ -22,7 +22,6 @@ return {
       },
 
       completion = {
-        -- Trigger completion automatically
         trigger = {
           -- off: it fires a request (incl. minuet LLM calls) before anything is typed
           prefetch_on_insert = false,
@@ -31,11 +30,9 @@ return {
           show_on_trigger_character = true,
           show_on_insert_on_trigger_character = true,
           show_on_accept_on_trigger_character = false,
-          -- Re-show completions when backspacing into a keyword (e.g. delete a char, keep typing)
           show_on_backspace_in_keyword = true,
           show_on_insert = true,
-          -- Unblock " and { for JSON filetypes — jsonls uses " as its
-          -- primary trigger character for property name completions
+          -- jsonls uses " as its primary trigger character for property names
           show_on_x_blocked_trigger_characters = function()
             local ft = vim.bo.filetype
             if ft == "json" or ft == "jsonc" then
@@ -114,24 +111,20 @@ return {
           },
           lsp = {
             fallbacks = {},
-            -- Higher timeout for slower LSPs (e.g. Apex jorje JAR)
+            -- slow servers (e.g. Apex jorje) need longer than the default
             timeout_ms = 8000,
-            -- Avoid overwhelming the fuzzy matcher with huge result sets
             max_items = 100,
             async = true,
-            -- Bridge LSP detail → inline label_description and documentation
-            -- Many LSPs (e.g. Apex jorje) put type info in `detail` but leave
+            -- many LSPs (e.g. Apex jorje) put type info in `detail` but leave
             -- `labelDetails.description` empty, so blink's inline display is blank
             transform_items = function(_, items)
               for _, item in ipairs(items) do
-                -- Surface type info inline in the completion menu
                 if item.detail and type(item.detail) == "string" and item.detail ~= "" then
                   item.labelDetails = item.labelDetails or {}
                   if not item.labelDetails.description or item.labelDetails.description == "" then
                     item.labelDetails.description = item.detail
                   end
                 end
-                -- Ensure the documentation window has content
                 if not item.documentation and item.detail and type(item.detail) == "string" then
                   item.documentation = {
                     kind = "markdown",

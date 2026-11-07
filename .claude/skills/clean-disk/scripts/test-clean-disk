@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Tests for clean-disk against a throwaway home and temp dirs; never touches the real ones.
+#   scripts/test-clean-disk
+set -uo pipefail
+
+HERE=$(cd "$(dirname "$0")" && pwd)
+T=$(mktemp -d -p "${XDG_RUNTIME_DIR:-$HOME/.cache}" clean-disk-test.XXXXXX)
+# Holder processes are detached (setsid) because clean-disk ignores its own children, and the
+# tests source it. Each sleeps a duration unique to this run so cleanup can find them.
+NAP=300.$$
+cleanup() { pkill -u "$(id -u)" -xf "sleep $NAP"; rm -rf "$T"; on_exit; }
+
+export HOME=$T/home GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+mkdir -p "$HOME/Projects" "$HOME/.claude/jobs" "$HOME/.config" "$HOME/.local/state"
+# shellcheck source=clean-disk
+source "$HERE/clean-disk"
+trap cleanup EXIT   # after sourcing: clean-disk sets its own EXIT trap
+CLAUDE_TMP=$T/claude-tmp
+MIN_REVIEW=0
+
+FAILS=0
+pass() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; FAILS=$(( FAILS + 1 )); }
+gone() { [[ ! -e $2 ]] && pass "$1" || fail "$1 ($2 still exists)"; }
+kept_() { [[ -e $2 ]] && pass "$1" || fail "$1 ($2 was deleted)"; }
+old() { mkdir -p "$1"; echo x > "$1/f"; touch -d "$2" "$1/f" "$1"; }
+age_tree() { find "$1" -exec touch -h -d "$2" {} +; }          # backdate a whole tree
+hold() { setsid -f env -C "$1" sleep "$NAP"; sleep 0.2; }       # a process whose cwd is $1
+holdenv() { setsid -f env "$1" sleep "$NAP"; sleep 0.2; }       # a process with VAR=value in its env
+fresh_run() { : > "$RESULTS"; : > "$REVIEW"; DRY=0; load_keep; snapshot_procs; }
+
+# --- tmp sweep -------------------------------------------------------------------------------------
+tmpd=$T/tmp
+old "$tmpd/random-old" "5 days ago"
+old "$tmpd/random-new" "1 hour ago"
+old "$tmpd/go-build123" "2 hours ago"
+old "$tmpd/go-build456" "5 minutes ago"
+old "$tmpd/node-compile-cache" "1 minute ago"
+old "$tmpd/gocache-busy" "1 minute ago"
+old "$tmpd/tmux-1000" "9 days ago"
+old "$tmpd/has-socket" "9 days ago"
+python3 -c "import socket,sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])" "$tmpd/has-socket/s"
+touch -d "9 days ago" "$tmpd/has-socket"
+old "$tmpd/held-old" "9 days ago"
+hold "$tmpd/held-old"
+holdenv "GOCACHE=$tmpd/gocache-busy"
+fresh_run
+tmp_sweep "$tmpd" "$TMP_AGE_OTHER"
+gone  "tmp: other entry untouched for 5 days goes"            "$tmpd/random-old"
+kept_ "tmp: other entry touched an hour ago stays"            "$tmpd/random-new"
+grep -qF "$tmpd/random-new" "$REVIEW" && pass "tmp: fresh other entry is listed for review" || fail "tmp: fresh other entry is listed for review"
+gone  "tmp: go-build dir untouched for 2h goes"               "$tmpd/go-build123"
+kept_ "tmp: go-build dir touched 5 minutes ago stays"         "$tmpd/go-build456"
+gone  "tmp: idle node-compile-cache goes regardless of age"   "$tmpd/node-compile-cache"
+kept_ "tmp: gocache named in a live GOCACHE stays"            "$tmpd/gocache-busy"
+kept_ "tmp: tmux socket dir stays"                            "$tmpd/tmux-1000"
+kept_ "tmp: dir holding a socket stays"                       "$tmpd/has-socket"
+kept_ "tmp: dir that is a process cwd stays"                  "$tmpd/held-old"
+
+vtmp=$T/vartmp
+old "$vtmp/random-old" "30 days ago"
+old "$vtmp/go-build9" "2 hours ago"
+fresh_run
+tmp_sweep "$vtmp" 0
+kept_ "var/tmp: unknown entries are never swept"              "$vtmp/random-old"
+gone  "var/tmp: known temp patterns are swept"                "$vtmp/go-build9"
+
+# --- dry run deletes nothing -----------------------------------------------------------------------
+old "$tmpd/dry-old" "5 days ago"
+fresh_run; DRY=1
+tmp_sweep "$tmpd" "$TMP_AGE_OTHER"
+kept_ "dry run: nothing is deleted"                           "$tmpd/dry-old"
+grep -qF "$tmpd/dry-old" "$RESULTS" && pass "dry run: deletion is reported" || fail "dry run: deletion is reported"
+
+# --- Claude scratchpads ----------------------------------------------------------------------------
+live=11111111-1111-1111-1111-111111111111
+ended_old=22222222-2222-2222-2222-222222222222
+ended_new=33333333-3333-3333-3333-333333333333
+old "$CLAUDE_TMP/-home-proj/$live/scratchpad" "3 days ago"
+old "$CLAUDE_TMP/-home-proj/$ended_old/scratchpad" "3 days ago"
+old "$CLAUDE_TMP/-home-proj/$ended_new/scratchpad" "1 hour ago"
+old "$CLAUDE_TMP/bundled-skills" "9 days ago"
+old "$CLAUDE_TMP/bash-edit-diff/abc" "3 days ago"
+holdenv "CLAUDE_CODE_SESSION_ID=$live"
+touch -d "3 days ago" "$CLAUDE_TMP/-home-proj"/*/
+fresh_run
+rules_claude_tmp
+kept_ "scratch: live session stays"                           "$CLAUDE_TMP/-home-proj/$live"
+gone  "scratch: ended session untouched for a day goes"       "$CLAUDE_TMP/-home-proj/$ended_old"
+kept_ "scratch: ended session touched within a day stays"     "$CLAUDE_TMP/-home-proj/$ended_new"
+grep -qF "$ended_new" "$REVIEW" && pass "scratch: recent ended session is listed for review" || fail "scratch: recent ended session is listed for review"
+kept_ "scratch: bundled-skills stays"                         "$CLAUDE_TMP/bundled-skills"
+gone  "scratch: old bash-edit-diff entries go"                "$CLAUDE_TMP/bash-edit-diff/abc"
+
+# --- Claude jobs -----------------------------------------------------------------------------------
+mkjob() { mkdir -p "$HOME/.claude/jobs/$1/gocache" "$HOME/.claude/jobs/$1/tmp"; echo "{\"state\":\"$2\",\"name\":\"$1\"}" > "$HOME/.claude/jobs/$1/state.json"; echo x > "$HOME/.claude/jobs/$1/tmp/notes.md"; }
+mkjob donejob done
+mkjob workjob working
+mkjob refjob done
+mkjob oldjob done
+age_tree "$HOME/.claude/jobs/oldjob" "10 days ago"
+holdenv "CLAUDE_JOB_DIR=$HOME/.claude/jobs/refjob"
+fresh_run
+rules_claude_jobs
+gone  "jobs: finished job's gocache goes"                     "$HOME/.claude/jobs/donejob/gocache"
+kept_ "jobs: finished job's own files stay"                   "$HOME/.claude/jobs/donejob/tmp/notes.md"
+kept_ "jobs: working job's gocache stays"                     "$HOME/.claude/jobs/workjob/gocache"
+gone  "jobs: a process naming the job dir does not pin its cache" "$HOME/.claude/jobs/refjob/gocache"
+gone  "jobs: finished job untouched for JOB_DAYS goes whole"  "$HOME/.claude/jobs/oldjob"
+
+# --- Claude transcripts ----------------------------------------------------------------------------
+proj=$HOME/.claude/projects/-home-live
+gproj=$HOME/.claude/projects/-home-gone
+s_old=44444444-4444-4444-4444-444444444444
+s_new=55555555-5555-5555-5555-555555555555
+s_live=66666666-6666-6666-6666-666666666666
+s_orph=77777777-7777-7777-7777-777777777777
+mkdir -p "$proj/$s_old/subagents" "$proj/memory" "$gproj/memory"
+for sid in $s_old $s_new $s_live; do echo "{\"cwd\":\"$HOME\"}" > "$proj/$sid.jsonl"; done
+echo "{\"cwd\":\"$HOME/nowhere\"}" > "$gproj/$s_orph.jsonl"
+echo note > "$proj/memory/MEMORY.md"; echo note > "$gproj/memory/MEMORY.md"
+age_tree "$proj" "20 days ago"
+touch "$proj/$s_new.jsonl"
+holdenv "CLAUDE_CODE_SESSION_ID=$s_live"
+fresh_run
+rules_claude_transcripts
+gone  "transcripts: session untouched for TRANSCRIPT_DAYS goes" "$proj/$s_old.jsonl"
+gone  "transcripts: its subagent dir goes with it"            "$proj/$s_old"
+kept_ "transcripts: recent session stays"                     "$proj/$s_new.jsonl"
+kept_ "transcripts: live session stays however old"           "$proj/$s_live.jsonl"
+kept_ "transcripts: memory stays"                             "$proj/memory/MEMORY.md"
+gone  "transcripts: fresh session of a gone directory goes"   "$gproj/$s_orph.jsonl"
+kept_ "transcripts: memory of a gone directory stays"         "$gproj/memory/MEMORY.md"
+
+# --- repo output -----------------------------------------------------------------------------------
+idle=$HOME/Projects/idle
+git init -q -b main "$idle"
+printf 'node_modules/\n.tmp/\n' > "$idle/.gitignore"
+git -C "$idle" add .gitignore
+d60=$(date -d "60 days ago" -R); GIT_COMMITTER_DATE=$d60 git -C "$idle" -c user.email=t@t -c user.name=t commit -q -m init --date "$d60"
+mkdir -p "$idle/node_modules/x" "$idle/web/node_modules/y"
+old "$idle/.tmp" "10 days ago"
+busyrepo=$HOME/Projects/busy
+git init -q -b main "$busyrepo"
+git -C "$busyrepo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+mkdir -p "$busyrepo/node_modules/x"
+old "$busyrepo/.tmp" "1 hour ago"
+fresh_run
+rules_repo_output
+gone  "repo: build output in an idle repo goes"               "$idle/node_modules"
+gone  "repo: nested build output in an idle repo goes"        "$idle/web/node_modules"
+gone  "repo: scratch dir untouched for a week goes"           "$idle/.tmp"
+kept_ "repo: build output in an active repo stays"            "$busyrepo/node_modules"
+kept_ "repo: fresh scratch dir stays"                         "$busyrepo/.tmp"
+
+# --- review: keep, remove ------------------------------------------------------------------------
+mkdir -p "$HOME/junk/a" "$HOME/keepme" "$HOME/busy"
+fresh_run
+add_review home-dir "$HOME/junk" "" "test"
+add_review home-dir "$HOME/busy" "" "test"
+print_review >/dev/null
+cmd_keep "$HOME/keepme" >/dev/null
+load_keep
+kept "$HOME/keepme/sub" && pass "keep: paths under a kept path are suppressed" || fail "keep: paths under a kept path are suppressed"
+: > "$REVIEW"; add_review home-dir "$HOME/keepme" "" "test"
+[[ ! -s $REVIEW ]] && pass "keep: kept path is not listed" || fail "keep: kept path is not listed"
+mkdir -p "$HOME/unlisted"
+cmd_remove "$HOME/unlisted" >/dev/null
+kept_ "remove: path missing from the last review is refused"  "$HOME/unlisted"
+hold "$HOME/busy"
+cmd_remove "$HOME/busy" >/dev/null
+kept_ "remove: path in use is refused"                        "$HOME/busy"
+cmd_remove "$HOME/junk" >/dev/null
+gone  "remove: reviewed path is removed"                      "$HOME/junk"
+grep -qF "$HOME/junk" "$REVIEW_FILE" && fail "remove: row leaves the review file" || pass "remove: row leaves the review file"
+
+# --- worktrees -------------------------------------------------------------------------------------
+repo=$HOME/Projects/r
+git init -q -b main "$repo" && git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+git -C "$repo" worktree add -q "$repo/.worktrees/clean" -b clean
+git -C "$repo" worktree add -q "$repo/.worktrees/dirty" -b dirty
+git -C "$repo" worktree add -q "$repo/.worktrees/idle-merged" -b idle-merged
+git -C "$repo" worktree add -q "$repo/.worktrees/idle-unmerged" -b idle-unmerged
+git -C "$repo/.worktrees/idle-unmerged" -c user.email=t@t -c user.name=t commit -q --allow-empty -m wip
+git -C "$repo" worktree add -q "$repo/.worktrees/idle-dirty" -b idle-dirty
+echo change > "$repo/.worktrees/dirty/file"
+echo change > "$repo/.worktrees/idle-dirty/file"
+for w in idle-merged idle-unmerged idle-dirty; do age_tree "$repo/.worktrees/$w" "3 days ago"; done
+fresh_run
+rules_worktrees
+print_review >/dev/null
+gone  "worktree: merged, clean, idle worktree goes"           "$repo/.worktrees/idle-merged"
+git -C "$repo" show-ref -q --verify refs/heads/idle-merged && pass "worktree: its branch stays" || fail "worktree: its branch stays"
+kept_ "worktree: idle unmerged worktree stays"                "$repo/.worktrees/idle-unmerged"
+kept_ "worktree: idle dirty worktree stays"                   "$repo/.worktrees/idle-dirty"
+kept_ "worktree: freshly touched merged worktree stays"       "$repo/.worktrees/clean"
+grep -qF "$repo/.worktrees/idle-unmerged" "$REVIEW_FILE" && pass "worktree: unmerged one is listed for review" || fail "worktree: unmerged one is listed for review"
+grep -q 'merged into main: yes' "$REVIEW_FILE" && pass "worktree: merged state reported" || fail "worktree: merged state reported"
+cmd_remove "$repo/.worktrees/dirty" >/dev/null
+kept_ "worktree: dirty worktree needs --force"                "$repo/.worktrees/dirty"
+cmd_remove "$repo/.worktrees/clean" >/dev/null
+gone  "worktree: clean worktree is removed"                   "$repo/.worktrees/clean"
+cmd_remove --force "$repo/.worktrees/dirty" >/dev/null
+gone  "worktree: --force removes a dirty worktree"            "$repo/.worktrees/dirty"
+git -C "$repo" show-ref -q --verify refs/heads/clean && pass "worktree: branch survives removal" || fail "worktree: branch survives removal"
+
+echo
+(( FAILS )) && { echo "$FAILS failed"; exit 1; }
+echo "all passed"

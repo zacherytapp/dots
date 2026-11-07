@@ -1,5 +1,10 @@
 {
   "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -50,6 +55,14 @@
       "WebFetch(domain:shipyard.build)"
     ],
     "deny": [
+      "Bash(op inject:*)",
+      "Bash(op item get:*)",
+      "Bash(op read:*)",
+      "Bash(op run:*)",
+      "Bash(systemd-creds decrypt:*)",
+      "Bash(with-secrets:*)",
+      "Read(~/.config/credstore.encrypted/**)",
+      "Read(~/.config/credstore/**)",
       "Bash(dd *)",
       "Bash(fdisk *)",
       "Bash(mkfs *)",
@@ -341,34 +354,6 @@
   "showThinkingSummaries": true,
   "theme": "dark",
   "editorMode": "vim",
-  "autoMode": {
-    "environment": [
-      "### Org-wide",
-      "**Organization**: None configured",
-      "**Cloud provider(s)**: None configured",
-      "**Repository visibility**: assume private unless the remote host and repo name indicate otherwise, or a visibility check in the transcript shows public — unqueryable here, no remotes configured for this repo",
-      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
-      "**Secrets management**: None configured",
-      "**Default / protected branches**: unknown — origin/HEAD unset, no remotes configured, not queryable via gh",
-      "**CI/CD deploy targets**: None configured",
-      "**Network posture**: None configured",
-      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine with open internet",
-      "**Source control**: no git remotes configured in this repo (~, 0 tracked files) — no additional orgs configured",
-      "**Trusted internal domains**: None configured",
-      "**Trusted cloud buckets**: None configured",
-      "**Key internal services**: None configured",
-      "**Internal package registry**: None configured",
-      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar — note: this home directory contains sensitive-looking paths such as .claude/.credentials.json, .env, gpg-secret.asc, and Projects/blastbeat/deploy/terraform.tfstate(.backup)",
-      "**Data retention / declassification**: None configured",
-      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
-      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
-      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment — note: Projects/blastbeat/deploy contains live Terraform state and .tf files (cloudflare.tf, coolify.tf, droplet.tf) that should be treated with care",
-      "### User-specific",
-      "**Primary use of Claude Code**: software development (observed: Plannotator skill usage, noctalia/hyprctl/herdr desktop-environment tooling, system package management via pacman/paru)",
-      "**Trusted repo**: The git repository the agent started in (its working directory, ~) and its configured remote(s) — no remotes are currently configured, so no trusted git remote exists",
-      "**Org-specific CLIs**: None configured"
-    ]
-  },
   "skillOverrides": {
     "find-skills": "off",
     "grilling": "off",

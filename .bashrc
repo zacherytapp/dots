@@ -13,3 +13,6 @@ PS1='[\u@\h \W]\$ '
 # juliaup completions; its PATH is in ~/.profile (juliaup's modifypath is off so it
 # never rewrites these files with absolute paths)
 [ -f "$HOME/.julia/juliaup/completions/bash.sh" ] && source "$HOME/.julia/juliaup/completions/bash.sh"
+
+# Untracked machine-specific settings (e.g. PATH entries installers append).
+if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi

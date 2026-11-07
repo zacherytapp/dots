@@ -37,7 +37,6 @@ diffFilter = delta --color-only
 [delta]
 navigate = true
 light = false
-# bat's built-in gruvbox, to match the Gruvbox Material desktop
 syntax-theme = gruvbox-dark
 side-by-side = false
 line-numbers = true

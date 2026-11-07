@@ -36,3 +36,11 @@ source ~/.config/zsh/worktrees.zsh
 # juliaup completions; its PATH is in ~/.zshenv (juliaup's modifypath is off so it
 # never rewrites these files with absolute paths)
 [ -f "$HOME/.julia/juliaup/completions/zsh.zsh" ] && source "$HOME/.julia/juliaup/completions/zsh.zsh"
+
+# openssh's user agent (ssh-agent.socket), except over ssh with a forwarded agent
+if [[ -S $XDG_RUNTIME_DIR/ssh-agent.socket ]] && ! [[ -n $SSH_CONNECTION && -S $SSH_AUTH_SOCK ]]; then
+  export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+fi
+
+# Untracked machine-specific settings (e.g. PATH entries installers append).
+if [ -f "$HOME/.config/shell/local.sh" ]; then . "$HOME/.config/shell/local.sh"; fi

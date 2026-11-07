@@ -14,7 +14,6 @@ return {
     "akinsho/git-conflict.nvim",
     version = "*",
     event = { "BufReadPost", "BufNewFile" },
-    -- co / ct / cb / c0 choose ours / theirs / both / none; ]x / [x next / prev conflict
     config = true,
   },
   {

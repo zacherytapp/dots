@@ -1,0 +1,4 @@
+# Keeps machine-local keys on disk but out of commits. Requires running
+# `.local/bin/config/local-keys.sh install` once per clone.
+.claude/settings.json   filter=local-keys
+.pi/agent/settings.json filter=local-keys

@@ -278,6 +278,28 @@ function installUbuntu(ctx: Context): void {
   installAdwGtk3();
 }
 
+const LOGIND_NOCTALIA = "/etc/systemd/logind.conf.d/10-noctalia.conf";
+
+/**
+ * noctalia binds the power/sleep keys (hypr/config/binds.lua) and locks before
+ * suspend; without this drop-in logind acts on them itself (power key = instant
+ * poweroff).
+ */
+function powerKeys(): void {
+  const changed = ensureFile(
+    LOGIND_NOCTALIA,
+    `# Installed by dots .local/bin/config: noctalia handles these keys and idle.
+[Login]
+HandlePowerKey=ignore
+HandleSuspendKey=ignore
+HandleHibernateKey=ignore
+IdleAction=ignore
+`,
+  );
+  // reload, not restart: restarting logind ends the running sessions
+  if (changed && existsSync("/run/systemd/system")) run("systemctl", ["reload", "systemd-logind"]);
+}
+
 /** Checks, then installs the hyprland + noctalia session for this distro. */
 export function desktopInstall(ctx: Context): void {
   const { distro } = ctx;
@@ -308,6 +330,7 @@ export function desktopInstall(ctx: Context): void {
       installUbuntu(ctx);
       break;
   }
+  powerKeys();
 
   const v = new Verifier(process.env.PATH ?? "");
   verifyDesktop(ctx, v);
@@ -402,5 +425,11 @@ export function verifyDesktop(_ctx: Context, v: Verifier): void {
   else
     warnLine(
       "no hyprland-uwsm.desktop session entry, start hyprland with 'uwsm start hyprland.desktop'",
+    );
+
+  if (existsSync(LOGIND_NOCTALIA)) ok("logind leaves the power/sleep keys to noctalia");
+  else
+    warnLine(
+      "no logind.conf.d/10-noctalia.conf, the power key powers off without noctalia's session menu",
     );
 }

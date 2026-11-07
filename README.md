@@ -66,7 +66,8 @@ Want to install it or see how it works? The installer, stow and testing docs are
 - **[Claude Code](https://claude.com/claude-code)** with my own TypeScript hooks (guards for bash, git, secrets, sensitive data, prompt injection and file layout) and the [ClaudeCodeStatusLine](https://github.com/daniel3303/ClaudeCodeStatusLine) status line
 - Shared **agent skills** in `.agents/` for PRs, code review, specs and tickets, merge conflicts, research and meeting notes
 - **[Plannotator](https://plannotator.ai)** for reviewing and annotating agent plans in the browser
-- **pi** and **opencode** as alternate agents
+- **pi** and **opencode** as alternate agents, sharing the same MCP servers (including a **Forgejo** MCP server)
+- **[LM Studio](https://lmstudio.ai)** serving local models
 - **GitHub Copilot**, **minuet-ai** (local LLM completions) and **opencode.nvim** inside Neovim
 
 ## Self-hosted speech-to-text
@@ -82,16 +83,17 @@ Push-to-talk dictation that runs entirely on my machine. No audio leaves it.
 
 ## Apps
 
-- **Browsers & communication:** Firefox, Google Chrome, Thunderbird, Slack, Discord, Zoom
-- **Productivity:** Obsidian, LibreOffice, 1Password, Remmina, Meld
-- **Media:** Spotify, VLC, GIMP, darktable, digiKam, gpu-screen-recorder
+- **Browsers & communication:** Firefox, Google Chrome, Thunderbird, Slack, Discord, Zoom, BlueBubbles
+- **Productivity:** Obsidian, LibreOffice, 1Password, Remmina, Meld, WinBoat
+- **Media:** Spotify, VLC, GIMP, darktable, digiKam, gpu-screen-recorder, OBS Studio, OpenDeck
 - **Files:** Dolphin, Nautilus
 - **Gaming (opt-in):** Steam, Lutris, Wine, GameMode, MangoHud
 
 ## Security
 
 - ufw firewall, fail2ban and a hardened sshd
-- gpg and `pass` for secrets
+- gpg and `pass` for secrets; the **1Password CLI** and `with-secrets` hand MCP servers only the tokens they need
+- Proton VPN
 - gitleaks secret scanning in GitHub Actions
 
 ## To-do

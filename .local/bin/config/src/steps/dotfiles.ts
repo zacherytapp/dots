@@ -59,4 +59,9 @@ export function stowDotfiles(ctx: Context): void {
   }
   user.run("stow", ["."], { cwd: repoDir });
   note(`linked ${repoDir} into ${user.home}`);
+  // per-clone git filter that keeps machine-local settings keys out of commits
+  // (.gitattributes); a copied tree without .git (the Docker tests) has no clone to set up
+  if (existsSync(join(repoDir, ".git"))) {
+    user.run(join(repoDir, ".local", "bin", "config", "local-keys.sh"), ["install"]);
+  } else note("not a git checkout, skipped the local-keys filter");
 }

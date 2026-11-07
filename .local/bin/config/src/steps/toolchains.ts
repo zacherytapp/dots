@@ -108,11 +108,21 @@ function isSymlink(path: string): boolean {
   }
 }
 
-/** Binary is named after the last path element (none of these end in /vN). */
+/** `go install` names the binary after the last path element, skipping a major-version suffix. */
+export function goToolBin(tool: string): string {
+  return (
+    tool
+      .replace(/@.*$/, "")
+      .replace(/\/v\d+$/, "")
+      .split("/")
+      .pop() ?? tool
+  );
+}
+
 export function installGoTools(ctx: Context, tools: readonly string[]): void {
   const { user } = ctx;
   for (const tool of tools) {
-    const bin = tool.replace(/@.*$/, "").split("/").pop() ?? tool;
+    const bin = goToolBin(tool);
     if (existsSync(user.path("go", "bin", bin))) {
       note(`go tool already installed: ${bin}`);
       continue;
@@ -120,6 +130,17 @@ export function installGoTools(ctx: Context, tools: readonly string[]): void {
     // GOTOOLCHAIN=auto: distro go (Fedora sets local) can be older than a tool needs
     user.run("go", ["install", tool], { env: { GOTOOLCHAIN: "auto" } });
   }
+}
+
+/** Task (taskfile.dev) as `task` in ~/.local/bin; Arch's go-task package names it go-task. */
+export function installTask(ctx: Context): void {
+  const { user } = ctx;
+  const bin = user.path(".local", "bin", "task");
+  if (existsSync(bin)) return note(`task already installed: ${user.output(bin, ["--version"])}`);
+  user.mkdir(user.path(".local", "bin"));
+  user.installScript("https://taskfile.dev/install.sh", {
+    args: ["-d", "-b", user.path(".local", "bin")],
+  });
 }
 
 export function installPipxTools(ctx: Context, tools: readonly string[]): void {

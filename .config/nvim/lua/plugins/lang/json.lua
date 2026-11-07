@@ -1,5 +1,3 @@
--- JSON / JSONC / JSON5: jsonls with SchemaStore (+ sfdx-project.json schema),
--- prettierd. Completion for JSON shows only LSP + path (see plugins/blink.lua).
 return {
   {
     "nvim-treesitter/nvim-treesitter",

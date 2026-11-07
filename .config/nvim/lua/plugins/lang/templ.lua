@@ -1,5 +1,3 @@
--- templ (https://templ.guide): templ LSP + formatter, with html / tailwind /
--- emmet also attached (see lang/web.lua)
 return {
   {
     "nvim-treesitter/nvim-treesitter",

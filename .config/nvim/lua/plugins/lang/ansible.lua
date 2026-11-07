@@ -1,7 +1,3 @@
--- Ansible: ansible-language-server (module docs, completion, ansible-lint
--- validation) for yaml.ansible buffers; detection is in lua/config/filetypes.lua.
--- Templates (*.j2) get Jinja support from lang/python-templates.lua.
--- ansible-language-server needs `ansible` itself installed for module docs.
 return {
   {
     "mason-org/mason.nvim",

@@ -1,4 +1,4 @@
--- rustfmt: 4 spaces, 100 columns
+-- rustfmt defaults: 4 spaces, 100 columns
 vim.bo.expandtab = true
 vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 4

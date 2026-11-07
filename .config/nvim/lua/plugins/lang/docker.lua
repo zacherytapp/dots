@@ -1,6 +1,3 @@
--- Docker: Docker's own language server (the one behind VS Code's Docker DX
--- extension) for Dockerfiles, Compose and Bake files, plus hadolint. Compose
--- files also get yamlls + the compose schema from lang/yaml.lua.
 return {
   {
     "nvim-treesitter/nvim-treesitter",

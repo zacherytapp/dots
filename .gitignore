@@ -1,11 +1,9 @@
-# Editor/app backups that should never be committed
 *.bak
 *.bak[.-]*
 *.orig
 *.pre-*
 *.prebnet
 
-# Runtime state some apps write next to their config
 .config/herdr/*.log
 .config/herdr/*.sock
 .config/herdr/session.json
@@ -15,8 +13,13 @@
 .claude/worktrees/
 .claude/settings.local.json
 
-# Private ssh hosts belong in ~/.ssh/config.d, never here
+# Private ssh hosts; must never be committed
 .ssh/config.d/
+
+# Secrets and 1Password references; must never be committed
+.config/credstore/
+.config/credstore.encrypted/
+.config/with-secrets/
 
 # Local-only planning docs
 /SPEC.md

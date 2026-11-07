@@ -1,8 +1,4 @@
--- Linters per filetype are contributed by lua/plugins/lang/*.lua.
---   linters_by_ft = { ft = { "linter", ... } }
---   linters = { name = { ...overrides, condition = function(ctx) -> boolean } }
--- Linters whose command isn't installed are skipped silently; :LintInfo
--- shows what would run for the current buffer.
+-- opts.linters entries may set `condition = function(ctx) -> boolean` to skip a linter
 return {
   {
     "mfussenegger/nvim-lint",
@@ -32,7 +28,6 @@ return {
         return cmd
       end
 
-      --- Linters for the buffer with their state: "run", "missing", "skipped"
       local function resolve(buf)
         local ctx = { buf = buf, filename = vim.api.nvim_buf_get_name(buf) }
         ctx.dirname = vim.fn.fnamemodify(ctx.filename, ":h")

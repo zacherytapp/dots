@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Herdr port of `bind -r O select-window -t :logs` and friends: focus the tab
-# with the given name in the active workspace, creating it if it is missing.
+# usage: goto-tab.sh <tab-name>
+# Focus the named tab in the active workspace, creating it if missing.
 set -euo pipefail
 
 herdr="${HERDR_BIN_PATH:-herdr}"

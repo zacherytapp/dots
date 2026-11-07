@@ -96,7 +96,6 @@ return {
         end,
         desc = "Show all notifications (history)",
       },
-      -- git
       {
         "<leader>gg",
         function()
@@ -153,7 +152,6 @@ return {
         mode = { "n", "x" },
         desc = "Git browse (copy URL)",
       },
-      -- terminal
       {
         "<c-/>",
         function()
@@ -184,7 +182,6 @@ return {
         end,
         desc = "Terminal (root dir)",
       },
-      -- references under cursor (LSP document highlight)
       {
         "]]",
         function()
@@ -219,7 +216,6 @@ return {
       vim.api.nvim_create_autocmd("User", {
         pattern = "VeryLazy",
         callback = function()
-          -- Debug helpers
           _G.dd = function(...)
             Snacks.debug.inspect(...)
           end
@@ -228,7 +224,6 @@ return {
           end
           vim.print = _G.dd
 
-          -- UI toggles (<leader>u*)
           local util = require("util")
           util.format_toggle():map("<leader>uF")
           util.format_toggle(true):map("<leader>uf")

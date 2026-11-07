@@ -13,9 +13,6 @@ local function get_args(config)
   return config
 end
 
--- Language adapters/configurations come from lua/plugins/lang/*.lua, either as
--- their own plugins (nvim-dap-go, nvim-dap-python, rustaceanvim) or through
--- `opts.configurations = { <filetype> = { ... } }` on this spec.
 return {
   {
     "mfussenegger/nvim-dap",
@@ -84,7 +81,7 @@ return {
         automatic_installation = true,
         ensure_installed = {},
         handlers = {
-          -- These adapters are owned by dedicated plugins (see lang/*.lua)
+          -- nvim-dap-go and nvim-dap-python set these adapters up
           delve = function() end,
           python = function() end,
         },
@@ -94,7 +91,6 @@ return {
         dap.configurations[ft] = vim.list_extend(dap.configurations[ft] or {}, configs)
       end
 
-      -- .vscode/launch.json support (VS Code debug configurations)
       local vscode = require("dap.ext.vscode")
       local json = require("plenary.json")
       vscode.json_decode = function(str)
