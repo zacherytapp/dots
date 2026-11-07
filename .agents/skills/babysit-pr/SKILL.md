@@ -1,15 +1,15 @@
 ---
 name: babysit-pr
-description: Iteratively reviews and keeps GitHub and Forgejo/Gitea pull requests merge-ready. Use when a PR was just filed or needs CI, feedback, conflict, or maintainability work.
+description: Iteratively reviews and keeps GitHub and Forgejo pull requests merge-ready. Use when a PR was just filed or needs CI, feedback, conflict, or maintainability work.
 ---
 
 # Babysit a PR
 
 ## Select the provider
 
-Inspect `git remote -v` and identify the remote and host for the target PR or base repository; do not assume a remote named `origin`. Then check `command -v gh` and `command -v gt`. Use `gh` for a GitHub remote and `gt` (the Gitea CLI, formerly `tea`) for a Forgejo/Gitea remote; do not choose by CLI precedence when both are installed. Confirm authentication with `gh auth status` or `gt auth status --json host,user,active,credential_available`, matching the remote host to a gt credential. Stop if the matching CLI or credentials are unavailable.
+Inspect `git remote -v` and identify the remote and host for the target PR or base repository; do not assume a remote named `origin`. Then check `command -v gh` and `command -v gt`. Only GitHub and Forgejo are supported: use `gh` for a GitHub remote and `gt` for a Forgejo remote (`gt` is the Gitea CLI, formerly `tea`, and works through Forgejo's Gitea-compatible API); do not choose by CLI precedence when both are installed. Confirm a non-GitHub host is Forgejo with `curl -fsS https://<host>/api/forgejo/v1/version`, which only Forgejo serves, and stop for any other host, including Gitea. Confirm authentication with `gh auth status` or `gt auth status --json host,user,active,credential_available`, matching the remote host to a gt credential. Stop if the matching CLI or credentials are unavailable.
 
-Identify the PR from the user, current branch, or provider output. Never silently select the first PR. For Forgejo/Gitea:
+Identify the PR from the user, current branch, or provider output. Never silently select the first PR. For Forgejo:
 
 ```bash
 gt pr list --json number,title,head,state,url
@@ -27,7 +27,7 @@ gh pr checks "$PR"
 gh api "repos/{owner}/{repo}/pulls/$PR/comments"
 ```
 
-Forgejo/Gitea:
+Forgejo:
 
 ```bash
 gt pr view "$PR" --json number,title,state,draft,mergeable,base,head,head_sha,review_decision,comments
@@ -47,7 +47,7 @@ For every failed run, inspect details and failed logs.
 # GitHub
 gh run view <run-id> --log-failed
 
-# Forgejo/Gitea
+# Forgejo
 gt run view <run-id> --json id,status,conclusion,jobs
 gt run logs <run-id> --failed
 ```
@@ -60,7 +60,7 @@ At the start of the first round, read and follow [review-code](../review-code/SK
 
 Make code changes for that worklist by following [implement-pr-fixes](../implement-pr-fixes/SKILL.md) in the existing branch and environment. Do not edit the ledger from the implementation role. After each fix push, run the selected reviewer so it independently reconciles findings against the new SHA. Ask the user about ambiguous requests or design decisions; do not automatically implement subjective nits or out-of-scope suggestions.
 
-Aim for no open review blockers, no actionable in-scope human feedback, passing required CI, and no conflicts—not zero comments. After a Forgejo/Gitea fix is pushed and independently verified, resolve its thread with `gt pr review resolve "$PR" <comment-id>`. Report feedback that cannot be resolved automatically.
+Aim for no open review blockers, no actionable in-scope human feedback, passing required CI, and no conflicts—not zero comments. After a Forgejo fix is pushed and independently verified, resolve its thread with `gt pr review resolve "$PR" <comment-id>`. Report feedback that cannot be resolved automatically.
 
 ## Resolve conflicts
 
@@ -83,7 +83,7 @@ When everything passes, no actionable feedback or conflicts remain, and the PR i
 
 ```bash
 gh pr ready "$PR"       # GitHub
-gt pr ready "$PR"       # Forgejo/Gitea
+gt pr ready "$PR"       # Forgejo
 ```
 
 ## Report

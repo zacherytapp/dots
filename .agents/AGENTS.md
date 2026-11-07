@@ -28,7 +28,7 @@ From the dots repo root: `pnpm check:skills`, `pnpm test` (includes the hook beh
 
 This exhaustive list is checked against skill directories not recorded in `.skill-lock.json`:
 
-- `babysit-pr` — keep GitHub and Forgejo/Gitea pull requests merge-ready
+- `babysit-pr` — keep GitHub and Forgejo pull requests merge-ready
 - `deslop` — remove AI-generated slop from diffs
 - `file-pr` — create clear pull requests with the correct host CLI
 - `grill-with-docs` — grill a plan while recording the glossary and ADRs in `docs/`
