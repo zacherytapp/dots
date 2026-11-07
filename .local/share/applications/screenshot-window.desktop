@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot: Window
+GenericName=Screenshot
+Comment=Capture the focused window
+Exec=noctalia msg screenshot-window
+Icon=screenshot-window
+Terminal=false
+Categories=Utility;
+Keywords=screenshot;capture;screen;print;snip;grab;

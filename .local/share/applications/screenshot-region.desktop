@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot: Region
+GenericName=Screenshot
+Comment=Select an area of the screen to capture
+Exec=noctalia msg screenshot-region
+Icon=screenshot-region
+Terminal=false
+Categories=Utility;
+Keywords=screenshot;capture;screen;print;snip;grab;

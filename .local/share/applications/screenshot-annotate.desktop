@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot: Annotate
+GenericName=Screenshot
+Comment=Freeze the screen, draw on it, then copy or save
+Exec=noctalia msg screenshot-annotate
+Icon=screenshot-annotate
+Terminal=false
+Categories=Utility;
+Keywords=screenshot;capture;screen;print;snip;grab;
