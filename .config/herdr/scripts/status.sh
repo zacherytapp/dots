@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Right-hand status entry for the Herdr tab bar: CPU load, CPU temperature in
+# Right-hand status for the herdr tab bar and the herdr-app `tmux-status` mod: CPU load, CPU temperature in
 # Fahrenheit and battery percentage — the ukiyo tmux status modules.
 set -uo pipefail
 
@@ -17,7 +17,10 @@ cpu=0
 
 # CPU package temperature, reported in Fahrenheit (@ukiyo-show-fahrenheit true).
 temp=""
-c=$(sensors 2>/dev/null | awk 'match($0, /^(Package id 0|Tctl|Tdie|Composite):[[:space:]]*\+?([0-9.]+)°C/, m) { print m[2]; exit }')
+# Portable awk (no gawk match() captures): first °C field on the matching line.
+c=$(sensors 2>/dev/null | awk '/^(Package id 0|Tctl|Tdie|Composite):/ {
+    for (i = 2; i <= NF; i++) if ($i ~ /°C$/) { v = $i; gsub(/[+°C]/, "", v); print v; exit }
+}')
 [[ -z "$c" ]] && c=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
 [[ -n "$c" ]] && temp=$(awk -v c="$c" 'BEGIN { printf "%.0f°F", c * 9 / 5 + 32 }')
 

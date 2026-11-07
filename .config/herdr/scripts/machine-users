@@ -1,0 +1,5 @@
+# <host glob> <ssh user>   first match wins; hosts not listed use your ssh config.
+# Tailscale-SSH hosts reject the local user, so they need an explicit account.
+balam-*     deploy
+barong-*    deploy
+balberith   deploy

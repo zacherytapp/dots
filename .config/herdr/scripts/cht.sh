@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Herdr port of tmux-cht.sh: pick a language or command, ask a question,
+# Port of tmux-cht.sh for herdr (prefix+i popup) and herdr-app (`cht` mod): pick a language or command, ask a question,
 # and page the answer from cht.sh.
 set -euo pipefail
 
