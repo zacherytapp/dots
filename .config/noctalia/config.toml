@@ -164,6 +164,9 @@ directory = "~/.config/walls"
     [wallpaper.default]
     path = "~/.config/walls/gruvbox1.png"
 
+[weather]
+unit = "imperial"
+
 [widget.clock]
 color = "secondary"
 format = "{:%-I:%M %p %A %m/%d/%y}"
