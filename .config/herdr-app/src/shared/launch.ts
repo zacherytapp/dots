@@ -36,6 +36,11 @@ export function findTab(name: string): { space: SpaceInfo; tab: string } | null 
   return null;
 }
 
+/** Every named tab's name, in every space: one look per render instead of one per button. */
+export function namedTabs(): Set<string> {
+  return new Set(spaces().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
+}
+
 export interface Work {
   /** The session's (or tab's) name, which is also how a second click finds it ("WEB-142"). */
   name: string;

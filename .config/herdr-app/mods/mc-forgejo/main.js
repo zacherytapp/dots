@@ -389,6 +389,9 @@ function findTab(name) {
   }
   return null;
 }
+function namedTabs() {
+  return new Set(spaces2().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
+}
 async function startWork(work) {
   const existing = findTab(work.name);
   if (existing) {
@@ -1175,7 +1178,12 @@ var BoardView = class extends ListView {
     const all = this.scope() === "all";
     const shown = this.filter === "all" ? items : items.filter((i) => i.column === this.filter);
     const actions = useIssueActions(cx);
-    const card = (item) => this.card(t, item, all, actions);
+    const acts = {
+      actions,
+      main: actions.length ? mainWindowAgent() : null,
+      open: actions.length ? namedTabs() : /* @__PURE__ */ new Set(),
+    };
+    const card = (item) => this.card(t, item, all, acts);
     const wide = this.width >= COLUMNS_AT && this.filter === "all";
     if (wide) {
       return h_flex3()
@@ -1234,7 +1242,7 @@ var BoardView = class extends ListView {
       .child(label)
       .child(div3().text_size(11).text_color(t.dim).child(String(count)));
   }
-  card(t, item, all, actions) {
+  card(t, item, all, acts) {
     const labels = item.labels ?? [];
     return v_flex3()
       .id(`card-${item.id}`)
@@ -1294,7 +1302,7 @@ var BoardView = class extends ListView {
         ),
       )
       .when(hasWork(item), (el) => el.child(workRow(t, item)))
-      .when(actions.length > 0, (el) => el.child(actionRow(t, item, actions)))
+      .when(acts.actions.length > 0, (el) => el.child(actionRow(t, item, acts)))
       .child(
         h_flex3()
           .gap(4)
@@ -1429,8 +1437,7 @@ function checksGlyph(t, checks) {
         .text_color(t[c.tone] ?? t.muted)
     : null;
 }
-function actionRow(t, item, actions) {
-  const main = mainWindowAgent();
+function actionRow(t, item, { actions, main, open: tabs }) {
   const fallback = agentProgram;
   const lead = main ?? fallback;
   const who = lead?.name ?? "the agent";
@@ -1447,7 +1454,7 @@ function actionRow(t, item, actions) {
     )
     .children(
       actions.map((a, i) => {
-        const open = findTab(actionTabName(a, item));
+        const open = tabs.has(actionTabName(a, item));
         return h_flex3()
           .id(`action-${i}-${item.id}`)
           .flex_none()

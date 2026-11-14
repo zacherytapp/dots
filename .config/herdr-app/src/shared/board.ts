@@ -15,7 +15,7 @@ import {
 } from "./board-model.ts";
 import { loadConfig, type IssueAction } from "./config.ts";
 import { actionTabName } from "./issue-actions.ts";
-import { copyText, findTab, mainWindowAgent, openUrl, runIssueAction } from "./launch.ts";
+import { copyText, mainWindowAgent, namedTabs, openUrl, runIssueAction } from "./launch.ts";
 import { ListView } from "./list-view.ts";
 import { alpha, asset, chromeIcon, countChip, iconButton, stopPress, type Theme } from "./ui.ts";
 import { ago } from "./util.ts";
@@ -136,7 +136,13 @@ export class BoardView extends ListView<BoardItem> {
     const all = this.scope() === "all";
     const shown = this.filter === "all" ? items : items.filter((i) => i.column === this.filter);
     const actions = useIssueActions(cx);
-    const card = (item: BoardItem) => this.card(t, item, all, actions);
+    // Read once for the whole board: per card, walking every pane and tab outran the render.
+    const acts: ActionContext = {
+      actions,
+      main: actions.length ? mainWindowAgent() : null,
+      open: actions.length ? namedTabs() : new Set(),
+    };
+    const card = (item: BoardItem) => this.card(t, item, all, acts);
     const wide = this.width >= COLUMNS_AT && this.filter === "all";
     if (wide) {
       return h_flex()
@@ -197,7 +203,7 @@ export class BoardView extends ListView<BoardItem> {
       .child(div().text_size(11).text_color(t.dim).child(String(count)));
   }
 
-  card(t: Theme, item: BoardItem, all: boolean, actions: IssueAction[]): El {
+  card(t: Theme, item: BoardItem, all: boolean, acts: ActionContext): El {
     const labels = item.labels ?? [];
     return v_flex()
       .id(`card-${item.id}`)
@@ -264,7 +270,7 @@ export class BoardView extends ListView<BoardItem> {
         ),
       )
       .when(hasWork(item), (el: El) => el.child(workRow(t, item)))
-      .when(actions.length > 0, (el: El) => el.child(actionRow(t, item, actions)))
+      .when(acts.actions.length > 0, (el: El) => el.child(actionRow(t, item, acts)))
       .child(
         h_flex()
           .gap(4)
@@ -430,9 +436,17 @@ function checksGlyph(t: Theme, checks: string | undefined): El | null {
     : null;
 }
 
+/** What every card's action row needs, read once per render. */
+interface ActionContext {
+  actions: IssueAction[];
+  /** The agent open in the main window (mainWindowAgent). */
+  main: Program | null;
+  /** Named tabs, so a button can show that its tab is open. */
+  open: Set<string>;
+}
+
 /** The configured actions (Review issue, Implement, Review code), led by the agent that runs them. */
-function actionRow(t: Theme, item: BoardItem, actions: IssueAction[]): El {
-  const main = mainWindowAgent();
+function actionRow(t: Theme, item: BoardItem, { actions, main, open: tabs }: ActionContext): El {
   const fallback = agentProgram;
   const lead = main ?? fallback;
   const who = lead?.name ?? "the agent";
@@ -449,7 +463,7 @@ function actionRow(t: Theme, item: BoardItem, actions: IssueAction[]): El {
     )
     .children(
       actions.map((a, i) => {
-        const open = findTab(actionTabName(a, item));
+        const open = tabs.has(actionTabName(a, item));
         return h_flex()
           .id(`action-${i}-${item.id}`)
           .flex_none()
