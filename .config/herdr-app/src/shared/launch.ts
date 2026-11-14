@@ -79,9 +79,13 @@ export async function startWork(work: Work): Promise<void> {
   });
 }
 
-/** Runs argv in the login shell on a space's machine, so it finds what a terminal there would. */
+/**
+ * Runs argv in the interactive login shell on a space's machine, as Herdr's own launcher does,
+ * so it finds what a terminal there would (~/.local/bin is often added only by ~/.zshrc). The
+ * shell's own startup chatter (zle, prompt plugins) is dropped; the command's stderr is kept.
+ */
 function inLoginShell(argv: string[], cwd: string, machine: string | null) {
-  const script = `exec "\${SHELL:-/bin/sh}" -lc 'exec "$@"' "$0" "$@"`;
+  const script = `exec "\${SHELL:-/bin/sh}" -lic 'exec "$@" 2>&3' "$0" "$@" 3>&2 2>/dev/null </dev/null`;
   return exec("sh", ["-c", script, "sh", ...argv], {
     ...(cwd ? { cwd } : {}),
     on: machine ?? undefined,

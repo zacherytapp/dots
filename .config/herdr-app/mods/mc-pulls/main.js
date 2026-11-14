@@ -319,7 +319,7 @@ async function startWork(work) {
   });
 }
 function inLoginShell(argv, cwd, machine) {
-  const script = `exec "\${SHELL:-/bin/sh}" -lc 'exec "$@"' "$0" "$@"`;
+  const script = `exec "\${SHELL:-/bin/sh}" -lic 'exec "$@" 2>&3' "$0" "$@" 3>&2 2>/dev/null </dev/null`;
   return exec3("sh", ["-c", script, "sh", ...argv], {
     ...(cwd ? { cwd } : {}),
     on: machine ?? void 0,
