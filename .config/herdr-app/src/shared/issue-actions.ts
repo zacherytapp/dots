@@ -59,6 +59,33 @@ export function chooseAgent(
   );
 }
 
+/** Claude Code, which can run a session in the background (`claude --bg`) instead of in a tab. */
+export function runsInBackground(argv: string[]): boolean {
+  return agentKeyOf(argv[0]?.split("/").pop()) === "claude";
+}
+
+/** `claude --bg` named `name`, so its agent view and the Agents sidebar show it by that name. */
+export function backgroundArgv(argv: string[], name: string, task: string): string[] {
+  return [...argv, "--bg", "-n", name, task];
+}
+
+/** The short id in `claude --bg`'s "backgrounded · 8d1e1774 · name" line, or null. */
+export function backgroundId(stdout: string): string | null {
+  return /^backgrounded\W+([0-9a-f]{6,})\b/m.exec(stdout)?.[1] ?? null;
+}
+
+/** Whether `claude agents --json` lists a background session named `name` (a login shell may print first). */
+export function hasBackgroundSession(stdout: string, name: string): boolean {
+  const start = stdout.search(/^\[/m);
+  if (start < 0) return false;
+  try {
+    const list = JSON.parse(stdout.slice(start)) as { kind?: string; name?: string }[];
+    return list.some((s) => s.kind === "background" && s.name === name);
+  } catch {
+    return false;
+  }
+}
+
 /** "Review issue: homedge#12": the tab a button makes, and how a second click finds it. */
 export function actionTabName(action: IssueAction, item: BoardItem): string {
   return `${action.label}: ${item.tabName}`;

@@ -353,3 +353,24 @@ test("issue actions type each agent's skill command with the issue link", async 
   assert.equal(chooseAgent(review, null, ["/usr/bin/opencode"]), "opencode");
   assert.equal(chooseAgent({ ...review, agent: "claude" }, "pi", ["claude"]), "claude");
 });
+
+test("Claude Code actions start a named background session", async () => {
+  const { backgroundArgv, backgroundId, hasBackgroundSession, runsInBackground } =
+    await import("./issue-actions.ts");
+  assert.equal(runsInBackground(["claude"]), true);
+  assert.equal(runsInBackground(["/home/z/.local/bin/claude", "--model", "opus"]), true);
+  assert.equal(runsInBackground(["pi"]), false);
+  assert.deepEqual(
+    backgroundArgv(["claude", "--model", "opus"], "Implement: x#1", "/implement u"),
+    ["claude", "--model", "opus", "--bg", "-n", "Implement: x#1", "/implement u"],
+  );
+  assert.equal(
+    backgroundId("backgrounded · 8d1e1774 · Implement: x#1\n  claude agents   list sessions\n"),
+    "8d1e1774",
+  );
+  assert.equal(backgroundId("something else"), null);
+  const listed = `motd\n[\n  {"kind":"interactive","name":"Implement: x#1"},\n  {"kind":"background","name":"Review issue: x#1"}\n]\n`;
+  assert.equal(hasBackgroundSession(listed, "Review issue: x#1"), true);
+  assert.equal(hasBackgroundSession(listed, "Implement: x#1"), false);
+  assert.equal(hasBackgroundSession("not json", "Implement: x#1"), false);
+});

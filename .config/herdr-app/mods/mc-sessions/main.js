@@ -2,7 +2,7 @@
 // .config/herdr-app/src/mods/mc-sessions/main.ts
 import { div as div4 } from "gpui-kit";
 import { h_flex as h_flex4, v_flex as v_flex4 } from "gpui-base";
-import { home, run as run3, spaces as spaces3 } from "herdr";
+import { home as home2, run as run3, spaces as spaces3 } from "herdr";
 
 // .config/herdr-app/src/shared/board.ts
 import { div as div3, image as image2, svg as svg3 } from "gpui-kit";
@@ -17,10 +17,10 @@ function baseName(path) {
   const trimmed = (path ?? "").replace(/\/+$/, "");
   return trimmed.split("/").pop() || trimmed || "/";
 }
-function tildify(path, home2) {
+function tildify(path, home3) {
   if (!path) return "";
-  if (home2 && (path === home2 || path.startsWith(`${home2}/`)))
-    return `~${path.slice(home2.length)}`;
+  if (home3 && (path === home3 || path.startsWith(`${home3}/`)))
+    return `~${path.slice(home3.length)}`;
   return path;
 }
 function duration(ms) {
@@ -137,6 +137,7 @@ function editConfigArgs() {
 import {
   exec as exec3,
   focused,
+  home,
   knownAgents,
   notify,
   panes as panes2,
@@ -1124,7 +1125,7 @@ var Sessions = class extends ListView {
   }
   row(t, s, program, all) {
     const open = findTab(tabNameOf(s));
-    const folder = s.cwd === home() ? "~" : baseName(s.cwd);
+    const folder = s.cwd === home2() ? "~" : baseName(s.cwd);
     const where = [all || s.machine ? folder : null, s.branch, s.machine, ago(s.updated)]
       .filter(Boolean)
       .join(" · ");
@@ -1140,7 +1141,7 @@ var Sessions = class extends ListView {
       .cursor_pointer()
       .hover((st) => st.bg(t.hover))
       .tooltip(
-        `${tildify(s.cwd, home())}
+        `${tildify(s.cwd, home2())}
 ${s.id}`,
       )
       .on_click(() => void resume(s))

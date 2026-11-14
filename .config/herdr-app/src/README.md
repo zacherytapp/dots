@@ -82,10 +82,14 @@ mention it, and remote branches named after it (`fix/12-login`, `WEB-142-form`),
 the remote. A pull request's chip carries its checks (passing, failing, running).
 
 Each card has a button per entry in `issueActions` (default: Review issue, Implement, Review
-code). A button opens a new tab in the issue's space running the agent open in the main window
-(the focused pane's, else one in the shown tab or space, else `agent.argv`), and types that
-agent's skill command and the issue link: `/review-issue <url>` for Claude and opencode,
-`/skill:review-issue <url>` for pi (`agents.<name>.skill`). Clicking again shows that tab.
+code). A button starts the agent open in the main window (the focused pane's, else one in the
+shown tab or space, else `agent.argv`) in the issue's space, with that agent's skill command and
+the issue link: `/review-issue <url>` for Claude and opencode, `/skill:review-issue <url>` for pi
+(`agents.<name>.skill`). Claude Code runs as a background session (`claude --bg`, named like
+`Implement: homedge#12`) in the space's repo on its machine, with no tab: Claude's agent view
+(`claude agents`) and the Agents sidebar list it, and clicking its row there opens it in a tab.
+Clicking the button again shows that tab, or says it is already running. Other agents open in
+a new tab, and clicking again shows it. The pull request buttons in `mc-pulls` work the same way.
 An action can set its own `prompt` (placeholders `{command}`, `{skill}`, `{url}`, `{key}`,
 `{title}`, `{repo}`, `{pulls}`) or always use one `agent`. The comment count sits in the
 card's bottom-right corner.

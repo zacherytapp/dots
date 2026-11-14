@@ -3,6 +3,7 @@
 import {
   exec,
   focused,
+  home,
   knownAgents,
   notify,
   panes,
@@ -14,8 +15,17 @@ import {
 } from "herdr";
 import type { BoardItem } from "./board-model.ts";
 import { loadConfig, type IssueAction } from "./config.ts";
-import { actionPrompt, actionTabName, agentKeyOf, chooseAgent } from "./issue-actions.ts";
-import { activeSpace, spacesForSlug } from "./repo.ts";
+import {
+  actionPrompt,
+  actionTabName,
+  agentKeyOf,
+  backgroundArgv,
+  backgroundId,
+  chooseAgent,
+  hasBackgroundSession,
+  runsInBackground,
+} from "./issue-actions.ts";
+import { activeSpace, repoOf, spaceFolder, spacesForSlug } from "./repo.ts";
 
 /** The tab already named `name`, in any space. */
 export function findTab(name: string): { space: SpaceInfo; tab: string } | null {
@@ -27,7 +37,7 @@ export function findTab(name: string): { space: SpaceInfo; tab: string } | null 
 }
 
 export interface Work {
-  /** The tab's name, which is also how a second click finds it ("WEB-142"). */
+  /** The session's (or tab's) name, which is also how a second click finds it ("WEB-142"). */
   name: string;
   task: string;
   /** "owner/repo" to choose the space by; else the shown space. */
@@ -38,7 +48,9 @@ export interface Work {
 
 /**
  * Starts an agent on a piece of work, in a space checked out at its repo (the shown one when
- * it is, else the first), or in the shown space. A second click shows the tab it made.
+ * it is, else the first), or in the shown space. Claude Code runs as a background session, with
+ * no tab: its agent view and the Agents sidebar list it, and the sidebar opens it. Other agents
+ * get a tab. A second click shows the tab already open for it, or says it is already running.
  */
 export async function startWork(work: Work): Promise<void> {
   const existing = findTab(work.name);
@@ -53,13 +65,66 @@ export async function startWork(work: Work): Promise<void> {
     const candidates = await spacesForSlug(work.repo);
     space = candidates.find((s) => s.active) ?? candidates[0] ?? space;
   }
+  const argv = work.argv?.length ? work.argv : config.agent.argv;
+  if (runsInBackground(argv)) {
+    await startInBackground(space, argv, work);
+    return;
+  }
   if (space && !space.active) run("space.select", { id: space.id });
   run("tab.new", {
     name: work.name,
     ...(space ? { space: space.id } : {}),
-    argv: work.argv?.length ? work.argv : config.agent.argv,
+    argv,
     task: work.task,
   });
+}
+
+/** Runs argv in the login shell on a space's machine, so it finds what a terminal there would. */
+function inLoginShell(argv: string[], cwd: string, machine: string | null) {
+  const script = `exec "\${SHELL:-/bin/sh}" -lc 'exec "$@"' "$0" "$@"`;
+  return exec("sh", ["-c", script, "sh", ...argv], {
+    ...(cwd ? { cwd } : {}),
+    on: machine ?? undefined,
+  });
+}
+
+/** `claude --bg` in the space's repo (else its folder), on its machine; reports how it went. */
+async function startInBackground(
+  space: SpaceInfo | null,
+  argv: string[],
+  work: Work,
+): Promise<void> {
+  const machine = space?.machine ?? null;
+  const cwd = space
+    ? ((await repoOf(space).catch(() => null))?.root ?? spaceFolder(space))
+    : home();
+  try {
+    const listed = await inLoginShell([argv[0], "agents", "--json"], cwd, machine);
+    if (hasBackgroundSession(listed.stdout, work.name)) {
+      notify({
+        title: "Already running",
+        body: `${work.name}: open it from Agents or \`claude agents\`.`,
+        level: "info",
+        timeout: 4000,
+      });
+      return;
+    }
+    const r = await inLoginShell(backgroundArgv(argv, work.name, work.task), cwd, machine);
+    if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
+    const id = backgroundId(r.stdout);
+    notify({
+      title: "Started in the background",
+      body: `${work.name}${id ? ` (${id})` : ""}: in Agents and \`claude agents\`.`,
+      level: "success",
+      timeout: 4000,
+    });
+  } catch (e) {
+    notify({
+      title: `Couldn't start ${work.name}`,
+      body: String((e as Error)?.message ?? e).slice(-300),
+      level: "error",
+    });
+  }
 }
 
 /** Opens a link in the default browser on this computer. */

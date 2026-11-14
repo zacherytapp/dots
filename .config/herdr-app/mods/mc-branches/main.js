@@ -229,6 +229,7 @@ async function forgejo() {
 import {
   exec as exec3,
   focused,
+  home,
   knownAgents,
   notify,
   panes as panes2,

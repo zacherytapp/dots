@@ -4,7 +4,7 @@ import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
 import {
   agents,
-  home,
+  home as home2,
   layout,
   notify as notify2,
   panes as panes3,
@@ -39,6 +39,7 @@ var KEYS = {
 import {
   exec as exec3,
   focused,
+  home,
   knownAgents,
   notify,
   panes as panes2,
@@ -919,7 +920,7 @@ var Agents = class extends View {
   }
   /** Reads this computer's jobs the moment Claude Code writes one (state.json). */
   watchJobs(cx) {
-    const dir = `${home()}/.claude/jobs`;
+    const dir = `${home2()}/.claude/jobs`;
     cx.spawn(async (cx2) => {
       for (;;) {
         let paths;

@@ -146,10 +146,40 @@ function editConfigArgs() {
   return { name: "mission-control.json", argv: ["nvim", configPath()] };
 }
 
+// .config/herdr-app/src/shared/issue-actions.ts
+function agentKeyOf(program) {
+  if (!program) return null;
+  const k = program.toLowerCase();
+  if (k.startsWith("claude")) return "claude";
+  if (k.startsWith("opencode")) return "opencode";
+  if (k === "pi" || k.startsWith("pi-")) return "pi";
+  return k;
+}
+function runsInBackground(argv) {
+  return agentKeyOf(argv[0]?.split("/").pop()) === "claude";
+}
+function backgroundArgv(argv, name, task) {
+  return [...argv, "--bg", "-n", name, task];
+}
+function backgroundId(stdout) {
+  return /^backgrounded\W+([0-9a-f]{6,})\b/m.exec(stdout)?.[1] ?? null;
+}
+function hasBackgroundSession(stdout, name) {
+  const start = stdout.search(/^\[/m);
+  if (start < 0) return false;
+  try {
+    const list = JSON.parse(stdout.slice(start));
+    return list.some((s) => s.kind === "background" && s.name === name);
+  } catch {
+    return false;
+  }
+}
+
 // .config/herdr-app/src/shared/launch.ts
 import {
   exec as exec3,
   focused,
+  home,
   knownAgents,
   notify,
   panes as panes2,
@@ -275,13 +305,58 @@ async function startWork(work) {
     const candidates = await spacesForSlug(work.repo);
     space = candidates.find((s) => s.active) ?? candidates[0] ?? space;
   }
+  const argv = work.argv?.length ? work.argv : config.agent.argv;
+  if (runsInBackground(argv)) {
+    await startInBackground(space, argv, work);
+    return;
+  }
   if (space && !space.active) run("space.select", { id: space.id });
   run("tab.new", {
     name: work.name,
     ...(space ? { space: space.id } : {}),
-    argv: work.argv?.length ? work.argv : config.agent.argv,
+    argv,
     task: work.task,
   });
+}
+function inLoginShell(argv, cwd, machine) {
+  const script = `exec "\${SHELL:-/bin/sh}" -lc 'exec "$@"' "$0" "$@"`;
+  return exec3("sh", ["-c", script, "sh", ...argv], {
+    ...(cwd ? { cwd } : {}),
+    on: machine ?? void 0,
+  });
+}
+async function startInBackground(space, argv, work) {
+  const machine = space?.machine ?? null;
+  const cwd = space
+    ? ((await repoOf(space).catch(() => null))?.root ?? spaceFolder(space))
+    : home();
+  try {
+    const listed = await inLoginShell([argv[0], "agents", "--json"], cwd, machine);
+    if (hasBackgroundSession(listed.stdout, work.name)) {
+      notify({
+        title: "Already running",
+        body: `${work.name}: open it from Agents or \`claude agents\`.`,
+        level: "info",
+        timeout: 4e3,
+      });
+      return;
+    }
+    const r = await inLoginShell(backgroundArgv(argv, work.name, work.task), cwd, machine);
+    if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
+    const id = backgroundId(r.stdout);
+    notify({
+      title: "Started in the background",
+      body: `${work.name}${id ? ` (${id})` : ""}: in Agents and \`claude agents\`.`,
+      level: "success",
+      timeout: 4e3,
+    });
+  } catch (e) {
+    notify({
+      title: `Couldn't start ${work.name}`,
+      body: String(e?.message ?? e).slice(-300),
+      level: "error",
+    });
+  }
 }
 async function openUrl(url) {
   try {
