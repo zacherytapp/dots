@@ -22,7 +22,7 @@ import {
   type PullGroup,
   type PullItem,
 } from "../../shared/github-model.ts";
-import { findTab, openUrl, copyText, startWork } from "../../shared/launch.ts";
+import { backgroundSessions, copyText, findTab, openUrl, startWork } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope } from "../../shared/list-view.ts";
 import { asset, chromeIcon, iconButton, type Theme } from "../../shared/ui.ts";
 import { ago, matches } from "../../shared/util.ts";
@@ -149,7 +149,11 @@ export default class Pulls extends ListView<PullItem> {
   }
 
   row(t: Theme, p: PullItem, program: Program | null, all: boolean): El {
-    const started = findTab(p.tabName);
+    const tab = findTab(p.tabName);
+    const started = Boolean(tab) || backgroundSessions().has(p.tabName);
+    const shown = tab
+      ? `Show the ${p.tabName} tab`
+      : `${p.tabName} is running in the background: open it from Agents`;
     const checks = {
       passing: [chromeIcon("check"), "Checks", t.ansi2, "All checks passed"],
       failing: [chromeIcon("x"), "Checks", t.blocked, "Some checks failed"],
@@ -270,7 +274,7 @@ export default class Pulls extends ListView<PullItem> {
           .child(
             agentButton(
               `agent-${p.id}`,
-              started ? `Show the ${p.tabName} tab` : `Start ${agentName} to review #${p.number}`,
+              started ? shown : `Start ${agentName} to review #${p.number}`,
               () => void startWork({ name: p.tabName, task: pullTask(p, "review"), repo: p.slug }),
               program,
               t,
@@ -291,11 +295,7 @@ export default class Pulls extends ListView<PullItem> {
                 .border(1)
                 .border_color(t.border)
                 .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-                .tooltip(
-                  started
-                    ? `Show the ${p.tabName} tab`
-                    : `Start ${agentName}: ${a.label.toLowerCase()}`,
-                )
+                .tooltip(started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`)
                 .on_click(
                   () => void startWork({ name: p.tabName, task: pullTask(p, a.id), repo: p.slug }),
                 )
@@ -303,7 +303,7 @@ export default class Pulls extends ListView<PullItem> {
             ),
           )
           .child(div().flex_1())
-          .when(Boolean(started), (el: El) => el.child(div().size(6).rounded(3).bg(t.working)))
+          .when(started, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)))
           .child(
             iconButton(
               `open-${p.id}`,

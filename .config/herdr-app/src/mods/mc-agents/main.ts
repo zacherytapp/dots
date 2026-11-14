@@ -23,7 +23,7 @@ import {
   watchFolder,
 } from "herdr";
 import { KEYS, NODES } from "../../shared/sources.ts";
-import { findTab } from "../../shared/launch.ts";
+import { findTab, publishSessions } from "../../shared/launch.ts";
 import { spaceFolders } from "../../shared/repo.ts";
 import {
   asset,
@@ -213,6 +213,8 @@ export default class Agents extends View {
     const key = (j: Job) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`;
     if (jobs.map(key).join("\n") === this.jobs.map(key).join("\n")) return;
     this.jobs = jobs;
+    // The issue and pull request buttons light up while their session exists.
+    publishSessions(jobs.map((j) => j.name));
     cx.notify();
   }
 

@@ -184,6 +184,8 @@ import {
   notify,
   panes as panes2,
   run,
+  setShared,
+  shared,
   spaces as spaces2,
 } from "herdr";
 
@@ -292,11 +294,25 @@ function findTab(name) {
   }
   return null;
 }
+var SESSIONS_KEY = "mc.agents.sessions";
+function backgroundSessions() {
+  const v = shared(SESSIONS_KEY);
+  return new Set(Array.isArray(v) ? v.filter((n) => typeof n === "string") : []);
+}
+function publishSessions(names) {
+  const next = [...new Set(names)].sort();
+  const now = [...backgroundSessions()].sort();
+  if (next.join("\n") !== now.join("\n")) setShared(SESSIONS_KEY, next);
+}
 async function startWork(work) {
   const existing = findTab(work.name);
   if (existing) {
     run("space.select", { id: existing.space.id });
     run("tab.select", { id: existing.tab });
+    return;
+  }
+  if (backgroundSessions().has(work.name)) {
+    alreadyRunning(work.name);
     return;
   }
   const config = await loadConfig();
@@ -318,6 +334,14 @@ async function startWork(work) {
     task: work.task,
   });
 }
+function alreadyRunning(name) {
+  notify({
+    title: "Already started",
+    body: `${name}: open it from Agents, or remove it in \`claude agents\` to start again.`,
+    level: "info",
+    timeout: 5e3,
+  });
+}
 function inLoginShell(argv, cwd, machine) {
   const script = `exec "\${SHELL:-/bin/sh}" -lic 'exec "$@" 2>&3' "$0" "$@" 3>&2 2>/dev/null </dev/null`;
   return exec3("sh", ["-c", script, "sh", ...argv], {
@@ -333,17 +357,13 @@ async function startInBackground(space, argv, work) {
   try {
     const listed = await inLoginShell([argv[0], "agents", "--json"], cwd, machine);
     if (hasBackgroundSession(listed.stdout, work.name)) {
-      notify({
-        title: "Already running",
-        body: `${work.name}: open it from Agents or \`claude agents\`.`,
-        level: "info",
-        timeout: 4e3,
-      });
+      alreadyRunning(work.name);
       return;
     }
     const r = await inLoginShell(backgroundArgv(argv, work.name, work.task), cwd, machine);
     if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
     const id = backgroundId(r.stdout);
+    publishSessions([...backgroundSessions(), work.name]);
     notify({
       title: "Started in the background",
       body: `${work.name}${id ? ` (${id})` : ""}: in Agents and \`claude agents\`.`,
@@ -389,7 +409,7 @@ async function copyText(text) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared, shared, theme as theme2 } from "herdr";
+import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
 var KEYS = {
@@ -770,13 +790,13 @@ var ListView = class extends View {
       );
   }
   scope() {
-    return shared(KEYS.scope(this.source())) === "all" ? "all" : "space";
+    return shared2(KEYS.scope(this.source())) === "all" ? "all" : "space";
   }
   key() {
     return this.scope() === "all" ? "all" : `space:${activeSpace()?.id ?? ""}`;
   }
   setScope(scope, cx) {
-    setShared(KEYS.scope(this.source()), scope);
+    setShared2(KEYS.scope(this.source()), scope);
     this.reload(cx);
   }
   reload(cx, quiet = false) {
@@ -1352,7 +1372,11 @@ var Pulls = class extends ListView {
       .child(text);
   }
   row(t, p, program, all) {
-    const started = findTab(p.tabName);
+    const tab = findTab(p.tabName);
+    const started = Boolean(tab) || backgroundSessions().has(p.tabName);
+    const shown = tab
+      ? `Show the ${p.tabName} tab`
+      : `${p.tabName} is running in the background: open it from Agents`;
     const checks = {
       passing: [chromeIcon("check"), "Checks", t.ansi2, "All checks passed"],
       failing: [chromeIcon("x"), "Checks", t.blocked, "Some checks failed"],
@@ -1473,7 +1497,7 @@ var Pulls = class extends ListView {
           .child(
             agentButton(
               `agent-${p.id}`,
-              started ? `Show the ${p.tabName} tab` : `Start ${agentName} to review #${p.number}`,
+              started ? shown : `Start ${agentName} to review #${p.number}`,
               () => void startWork({ name: p.tabName, task: pullTask(p, "review"), repo: p.slug }),
               program,
               t,
@@ -1494,11 +1518,7 @@ var Pulls = class extends ListView {
                 .border(1)
                 .border_color(t.border)
                 .hover((s) => s.bg(t.hover).text_color(t.foreground))
-                .tooltip(
-                  started
-                    ? `Show the ${p.tabName} tab`
-                    : `Start ${agentName}: ${a.label.toLowerCase()}`,
-                )
+                .tooltip(started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`)
                 .on_click(
                   () => void startWork({ name: p.tabName, task: pullTask(p, a.id), repo: p.slug }),
                 )
@@ -1506,7 +1526,7 @@ var Pulls = class extends ListView {
             ),
           )
           .child(div4().flex_1())
-          .when(Boolean(started), (el) => el.child(div4().size(6).rounded(3).bg(t.working)))
+          .when(started, (el) => el.child(div4().size(6).rounded(3).bg(t.working)))
           .child(
             iconButton(
               `open-${p.id}`,

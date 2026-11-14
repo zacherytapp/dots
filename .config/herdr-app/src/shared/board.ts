@@ -15,7 +15,14 @@ import {
 } from "./board-model.ts";
 import { loadConfig, type IssueAction } from "./config.ts";
 import { actionTabName } from "./issue-actions.ts";
-import { copyText, mainWindowAgent, namedTabs, openUrl, runIssueAction } from "./launch.ts";
+import {
+  backgroundSessions,
+  copyText,
+  mainWindowAgent,
+  namedTabs,
+  openUrl,
+  runIssueAction,
+} from "./launch.ts";
 import { ListView } from "./list-view.ts";
 import { alpha, asset, chromeIcon, countChip, iconButton, stopPress, type Theme } from "./ui.ts";
 import { ago } from "./util.ts";
@@ -140,7 +147,8 @@ export class BoardView extends ListView<BoardItem> {
     const acts: ActionContext = {
       actions,
       main: actions.length ? mainWindowAgent() : null,
-      open: actions.length ? namedTabs() : new Set(),
+      tabs: actions.length ? namedTabs() : new Set(),
+      sessions: actions.length ? backgroundSessions() : new Set(),
     };
     const card = (item: BoardItem) => this.card(t, item, all, acts);
     const wide = this.width >= COLUMNS_AT && this.filter === "all";
@@ -441,12 +449,17 @@ interface ActionContext {
   actions: IssueAction[];
   /** The agent open in the main window (mainWindowAgent). */
   main: Program | null;
-  /** Named tabs, so a button can show that its tab is open. */
-  open: Set<string>;
+  /** Named tabs and background sessions, so a button can show that its work is started. */
+  tabs: Set<string>;
+  sessions: Set<string>;
 }
 
 /** The configured actions (Review issue, Implement, Review code), led by the agent that runs them. */
-function actionRow(t: Theme, item: BoardItem, { actions, main, open: tabs }: ActionContext): El {
+function actionRow(
+  t: Theme,
+  item: BoardItem,
+  { actions, main, tabs, sessions }: ActionContext,
+): El {
   const fallback = agentProgram;
   const lead = main ?? fallback;
   const who = lead?.name ?? "the agent";
@@ -463,7 +476,9 @@ function actionRow(t: Theme, item: BoardItem, { actions, main, open: tabs }: Act
     )
     .children(
       actions.map((a, i) => {
-        const open = tabs.has(actionTabName(a, item));
+        const name = actionTabName(a, item);
+        const tab = tabs.has(name);
+        const open = tab || sessions.has(name);
         return h_flex()
           .id(`action-${i}-${item.id}`)
           .flex_none()
@@ -481,9 +496,11 @@ function actionRow(t: Theme, item: BoardItem, { actions, main, open: tabs }: Act
           .on_mouse_down("left", stopPress)
           .on_click(() => void runIssueAction(a, item))
           .tooltip(
-            open
-              ? `Show the "${actionTabName(a, item)}" tab`
-              : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
+            tab
+              ? `Show the "${name}" tab`
+              : open
+                ? `"${name}" is running in the background: open it from Agents`
+                : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
           )
           .child(a.label)
           .when(Boolean(open), (el: El) => el.child(div().size(5).rounded(3).bg(t.working)));

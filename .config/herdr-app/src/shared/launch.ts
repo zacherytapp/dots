@@ -8,6 +8,8 @@ import {
   notify,
   panes,
   run,
+  setShared,
+  shared,
   spaces,
   type PaneInfo,
   type Program,
@@ -41,6 +43,25 @@ export function namedTabs(): Set<string> {
   return new Set(spaces().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
 }
 
+/**
+ * The names of Claude Code's background sessions on every machine (its job records: what its
+ * agent view lists until `claude rm`). mc-agents publishes them as it reads the jobs; a start
+ * from here adds its own at once.
+ */
+export const SESSIONS_KEY = "mc.agents.sessions";
+
+export function backgroundSessions(): Set<string> {
+  const v = shared(SESSIONS_KEY);
+  return new Set(Array.isArray(v) ? v.filter((n): n is string => typeof n === "string") : []);
+}
+
+/** Publishes the session names, only when they changed (every mod re-renders on a change). */
+export function publishSessions(names: Iterable<string>): void {
+  const next = [...new Set(names)].sort();
+  const now = [...backgroundSessions()].sort();
+  if (next.join("\n") !== now.join("\n")) setShared(SESSIONS_KEY, next);
+}
+
 export interface Work {
   /** The session's (or tab's) name, which is also how a second click finds it ("WEB-142"). */
   name: string;
@@ -64,6 +85,10 @@ export async function startWork(work: Work): Promise<void> {
     run("tab.select", { id: existing.tab });
     return;
   }
+  if (backgroundSessions().has(work.name)) {
+    alreadyRunning(work.name);
+    return;
+  }
   const config = await loadConfig();
   let space = activeSpace();
   if (work.repo) {
@@ -81,6 +106,15 @@ export async function startWork(work: Work): Promise<void> {
     ...(space ? { space: space.id } : {}),
     argv,
     task: work.task,
+  });
+}
+
+function alreadyRunning(name: string): void {
+  notify({
+    title: "Already started",
+    body: `${name}: open it from Agents, or remove it in \`claude agents\` to start again.`,
+    level: "info",
+    timeout: 5000,
   });
 }
 
@@ -110,17 +144,13 @@ async function startInBackground(
   try {
     const listed = await inLoginShell([argv[0], "agents", "--json"], cwd, machine);
     if (hasBackgroundSession(listed.stdout, work.name)) {
-      notify({
-        title: "Already running",
-        body: `${work.name}: open it from Agents or \`claude agents\`.`,
-        level: "info",
-        timeout: 4000,
-      });
+      alreadyRunning(work.name);
       return;
     }
     const r = await inLoginShell(backgroundArgv(argv, work.name, work.task), cwd, machine);
     if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
     const id = backgroundId(r.stdout);
+    publishSessions([...backgroundSessions(), work.name]);
     notify({
       title: "Started in the background",
       body: `${work.name}${id ? ` (${id})` : ""}: in Agents and \`claude agents\`.`,

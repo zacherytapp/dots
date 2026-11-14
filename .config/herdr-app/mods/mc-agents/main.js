@@ -11,8 +11,8 @@ import {
   playSound,
   run as run2,
   setAgentOrder,
-  setShared,
-  shared,
+  setShared as setShared2,
+  shared as shared2,
   spaces as spaces3,
   terminals,
   theme as theme2,
@@ -44,6 +44,8 @@ import {
   notify,
   panes as panes2,
   run,
+  setShared,
+  shared,
   spaces as spaces2,
 } from "herdr";
 
@@ -118,6 +120,16 @@ function findTab(name) {
     if (tab) return { space, tab: tab.id };
   }
   return null;
+}
+var SESSIONS_KEY = "mc.agents.sessions";
+function backgroundSessions() {
+  const v = shared(SESSIONS_KEY);
+  return new Set(Array.isArray(v) ? v.filter((n) => typeof n === "string") : []);
+}
+function publishSessions(names) {
+  const next = [...new Set(names)].sort();
+  const now = [...backgroundSessions()].sort();
+  if (next.join("\n") !== now.join("\n")) setShared(SESSIONS_KEY, next);
 }
 
 // .config/herdr-app/src/shared/ui.ts
@@ -900,10 +912,10 @@ var Agents = class extends View {
       .join("|");
   }
   mode() {
-    return shared("mc.agents.mode") === "spaces" ? "spaces" : "priority";
+    return shared2("mc.agents.mode") === "spaces" ? "spaces" : "priority";
   }
   open() {
-    return shared(KEYS.agentsFolded) !== true;
+    return shared2(KEYS.agentsFolded) !== true;
   }
   readContext(cx) {
     if (this.reading || !this.open()) return;
@@ -968,6 +980,7 @@ var Agents = class extends View {
     const key = (j) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`;
     if (jobs.map(key).join("\n") === this.jobs.map(key).join("\n")) return;
     this.jobs = jobs;
+    publishSessions(jobs.map((j) => j.name));
     cx.notify();
   }
   /**
@@ -1270,7 +1283,7 @@ var Agents = class extends View {
       .text_color(t.blocked)
       .child(`${urgent} need${urgent === 1 ? "s" : ""} you`);
     const toggle = (m, icon, label) =>
-      iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared("mc.agents.mode", m), {
+      iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared2("mc.agents.mode", m), {
         active: mode === m,
         size: 24,
         iconSize: 13,
@@ -1285,7 +1298,7 @@ var Agents = class extends View {
       .text_size(13)
       .on_size_change((size) => {
         const h = Math.round(size.height);
-        if (shared(KEYS.agentsHeight) !== h) setShared(KEYS.agentsHeight, h);
+        if (shared2(KEYS.agentsHeight) !== h) setShared2(KEYS.agentsHeight, h);
       })
       .child(
         sectionHeader(
@@ -1293,7 +1306,7 @@ var Agents = class extends View {
           "Agents",
           model.total,
           open,
-          () => setShared(KEYS.agentsFolded, open),
+          () => setShared2(KEYS.agentsFolded, open),
           [
             ...(urgent ? [needsYou] : []),
             ...(open

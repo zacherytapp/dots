@@ -234,6 +234,8 @@ import {
   notify,
   panes as panes2,
   run,
+  setShared,
+  shared,
   spaces as spaces2,
 } from "herdr";
 
@@ -314,7 +316,7 @@ async function copyText(text) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared, shared, theme as theme2 } from "herdr";
+import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
 var KEYS = {
@@ -718,13 +720,13 @@ var ListView = class extends View {
       );
   }
   scope() {
-    return shared(KEYS.scope(this.source())) === "all" ? "all" : "space";
+    return shared2(KEYS.scope(this.source())) === "all" ? "all" : "space";
   }
   key() {
     return this.scope() === "all" ? "all" : `space:${activeSpace()?.id ?? ""}`;
   }
   setScope(scope, cx) {
-    setShared(KEYS.scope(this.source()), scope);
+    setShared2(KEYS.scope(this.source()), scope);
     this.reload(cx);
   }
   reload(cx, quiet = false) {

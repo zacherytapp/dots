@@ -257,6 +257,8 @@ import {
   notify,
   panes as panes2,
   run,
+  setShared,
+  shared,
   spaces as spaces2,
 } from "herdr";
 
@@ -355,11 +357,25 @@ function findTab(name) {
 function namedTabs() {
   return new Set(spaces2().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
 }
+var SESSIONS_KEY = "mc.agents.sessions";
+function backgroundSessions() {
+  const v = shared(SESSIONS_KEY);
+  return new Set(Array.isArray(v) ? v.filter((n) => typeof n === "string") : []);
+}
+function publishSessions(names) {
+  const next = [...new Set(names)].sort();
+  const now = [...backgroundSessions()].sort();
+  if (next.join("\n") !== now.join("\n")) setShared(SESSIONS_KEY, next);
+}
 async function startWork(work) {
   const existing = findTab(work.name);
   if (existing) {
     run("space.select", { id: existing.space.id });
     run("tab.select", { id: existing.tab });
+    return;
+  }
+  if (backgroundSessions().has(work.name)) {
+    alreadyRunning(work.name);
     return;
   }
   const config = await loadConfig();
@@ -381,6 +397,14 @@ async function startWork(work) {
     task: work.task,
   });
 }
+function alreadyRunning(name) {
+  notify({
+    title: "Already started",
+    body: `${name}: open it from Agents, or remove it in \`claude agents\` to start again.`,
+    level: "info",
+    timeout: 5e3,
+  });
+}
 function inLoginShell(argv, cwd, machine) {
   const script = `exec "\${SHELL:-/bin/sh}" -lic 'exec "$@" 2>&3' "$0" "$@" 3>&2 2>/dev/null </dev/null`;
   return exec3("sh", ["-c", script, "sh", ...argv], {
@@ -396,17 +420,13 @@ async function startInBackground(space, argv, work) {
   try {
     const listed = await inLoginShell([argv[0], "agents", "--json"], cwd, machine);
     if (hasBackgroundSession(listed.stdout, work.name)) {
-      notify({
-        title: "Already running",
-        body: `${work.name}: open it from Agents or \`claude agents\`.`,
-        level: "info",
-        timeout: 4e3,
-      });
+      alreadyRunning(work.name);
       return;
     }
     const r = await inLoginShell(backgroundArgv(argv, work.name, work.task), cwd, machine);
     if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
     const id = backgroundId(r.stdout);
+    publishSessions([...backgroundSessions(), work.name]);
     notify({
       title: "Started in the background",
       body: `${work.name}${id ? ` (${id})` : ""}: in Agents and \`claude agents\`.`,
@@ -484,7 +504,7 @@ async function runIssueAction(action, item) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared, shared, theme as theme2 } from "herdr";
+import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
 var KEYS = {
@@ -890,13 +910,13 @@ var ListView = class extends View {
       );
   }
   scope() {
-    return shared(KEYS.scope(this.source())) === "all" ? "all" : "space";
+    return shared2(KEYS.scope(this.source())) === "all" ? "all" : "space";
   }
   key() {
     return this.scope() === "all" ? "all" : `space:${activeSpace()?.id ?? ""}`;
   }
   setScope(scope, cx) {
-    setShared(KEYS.scope(this.source()), scope);
+    setShared2(KEYS.scope(this.source()), scope);
     this.reload(cx);
   }
   reload(cx, quiet = false) {
@@ -1144,7 +1164,8 @@ var BoardView = class extends ListView {
     const acts = {
       actions,
       main: actions.length ? mainWindowAgent() : null,
-      open: actions.length ? namedTabs() : /* @__PURE__ */ new Set(),
+      tabs: actions.length ? namedTabs() : /* @__PURE__ */ new Set(),
+      sessions: actions.length ? backgroundSessions() : /* @__PURE__ */ new Set(),
     };
     const card = (item) => this.card(t, item, all, acts);
     const wide = this.width >= COLUMNS_AT && this.filter === "all";
@@ -1400,7 +1421,7 @@ function checksGlyph(t, checks) {
         .text_color(t[c.tone] ?? t.muted)
     : null;
 }
-function actionRow(t, item, { actions, main, open: tabs }) {
+function actionRow(t, item, { actions, main, tabs, sessions }) {
   const fallback = agentProgram;
   const lead = main ?? fallback;
   const who = lead?.name ?? "the agent";
@@ -1417,7 +1438,9 @@ function actionRow(t, item, { actions, main, open: tabs }) {
     )
     .children(
       actions.map((a, i) => {
-        const open = tabs.has(actionTabName(a, item));
+        const name = actionTabName(a, item);
+        const tab = tabs.has(name);
+        const open = tab || sessions.has(name);
         return h_flex3()
           .id(`action-${i}-${item.id}`)
           .flex_none()
@@ -1435,9 +1458,11 @@ function actionRow(t, item, { actions, main, open: tabs }) {
           .on_mouse_down("left", stopPress)
           .on_click(() => void runIssueAction(a, item))
           .tooltip(
-            open
-              ? `Show the "${actionTabName(a, item)}" tab`
-              : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
+            tab
+              ? `Show the "${name}" tab`
+              : open
+                ? `"${name}" is running in the background: open it from Agents`
+                : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
           )
           .child(a.label)
           .when(Boolean(open), (el) => el.child(div3().size(5).rounded(3).bg(t.working)));
