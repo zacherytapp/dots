@@ -204,6 +204,25 @@ cmd_remove --force "$repo/.worktrees/dirty" >/dev/null
 gone  "worktree: --force removes a dirty worktree"            "$repo/.worktrees/dirty"
 git -C "$repo" show-ref -q --verify refs/heads/clean && pass "worktree: branch survives removal" || fail "worktree: branch survives removal"
 
+# --- go build cache while go runs ------------------------------------------------------------------
+gc=$HOME/.cache/go-build
+mkdir -p "$gc/ab" "$gc/cd"
+echo x > "$gc/ab/old-a"; touch -d "8 hours ago" "$gc/ab/old-a"
+echo x > "$gc/cd/old-d"; touch -d "2 days ago" "$gc/cd/old-d"
+echo x > "$gc/ab/new-a"; touch -d "30 minutes ago" "$gc/ab/new-a"
+echo x > "$gc/README";   touch -d "30 days ago" "$gc/README"
+fresh_run; DRY=1
+zap_old_files go-build "$gc" "$GOCACHE_BUSY_AGE"
+kept_ "go-build: dry run deletes nothing"                     "$gc/ab/old-a"
+awk -F'\t' '$1 > 0 && $2 == "free" && $3 == "go-build"' "$RESULTS" | grep -q . && pass "go-build: dry run reports old entries" || fail "go-build: dry run reports old entries"
+fresh_run
+zap_old_files go-build "$gc" "$GOCACHE_BUSY_AGE"
+gone  "go-build: entry untouched for 8h goes while go runs"   "$gc/ab/old-a"
+gone  "go-build: entry untouched for 2 days goes"             "$gc/cd/old-d"
+kept_ "go-build: entry touched 30 minutes ago stays"          "$gc/ab/new-a"
+kept_ "go-build: top-level files stay"                        "$gc/README"
+kept_ "go-build: shard dirs stay"                             "$gc/cd"
+
 echo
 (( FAILS )) && { echo "$FAILS failed"; exit 1; }
 echo "all passed"

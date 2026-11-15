@@ -44,6 +44,8 @@ SCRATCH_AGE=1440                # minutes untouched before an ended session's sc
 TRANSCRIPT_DAYS=14              # Claude session transcripts untouched this long go
 JOB_DAYS=7                      # finished Claude jobs untouched this long go
 WORKTREE_IDLE=1440              # minutes untouched before a merged, clean worktree goes (1 day)
+GOCACHE_BUSY_AGE=360            # while go runs, go-build entries untouched this many minutes go
+                                # (go refreshes an entry's mtime hourly while it uses it)
 UUID_RE='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 DEFAULT_KEEP=("$HOME/Games" "$HOME/.local/share/Steam")
 
@@ -158,6 +160,23 @@ zap_idle() {
   zap "$2" "$3"
 }
 
+# zap_old_files RULE DIR MINUTES: delete the files under DIR untouched for MINUTES, keeping DIR's
+# layout; for caches that stay safe to thin while their tool runs.
+zap_old_files() {
+  local rule=$1 dir=$2 mins=$3 bytes left
+  [[ -d $dir ]] || return 0
+  local find_args=("$dir" -xdev -mindepth 2 -type f -mmin "+$mins")
+  if (( DRY )); then
+    bytes=$(find "${find_args[@]}" -printf '%s\n' 2>/dev/null | awk '{s+=$1} END {print s+0}')
+    record "$bytes" free "$rule" "$dir"
+    return
+  fi
+  bytes=$(find "${find_args[@]}" -printf '%s\n' -delete 2>/dev/null | awk '{s+=$1} END {print s+0}')
+  record "$bytes" free "$rule" "$dir"
+  left=$(size_of "$dir")
+  record "$left" "skip:in use (touched <${mins}m)" "$rule" "$dir"
+}
+
 # shrink RULE DIR CMD…: run a tool's own prune command on DIR; the dry run reports DIR's size as a bound.
 shrink() {
   local rule=$1 dir=$2 before after; shift 2
@@ -203,7 +222,7 @@ rules_go() {
   cache=$(env -C / -u GOCACHE go env GOCACHE)
   mod=$(env -C / -u GOMODCACHE go env GOMODCACHE)
   if pids=$(running go); then
-    record "$(size_of "$cache")" "skip:go running (pid $pids)" go-build "$cache"
+    zap_old_files go-build "$cache" "$GOCACHE_BUSY_AGE"
     record "$(size_of "$mod")" "skip:go running (pid $pids)" go-mod "$mod"
   else
     shrink go-build "$cache" env -u GOCACHE go clean -cache -fuzzcache
