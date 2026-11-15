@@ -2,11 +2,17 @@
   "mcpServers": {
     "firefox-devtools": {
       "command": "npx",
-      "args": ["-y", "@mozilla/firefox-devtools-mcp@latest", "--tool-preset", "developer"]
+      "args": [
+        "--prefer-offline",
+        "-y",
+        "@mozilla/firefox-devtools-mcp@0.10.7",
+        "--tool-preset",
+        "developer"
+      ]
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
+      "args": ["--prefer-offline", "-y", "chrome-devtools-mcp@1.13.0"]
     },
     "forgejo": {
       "command": "~/.local/bin/forgejo-mcp-claude"
