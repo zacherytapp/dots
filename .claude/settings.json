@@ -1,6 +1,7 @@
 {
   "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_DISABLE_DANGEROUS_RM_TIMEOUT": "1"
   },
   "attribution": {
     "commit": "",
@@ -89,6 +90,14 @@
       "Read(**/.env.production)",
       "Read(**/*.tfstate)",
       "Read(**/*.tfstate.backup)"
+    ],
+    "ask": [
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(shred *)",
+      "Bash(unlink *)",
+      "Bash(chmod *)",
+      "Bash(chown *)"
     ],
     "defaultMode": "auto"
   },
