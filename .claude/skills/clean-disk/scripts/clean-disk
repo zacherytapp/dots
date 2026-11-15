@@ -44,8 +44,10 @@ SCRATCH_AGE=1440                # minutes untouched before an ended session's sc
 TRANSCRIPT_DAYS=14              # Claude session transcripts untouched this long go
 JOB_DAYS=7                      # finished Claude jobs untouched this long go
 WORKTREE_IDLE=1440              # minutes untouched before a merged, clean worktree goes (1 day)
-GOCACHE_BUSY_AGE=360            # while go runs, go-build entries untouched this many minutes go
-                                # (go refreshes an entry's mtime hourly while it uses it)
+GOCACHE_BUSY_AGE=120            # while go runs, go-build entries untouched this many minutes go
+                                # (go refreshes an entry's mtime hourly while it uses it, so 2h
+                                # means unused for at least an hour)
+DOCKER_BUILD_CACHE_HOURS=24     # docker build cache unused this long goes
 PRUNE_JOBS=8                    # cache shard dirs pruned at once (btrfs unlinks wait on metadata)
 UUID_RE='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 DEFAULT_KEEP=("$HOME/Games" "$HOME/.local/share/Steam")
@@ -294,15 +296,15 @@ rules_docker() {
     out=$(docker system df --format '{{.Type}}\t{{.Reclaimable}}' | awk -F'\t' '$1 == "Images" {print $2}' | cut -d' ' -f1)
     record "$(parse_size "$out")" upto docker "images unused and older than 7d"
     out=$(docker system df --format '{{.Type}}\t{{.Size}}' | awk -F'\t' '$1 == "Build Cache" {print $2}')
-    record "$(parse_size "$out")" upto docker "build cache unused for 7d"
+    record "$(parse_size "$out")" upto docker "build cache unused for ${DOCKER_BUILD_CACHE_HOURS}h"
     return
   fi
   out=$(docker image prune -f 2>/dev/null | sed -n 's/^Total reclaimed space: //p')
   record "$(parse_size "$out")" free docker "dangling images"
   out=$(docker image prune -af --filter until=168h 2>/dev/null | sed -n 's/^Total reclaimed space: //p')
   record "$(parse_size "$out")" free docker "images unused and older than 7d"
-  out=$(docker builder prune -af --filter until=168h 2>/dev/null | sed -n 's/^Total:[[:space:]]*//p; s/^Total reclaimed space: //p' | tail -1)
-  record "$(parse_size "$out")" free docker "build cache unused for 7d"
+  out=$(docker builder prune -af --filter "until=${DOCKER_BUILD_CACHE_HOURS}h" 2>/dev/null | sed -n 's/^Total:[[:space:]]*//p; s/^Total reclaimed space: //p' | tail -1)
+  record "$(parse_size "$out")" free docker "build cache unused for ${DOCKER_BUILD_CACHE_HOURS}h"
 }
 
 rules_flatpak_user() {

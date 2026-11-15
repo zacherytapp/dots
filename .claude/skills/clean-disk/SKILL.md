@@ -13,7 +13,7 @@ S=~/.claude/skills/clean-disk/scripts/clean-disk
 
 It has three tiers:
 
-- **user**: deleted without asking. Covers regenerable caches (Go; while `go` runs, only go-build entries untouched for 6h, and go-mod is skipped; npm/pnpm/npx, uv/pip, cargo, browser caches, paru build output, docker images unused for 7d and old build cache) and stale `/tmp` entries. It also covers agent leftovers that meet a fixed rule:
+- **user**: deleted without asking. Covers regenerable caches (Go; while `go` runs, only go-build entries untouched for 2h, and go-mod is skipped; npm/pnpm/npx, uv/pip, cargo, browser caches, paru build output, docker images unused for 7d and build cache unused for 24h) and stale `/tmp` entries. It also covers agent leftovers that meet a fixed rule:
   - Claude session transcripts untouched for 14d, and all sessions of a project whose directory is gone. Live sessions and `memory/` are kept.
   - Finished Claude jobs untouched for 7d, and the build caches of younger ones.
   - Ended-session scratchpads untouched for 1d.
