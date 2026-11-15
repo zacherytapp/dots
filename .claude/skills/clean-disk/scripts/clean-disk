@@ -229,7 +229,9 @@ rules_go() {
     shrink go-build "$cache" env -u GOCACHE go clean -cache -fuzzcache
     shrink go-mod "$mod" env -u GOMODCACHE go clean -modcache
   fi
-  for d in "$HOME"/.cache/golangci-* "$HOME/.cache/goimports"; do zap go-tools "$d"; done
+  # golangci-lint holds no fd on its cache, so check the process; deleting under it races its writes.
+  for d in "$HOME"/.cache/golangci-*; do zap_idle golangci-lint go-tools "$d"; done
+  zap go-tools "$HOME/.cache/goimports"
   zap_idle gopls go-tools "$HOME/.cache/gopls"
 }
 

@@ -224,6 +224,19 @@ kept_ "go-build: entry touched 30 minutes ago stays"          "$gc/ab/new-a"
 kept_ "go-build: top-level files stay"                        "$gc/README"
 kept_ "go-build: shard dirs stay"                             "$gc/cd"
 
+# --- golangci-lint cache while the linter runs ----------------------------------------------------
+lc=$HOME/.cache/golangci-lint
+old "$lc/ab" "3 days ago"
+mkdir -p "$T/bin" && ln -s "$(command -v sleep)" "$T/bin/golangci-lint"
+setsid -f "$T/bin/golangci-lint" "$NAP"; sleep 0.2
+fresh_run
+for d in "$HOME"/.cache/golangci-*; do zap_idle golangci-lint go-tools "$d"; done
+kept_ "golangci-lint: cache stays while the linter runs"      "$lc/ab"
+pkill -u "$(id -u)" -xf "$T/bin/golangci-lint $NAP"; sleep 0.2
+fresh_run
+for d in "$HOME"/.cache/golangci-*; do zap_idle golangci-lint go-tools "$d"; done
+gone  "golangci-lint: cache goes once the linter exits"       "$lc"
+
 echo
 (( FAILS )) && { echo "$FAILS failed"; exit 1; }
 echo "all passed"
