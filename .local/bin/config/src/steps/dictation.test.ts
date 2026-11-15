@@ -61,6 +61,7 @@ describe("mergeConfig", () => {
     transcription_backend: "faster-whisper",
     faster_whisper_model: "large-v3-turbo",
     faster_whisper_device: "auto",
+    applications: { "herdr-app": { auto_paste: "ctrl+shift+v" } },
   };
 
   test("a working config is left alone", () => {
@@ -118,7 +119,22 @@ describe("mergeConfig", () => {
       recording_mode: "push_to_talk",
       external_bindings: true,
       transcription_backend: "faster-whisper",
+      applications: { "herdr-app": { auto_paste: "ctrl+shift+v" } },
     });
+  });
+
+  test("herdr gets ctrl+shift+v, other app rules are kept", () => {
+    const applications = {
+      "herdr-app": { auto_paste: "ctrl+v", note: "kept" },
+      slack: { auto_paste: false },
+    };
+    const { config, changes } = mergeConfig({ ...working, applications }, GPU_MODEL);
+    assert.deepEqual(changes, ["applications"]);
+    assert.deepEqual(config.applications, {
+      "herdr-app": { auto_paste: "ctrl+shift+v", note: "kept" },
+      slack: { auto_paste: false },
+    });
+    assert.deepEqual(applications["herdr-app"].auto_paste, "ctrl+v");
   });
 });
 

@@ -8,7 +8,8 @@
 //
 //   config   ~/.config/hyprwhspr/config.json is app-written and saved sparse
 //            (values equal to hyprwhspr's defaults are dropped), so it's
-//            merged on effective values instead of stowed
+//            merged on effective values instead of stowed. It also pins
+//            Ctrl+Shift+V as the paste chord for Herdr (PASTE_CHORDS)
 //   backend  `hyprwhspr setup auto` builds ~/.local/share/hyprwhspr/venv. It
 //            adds the CUDA pip wheels (cublas, cudnn) when `nvidia-smi -L`
 //            answers and installs CPU-only otherwise; there's no system CUDA 12
@@ -63,6 +64,11 @@ const REQUIRED: Config = {
   transcription_backend: "faster-whisper",
 };
 
+// Paste chords for apps hyprwhspr doesn't know are terminals (it sends Ctrl+V to
+// those). Herdr binds Ctrl+V to terminal.paste_image, which with text on the
+// clipboard hands Ctrl+V to the program inside, so dictation never lands.
+const PASTE_CHORDS: Record<string, string> = { "herdr-app": "ctrl+shift+v" };
+
 const PROMPT =
   "Technical dictation for a software engineer using Claude Code in a terminal. Vocabulary: " +
   "Claude, Claude Code, Anthropic, Hyprland, Ghostty, CachyOS, Arch, paru, systemd, kubectl, " +
@@ -76,7 +82,7 @@ export function effective(config: Config, key: string): unknown {
   return key in config ? config[key] : HYPRWHSPR_DEFAULTS[key];
 }
 
-/** Settings that break the keybind, local transcription or the GPU, with the value each needs. */
+/** Settings that break the keybind, local transcription, the GPU or pasting, with the value each needs. */
 export function requiredFixes(config: Config): Config {
   const fixes: Config = {};
   for (const [key, value] of Object.entries(REQUIRED)) {
@@ -86,8 +92,18 @@ export function requiredFixes(config: Config): Config {
   // transcription fails on libcublas.so.12 and silently drops to CPU. "auto"
   // is still GPU when CUDA works and CPU otherwise; an explicit "cpu" stays
   if (effective(config, "faster_whisper_device") === "cuda") fixes.faster_whisper_device = "auto";
+  const apps = isObject(config.applications) ? config.applications : {};
+  const merged: Config = { ...apps };
+  for (const [app, chord] of Object.entries(PASTE_CHORDS)) {
+    const rule = isObject(apps[app]) ? apps[app] : {};
+    if (rule.auto_paste !== chord) merged[app] = { ...rule, auto_paste: chord };
+  }
+  if (Object.keys(merged).some((app) => merged[app] !== apps[app])) fixes.applications = merged;
   return fixes;
 }
+
+const isObject = (value: unknown): value is Config =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * `current` with the required settings applied and the dots defaults filled in
@@ -308,9 +324,12 @@ export function setupDictation(ctx: Context): void {
 export function verifyDictation(ctx: Context, v: Verifier): void {
   v.section("dictation (hyprwhspr)");
   v.commands("hyprwhspr", "wtype", "ydotool", "wl-copy");
-  v.check("config: push-to-talk on the hyprland bind, local faster-whisper, device auto", () => {
-    return Object.keys(requiredFixes(readConfig(ctx))).length === 0;
-  });
+  v.check(
+    "config: push-to-talk on the hyprland bind, local faster-whisper, device auto, paste chords",
+    () => {
+      return Object.keys(requiredFixes(readConfig(ctx))).length === 0;
+    },
+  );
   v.check("faster-whisper venv", () => inspectVenv(venvDir(ctx)).fasterWhisper);
   const { nvidia, cuda } = probeGpu();
   // a container sees the host's gpu but not its driver
