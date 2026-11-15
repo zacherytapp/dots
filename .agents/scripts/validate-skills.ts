@@ -220,8 +220,8 @@ if (fs.existsSync(hostSkills)) {
       fail(`.claude/skills/${entry.name}: dangling or non-skill symlink`);
     }
   }
-  // Claude Code doesn't read ~/.agents/skills, so every local skill needs a link
-  for (const name of skillNames.filter((skill) => !locked.has(skill))) {
+  // Claude Code doesn't read ~/.agents/skills, so every skill, vendored or local, needs a link
+  for (const name of skillNames) {
     if (!fs.existsSync(path.join(hostSkills, name))) {
       fail(`.claude/skills/${name}: missing link (ln -s ../../.agents/skills/${name})`);
     }
