@@ -46,6 +46,7 @@ JOB_DAYS=7                      # finished Claude jobs untouched this long go
 WORKTREE_IDLE=1440              # minutes untouched before a merged, clean worktree goes (1 day)
 GOCACHE_BUSY_AGE=360            # while go runs, go-build entries untouched this many minutes go
                                 # (go refreshes an entry's mtime hourly while it uses it)
+PRUNE_JOBS=8                    # cache shard dirs pruned at once (btrfs unlinks wait on metadata)
 UUID_RE='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 DEFAULT_KEEP=("$HOME/Games" "$HOME/.local/share/Steam")
 
@@ -160,21 +161,21 @@ zap_idle() {
   zap "$2" "$3"
 }
 
-# zap_old_files RULE DIR MINUTES: delete the files under DIR untouched for MINUTES, keeping DIR's
-# layout; for caches that stay safe to thin while their tool runs.
+# zap_old_files RULE DIR MINUTES: delete the files inside DIR's subdirectories untouched for
+# MINUTES, keeping the layout; for sharded caches that stay safe to thin while their tool runs.
+# Subdirectories are walked PRUNE_JOBS at a time: on btrfs each unlink waits on metadata reads,
+# so one serial find leaves the SSD idle.
 zap_old_files() {
-  local rule=$1 dir=$2 mins=$3 bytes left
+  local rule=$1 dir=$2 mins=$3 bytes
   [[ -d $dir ]] || return 0
-  local find_args=("$dir" -xdev -mindepth 2 -type f -mmin "+$mins")
-  if (( DRY )); then
-    bytes=$(find "${find_args[@]}" -printf '%s\n' 2>/dev/null | awk '{s+=$1} END {print s+0}')
-    record "$bytes" free "$rule" "$dir"
-    return
-  fi
-  bytes=$(find "${find_args[@]}" -printf '%s\n' -delete 2>/dev/null | awk '{s+=$1} END {print s+0}')
+  local act=(-printf '%s\n')
+  (( DRY )) || act+=(-delete)
+  bytes=$(find "$dir" -xdev -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null |
+    xargs -0 -r -P "$PRUNE_JOBS" -I{} sh -c \
+      'd=$1; shift; find "$d" -xdev -mindepth 1 -type f "$@" | awk "{s+=\$1} END {print s+0}"' \
+      _ {} -mmin "+$mins" "${act[@]}" 2>/dev/null |
+    awk '{s+=$1} END {print s+0}')
   record "$bytes" free "$rule" "$dir"
-  left=$(size_of "$dir")
-  record "$left" "skip:in use (touched <${mins}m)" "$rule" "$dir"
 }
 
 # shrink RULE DIR CMD…: run a tool's own prune command on DIR; the dry run reports DIR's size as a bound.
