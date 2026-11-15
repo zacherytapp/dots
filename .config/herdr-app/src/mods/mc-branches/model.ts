@@ -81,6 +81,36 @@ export function parseLsRemote(stdout: string): Map<string, string> {
   return out;
 }
 
+/**
+ * Output of the one-shot local look: `for-each-ref refs/heads`, the current branch and
+ * `for-each-ref refs/remotes`, separated by `\x1e` lines. Missing sections come back empty.
+ */
+export function splitSections(stdout: string): [string, string, string] {
+  const [a = "", b = "", c = ""] = stdout.split("\x1e\n");
+  return [a, b, c];
+}
+
+/**
+ * Output of the batched `git ls-remote` script: a `\x1e<remote>\t<exit code>` line then that
+ * remote's heads. A remote that failed (or whose block is missing) maps to null.
+ */
+export function splitLsRemotes(
+  stdout: string,
+  names: string[],
+): Map<string, Map<string, string> | null> {
+  const out = new Map<string, Map<string, string> | null>(names.map((n) => [n, null]));
+  for (const block of stdout.split("\x1e").slice(1)) {
+    const nl = block.indexOf("\n");
+    const head = nl < 0 ? block : block.slice(0, nl);
+    const tab = head.lastIndexOf("\t");
+    if (tab < 0) continue;
+    const name = head.slice(0, tab);
+    if (head.slice(tab + 1).trim() === "0")
+      out.set(name, parseLsRemote(nl < 0 ? "" : block.slice(nl + 1)));
+  }
+  return out;
+}
+
 /** Remote-tracking refs (`origin/feature`) by "remote/name": their last-fetched date and subject. */
 export function parseRemoteRefs(stdout: string): Map<string, LocalBranch> {
   return new Map(parseLocal(stdout).map((b) => [b.name, b]));

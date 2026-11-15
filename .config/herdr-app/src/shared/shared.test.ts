@@ -3,7 +3,27 @@ import { test } from "node:test";
 import { columnFor, countByColumn, filterItems, sortItems, type BoardItem } from "./board-model.ts";
 import { issueItem, pullItem, pullTask, type GhIssue, type GhPull } from "./github-model.ts";
 import { hostOf, onHost, parseRemote } from "./remote.ts";
-import { ago, claudeProjectDir, cleanTitle, compactNumber, findNode, matches } from "./util.ts";
+import {
+  ago,
+  claudeProjectDir,
+  cleanTitle,
+  compactNumber,
+  findNode,
+  mapLimit,
+  matches,
+  stepIn,
+} from "./util.ts";
+
+test("stepIn wraps both ways and starts at an end with nothing current", () => {
+  const list = ["a", "b", "c"];
+  assert.equal(stepIn(list, 0, 1), "b");
+  assert.equal(stepIn(list, 2, 1), "a");
+  assert.equal(stepIn(list, 0, -1), "c");
+  assert.equal(stepIn(list, -1, 1), "a");
+  assert.equal(stepIn(list, -1, -1), "c");
+  assert.equal(stepIn(["a"], 0, 1), "a");
+  assert.equal(stepIn([], -1, 1), null);
+});
 
 test("parseRemote understands scp, ssh and https remotes", () => {
   assert.deepEqual(parseRemote("git@github.com:zacherytapp/dots.git"), {
@@ -373,4 +393,19 @@ test("Claude Code actions start a named background session", async () => {
   assert.equal(hasBackgroundSession(listed, "Review issue: x#1"), true);
   assert.equal(hasBackgroundSession(listed, "Implement: x#1"), false);
   assert.equal(hasBackgroundSession("not json", "Implement: x#1"), false);
+});
+
+test("mapLimit keeps order and never runs more than the limit at once", async () => {
+  let running = 0;
+  let most = 0;
+  const out = await mapLimit([5, 1, 4, 2, 3], 2, async (n) => {
+    running++;
+    most = Math.max(most, running);
+    await new Promise((r) => setTimeout(r, n));
+    running--;
+    return n * 10;
+  });
+  assert.deepEqual(out, [50, 10, 40, 20, 30]);
+  assert.equal(most, 2);
+  assert.deepEqual(await mapLimit([], 3, async () => 1), []);
 });

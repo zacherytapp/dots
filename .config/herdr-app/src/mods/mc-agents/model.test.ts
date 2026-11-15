@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AgentInfo, PaneInfo, Program, SpaceInfo } from "herdr";
-import { buildModel, titleStatus, type Input, type TerminalRecord } from "./model.ts";
+import {
+  buildModel,
+  titleStatus,
+  trackFinished,
+  type Input,
+  type TerminalRecord,
+} from "./model.ts";
+import { countBySpace, urgent } from "../../shared/space-agents-model.ts";
 import { parseUsage, shortModel, splitBlocks } from "./usage.ts";
 
 const claude: Program = {
@@ -197,4 +204,60 @@ test("context comes from the last assistant line, whole or cut short", () => {
       ["b", "line2\n"],
     ],
   );
+});
+
+test("an agent read from its title that stops working unseen shows as done until seen", () => {
+  const spaces = [space("s1", "dots", null, ["tb1"])];
+  const working = buildModel(input({ spaces, panes: [pane("t1", "tb1", "◐ Fix login")] }));
+  const before = new Map(working.all.map((r) => [r.address, r.status as string]));
+  const idle = input({ spaces, panes: [pane("t1", "tb1", "✳ Fix login")] });
+  const unseen = trackFinished(buildModel(idle).all, before, new Set(), () => false);
+  assert.deepEqual([...unseen], ["t1"]);
+  const done = buildModel({ ...idle, finished: unseen });
+  assert.equal(done.all[0].status, "done");
+  assert.equal(done.groups[0].label, "Done");
+  // Still unseen on the next look: kept. Once seen: gone.
+  const again = new Map(done.all.map((r) => [r.address, r.status as string]));
+  assert.deepEqual([...trackFinished(done.all, again, unseen, () => false)], ["t1"]);
+  assert.equal(trackFinished(done.all, again, unseen, () => true).size, 0);
+  // Seen while it finished: never marked.
+  assert.equal(trackFinished(buildModel(idle).all, before, new Set(), () => true).size, 0);
+});
+
+test("agents are counted by space; background jobs by the space holding their folder", () => {
+  const now = Date.now();
+  const row = (over: object) => ({
+    space: null,
+    machine: null,
+    status: "idle" as const,
+    cwd: null,
+    depth: 0,
+    job: null,
+    ...over,
+  });
+  const counts = countBySpace(
+    [
+      row({ space: "s1", status: "working" }),
+      row({ space: "s1", status: "working" }),
+      row({ space: "s1", status: "blocked" }),
+      row({ space: "s1", status: "working", depth: 1 }),
+      row({ status: "done", job: { cwd: "/home/zakk/x/sub", updated: now } }),
+      row({ status: "blocked", job: { cwd: "/home/zakk/x", updated: now - 8 * 86400000 } }),
+      row({ machine: "incubus", status: "working", job: { cwd: "/home/zakk/x", updated: now } }),
+    ],
+    [
+      { id: "s1", machine: null, folders: ["/home/zakk"] },
+      { id: "s2", machine: null, folders: ["/home/zakk/x/"] },
+      { id: "s3", machine: "incubus", folders: ["/home/zakk/x"] },
+    ],
+    now,
+  );
+  assert.deepEqual(counts, {
+    s1: { working: 2, blocked: 1, done: 0, idle: 0 },
+    s2: { working: 0, blocked: 0, done: 1, idle: 0 },
+    s3: { working: 1, blocked: 0, done: 0, idle: 0 },
+  });
+  assert.equal(urgent(counts.s1), "blocked");
+  assert.equal(urgent(counts.s3), "working");
+  assert.equal(urgent({ working: 0, blocked: 0, done: 0, idle: 0 }), null);
 });

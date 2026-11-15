@@ -8,6 +8,16 @@ import { exec as exec5, spaces as spaces3 } from "herdr";
 import { appHome, exec, readTextFile, writeTextFile } from "herdr";
 
 // .config/herdr-app/src/shared/util.ts
+function findNode(node, id) {
+  const n = node;
+  if (!n) return null;
+  if (n.id === id) return n;
+  for (const child of n.children ?? []) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+}
 function duration(ms) {
   const m = Math.floor(Math.max(0, ms) / 6e4);
   if (m < 1) return "<1m";
@@ -92,6 +102,8 @@ async function loadConfig() {
   return config;
 }
 var secrets = /* @__PURE__ */ new Map();
+var missing = /* @__PURE__ */ new Map();
+var MISS_MS = 5 * 6e4;
 var ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function tokenPath(service) {
   return `${appHome()}/mission-control/${service}.token`;
@@ -105,6 +117,7 @@ async function loginEnv(name) {
 async function readSecret(spec, service) {
   const known = secrets.get(service);
   if (known !== void 0) return known;
+  if (Date.now() - (missing.get(service) ?? 0) < MISS_MS) return "";
   let value = "";
   if (spec.tokenCommand?.length) {
     const [cmd, ...args] = spec.tokenCommand;
@@ -117,10 +130,12 @@ async function readSecret(spec, service) {
   }
   if (!value) value = ((await readTextFile(tokenPath(service)).catch(() => null)) ?? "").trim();
   if (value) secrets.set(service, value);
+  else missing.set(service, Date.now());
   return value;
 }
 function forgetSecret(service) {
   secrets.delete(service);
+  missing.delete(service);
 }
 async function saveToken(service, token) {
   const path = tokenPath(service);
@@ -262,26 +277,30 @@ function repoAt(machine, cwd) {
   value.catch(() => cache2.delete(key));
   return value;
 }
+var SEP = "";
 async function ask(machine, cwd) {
   const none = { machine, cwd, root: null, remotes: [] };
   if (!cwd) return none;
-  const on = machine ?? void 0;
-  const top = await exec2("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-  if (top.code !== 0) return none;
-  const list = await exec2("git", ["remote", "-v"], { cwd, on });
+  const r = await exec2(
+    "sh",
+    ["-c", `git rev-parse --show-toplevel && printf '${SEP}\\n' && git remote -v`],
+    { cwd, on: machine ?? void 0 },
+  );
+  const cut = r.stdout.indexOf(SEP);
+  if (r.code !== 0 || cut < 0) return none;
   const urls = /* @__PURE__ */ new Map();
-  for (const line of list.stdout.split("\n")) {
+  for (const line of r.stdout.slice(cut + 1).split("\n")) {
     const [name, url] = line.split(/\s+/);
     if (name && url && !urls.has(name)) urls.set(name, url);
   }
   const names = [...urls.keys()].sort((a, b) => (a === "origin" ? -1 : b === "origin" ? 1 : 0));
   const remotes = names
     .map((n) => {
-      const r = parseRemote(urls.get(n));
-      return r ? { ...r, remoteName: n } : null;
+      const r2 = parseRemote(urls.get(n));
+      return r2 ? { ...r2, remoteName: n } : null;
     })
-    .filter((r) => r !== null);
-  return { machine, cwd, root: top.stdout.trim(), remotes };
+    .filter((r2) => r2 !== null);
+  return { machine, cwd, root: r.stdout.slice(0, cut).trim(), remotes };
 }
 
 // .config/herdr-app/src/shared/launch.ts
@@ -316,9 +335,22 @@ async function copyText(text) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
+import {
+  layout,
+  run as run2,
+  setShared as setShared2,
+  shared as shared2,
+  theme as theme2,
+} from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
+var NODES = {
+  sidebar: "sidebar",
+  spaces: "mc-spaces",
+  agents: "mc-agents",
+  panel: "panel",
+  body: "panel-body",
+};
 var KEYS = {
   agentsHeight: "mc.agents.height",
   agentsFolded: "mc.agents.folded",
@@ -460,7 +492,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function textButton(id, label, onClick, opts = {}) {
   const t = theme();
@@ -549,6 +585,7 @@ function countChip(id, label, count, on, onClick) {
     .cursor_pointer()
     .when(on, (el) => el.bg(t.selected).text_color(t.accent))
     .when(!on, (el) => el.text_color(t.muted).hover((s) => s.text_color(t.foreground)))
+    .on_mouse_down("left", stopPress)
     .on_click((_e, cx) => onClick(cx))
     .child(label)
     .child(
@@ -575,6 +612,7 @@ function emptyState(title, body, actions = []) {
 }
 
 // .config/herdr-app/src/shared/list-view.ts
+var FRESH_MS = 3e4;
 var SCOPES = [
   { value: "space", label: "This space" },
   { value: "all", label: "All spaces" },
@@ -622,6 +660,7 @@ var ListView = class extends View {
     this.snap = { items: [], caption: "", note: "", setup: null, token: null, warning: "", at: 0 };
     this.cache = /* @__PURE__ */ new Map();
     this.loading = false;
+    this.busy = false;
     this.error = null;
     this.width = 0;
     this.seq = 0;
@@ -632,11 +671,26 @@ var ListView = class extends View {
     this.tokenInput = InputState.new({ placeholder: "Paste an access token" });
     this.tokenInput.set_masked(true);
     this.tokenInput.on("submit", (_e, cx2) => this.saveToken(cx2));
-    this.reload(cx);
-    cx.timer.every(1500, (cx2) => {
-      if (this.key() !== this.loadedKey) this.reload(cx2);
+    this.tried = 0;
+    this.memo = null;
+    cx.timer.every(Math.min(this.interval(), 6e4), (cx2) => {
+      if (this.shown() && this.due()) this.reload(cx2, true);
     });
-    cx.timer.every(this.interval(), (cx2) => this.reload(cx2, true));
+  }
+  /**
+   * Whether this copy is on screen: the panel is open and its stack shows this source. Copies stay
+   * alive while hidden (another source, panel closed), so they skip loading and drawing then.
+   * True when it isn't in the panel at all.
+   */
+  shown() {
+    const root = layout();
+    const body = findNode(root, NODES.body);
+    if (!body?.children?.some((c) => c.id === this.source())) return true;
+    return !findNode(root, NODES.panel)?.hidden && body.active === this.source();
+  }
+  /** Time to look again: never loaded, or `interval()` since the last try. */
+  due() {
+    return !this.busy && Date.now() - this.tried >= this.interval();
   }
   /** Saves the pasted token for the service the panel asked about, then loads again. */
   saveToken(cx) {
@@ -727,11 +781,35 @@ var ListView = class extends View {
   }
   setScope(scope, cx) {
     setShared2(KEYS.scope(this.source()), scope);
-    this.reload(cx);
+    this.switchTo(cx, this.key());
+    cx.notify();
   }
+  /** Loads again now and redraws (from a handler or a task, never from render). */
   reload(cx, quiet = false) {
-    const key = this.key();
+    this.load(cx, quiet);
+    cx.notify();
+  }
+  /**
+   * Shows another scope (a space switch, This space / All spaces): what it had last time at once,
+   * then asks again unless that was moments ago. No redraw, so render may call it.
+   */
+  switchTo(cx, key) {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < FRESH_MS) {
+      this.seq++;
+      this.snap = hit;
+      this.loadedKey = key;
+      this.tried = hit.at;
+      this.error = null;
+      this.loading = this.busy = false;
+      return;
+    }
+    this.load(cx, Boolean(hit), key);
+  }
+  /** Starts a load without asking for a redraw, so render may call it: render draws the result. */
+  load(cx, quiet = false, key = this.key()) {
     const seq = ++this.seq;
+    this.tried = Date.now();
     if (key !== this.loadedKey) {
       this.snap = this.cache.get(key) ?? {
         items: [],
@@ -745,8 +823,8 @@ var ListView = class extends View {
       this.error = null;
     }
     this.loadedKey = key;
-    if (!quiet) this.loading = true;
-    cx.notify();
+    this.loading = !quiet;
+    this.busy = true;
     cx.spawn(async (cx2) => {
       try {
         const r = await this.fetch(this.scope(), activeSpace());
@@ -771,6 +849,7 @@ var ListView = class extends View {
       } finally {
         if (seq === this.seq) {
           this.loading = false;
+          this.busy = false;
           cx2.notify();
         }
       }
@@ -785,9 +864,13 @@ var ListView = class extends View {
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton("refresh", asset("refresh"), "Refresh", (_e, cx) => this.reload(cx), {
-          active: this.loading,
-        }),
+        iconButton(
+          "refresh",
+          asset("refresh"),
+          this.busy ? "Loading…" : "Refresh",
+          (_e, cx) => this.reload(cx),
+          { active: this.busy, spin: this.busy },
+        ),
       )
       .when(this.hasSettings(), (el) =>
         el.child(
@@ -818,9 +901,20 @@ var ListView = class extends View {
   }
   footer(t, shown) {
     const total = this.snap.items.length;
-    const count =
-      shown === total ? `${total} ${this.noun()}` : `${shown} of ${total} ${this.noun()}`;
-    const when = this.loading ? "Loading…" : this.snap.at ? `Updated ${ago(this.snap.at)}` : "";
+    const explained =
+      total === 0 && Boolean(this.snap.setup || this.snap.token || this.snap.note || this.error);
+    const count = explained
+      ? ""
+      : shown === total
+        ? `${total} ${this.noun()}`
+        : `${shown} of ${total} ${this.noun()}`;
+    const when = this.loading
+      ? "Loading…"
+      : this.busy
+        ? "Refreshing…"
+        : this.snap.at
+          ? `Updated ${ago(this.snap.at)}`
+          : "";
     return h_flex2()
       .flex_none()
       .h(30)
@@ -841,9 +935,35 @@ var ListView = class extends View {
         el.child(div2().min_w(0).truncate().child(this.snap.caption)),
       );
   }
+  /** `visible()` for the current rows and query, worked out again only when either changed. */
+  shownItems() {
+    const query = this.search.value();
+    const m = this.memo;
+    if (m && m.items === this.snap.items && m.query === query) return m.shown;
+    const shown = this.visible(this.snap.items, query);
+    this.memo = { items: this.snap.items, query, shown };
+    return shown;
+  }
   render(cx) {
     const t = theme2();
-    const items = this.visible(this.snap.items, this.search.value());
+    const root = v_flex2()
+      .id("root")
+      .size_full()
+      .min_h(0)
+      .bg(t.background)
+      .text_size(13)
+      .text_color(t.foreground)
+      .on_size_change((size, cx2) => {
+        if (Math.abs(size.width - this.width) >= 1) {
+          this.width = size.width;
+          cx2.notify();
+        }
+      });
+    if (!this.shown()) return root;
+    const key = this.key();
+    if (key !== this.loadedKey) this.switchTo(cx, key);
+    else if (this.due()) this.load(cx, true, key);
+    const items = this.shownItems();
     let content;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
@@ -876,23 +996,8 @@ var ListView = class extends View {
             .child(this.body(t, items, cx))
         : this.body(t, items, cx);
     }
-    const sub =
-      this.snap.items.length && !this.snap.setup
-        ? this.subbar(t, this.visible(this.snap.items, this.search.value()))
-        : null;
-    return v_flex2()
-      .id("root")
-      .size_full()
-      .min_h(0)
-      .bg(t.background)
-      .text_size(13)
-      .text_color(t.foreground)
-      .on_size_change((size, cx2) => {
-        if (Math.abs(size.width - this.width) >= 1) {
-          this.width = size.width;
-          cx2.notify();
-        }
-      })
+    const sub = this.snap.items.length && !this.snap.setup ? this.subbar(t, items) : null;
+    return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el) => el.child(sub))
       .child(v_flex2().flex_1().min_h(0).pt(10).child(content))
@@ -932,6 +1037,23 @@ function parseLsRemote(stdout) {
   for (const line of stdout.split("\n")) {
     const [sha, ref] = line.trim().split(/\s+/);
     if (sha && ref?.startsWith("refs/heads/")) out.set(ref.slice(11), sha);
+  }
+  return out;
+}
+function splitSections(stdout) {
+  const [a = "", b = "", c = ""] = stdout.split("\n");
+  return [a, b, c];
+}
+function splitLsRemotes(stdout, names) {
+  const out = new Map(names.map((n) => [n, null]));
+  for (const block of stdout.split("").slice(1)) {
+    const nl = block.indexOf("\n");
+    const head = nl < 0 ? block : block.slice(0, nl);
+    const tab = head.lastIndexOf("	");
+    if (tab < 0) continue;
+    const name = head.slice(0, tab);
+    if (head.slice(tab + 1).trim() === "0")
+      out.set(name, parseLsRemote(nl < 0 ? "" : block.slice(nl + 1)));
   }
   return out;
 }
@@ -981,8 +1103,15 @@ var FILTERS = [
   { id: "remote", label: "Remote only" },
   { id: "pr", label: "With PR" },
 ];
-var LS_REMOTE =
-  'GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=8" git ls-remote --heads "$1"';
+var LOCAL_INFO =
+  'git for-each-ref --format="$1" refs/heads; printf "\\036\\n"; git branch --show-current; printf "\\036\\n"; git for-each-ref --format="$1" refs/remotes';
+var LS_REMOTES = [
+  'export GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=8"',
+  "d=$(mktemp -d) || exit 1",
+  'i=0; for r in "$@"; do i=$((i+1)); ( git ls-remote --heads "$r" >"$d/$i.out" 2>/dev/null; echo $? >"$d/$i.rc" ) & done; wait',
+  'i=0; for r in "$@"; do i=$((i+1)); printf "\\036%s\\t%s\\n" "$r" "$(cat "$d/$i.rc")"; cat "$d/$i.out"; done',
+  'rm -rf "$d"',
+].join("\n");
 async function githubPrs(slug) {
   const r = await exec5("gh", [
     "pr",
@@ -1025,57 +1154,64 @@ async function forgejoPrs(fj, slug) {
 async function loadRepo(repo, label, fj) {
   const on = repo.machine ?? void 0;
   const cwd = repo.root;
-  const git = (...args) => exec5("git", args, { cwd, on });
   const warnings = [];
   let token = null;
-  const [local, current, tracking] = await Promise.all([
-    git("for-each-ref", `--format=${REF_FORMAT}`, "refs/heads"),
-    git("branch", "--show-current"),
-    git("for-each-ref", `--format=${REF_FORMAT}`, "refs/remotes"),
-  ]);
-  const trackingRefs = parseRemoteRefs(tracking.stdout);
-  const remotes = [];
-  const prs = /* @__PURE__ */ new Map();
-  await Promise.all(
-    repo.remotes.map(async (remote) => {
-      const name = remote.remoteName ?? "origin";
+  const names = repo.remotes.map((r) => r.remoteName ?? "origin");
+  const info = exec5("sh", ["-c", LOCAL_INFO, "sh", REF_FORMAT], { cwd, on });
+  const ls = names.length
+    ? exec5("sh", ["-c", LS_REMOTES, "sh", ...names], { cwd, on })
+        .then((r) => splitLsRemotes(r.stdout, names))
+        .catch(() => /* @__PURE__ */ new Map())
+    : Promise.resolve(/* @__PURE__ */ new Map());
+  const found = await Promise.all(
+    repo.remotes.map(async (remote, i) => {
       const onForgejo = fj?.isRemote(remote) ?? false;
-      const web =
-        remote.host === "github.com"
-          ? `https://github.com/${remote.slug}/tree/`
-          : onForgejo && fj
-            ? `${fj.base}/${remote.slug}/src/branch/`
-            : null;
-      const ls = await exec5("sh", ["-c", LS_REMOTE, "sh", name], { cwd, on }).catch(() => null);
-      let heads = ls?.code === 0 ? parseLsRemote(ls.stdout) : null;
-      if (!heads) {
-        warnings.push(`${label}: couldn't reach ${name}, showing its last fetch`);
-        heads = new Map(
-          [...trackingRefs]
-            .filter(([ref]) => ref.startsWith(`${name}/`))
-            .map(([ref, b]) => [ref.slice(name.length + 1), b.sha]),
-        );
-      }
-      remotes.push({ remote: name, heads, web });
       try {
-        const found =
+        const prs2 =
           remote.host === "github.com"
             ? await githubPrs(remote.slug)
             : onForgejo && fj
               ? await forgejoPrs(fj, remote.slug)
               : /* @__PURE__ */ new Map();
-        for (const [head, pr] of found) if (!prs.has(head)) prs.set(head, pr);
+        return { i, prs: prs2 };
       } catch (e) {
         if (e instanceof TokenError) token = e.ask;
-        else warnings.push(`${label}: pull requests from ${name} unavailable`);
+        else warnings.push(`${label}: pull requests from ${names[i]} unavailable`);
+        return { i, prs: /* @__PURE__ */ new Map() };
       }
     }),
   );
+  const [infoOut, heads] = await Promise.all([info, ls]);
+  const [local, current, tracking] = splitSections(infoOut.stdout);
+  const trackingRefs = parseRemoteRefs(tracking);
+  const remotes = repo.remotes.map((remote, i) => {
+    const name = names[i];
+    const onForgejo = fj?.isRemote(remote) ?? false;
+    const web =
+      remote.host === "github.com"
+        ? `https://github.com/${remote.slug}/tree/`
+        : onForgejo && fj
+          ? `${fj.base}/${remote.slug}/src/branch/`
+          : null;
+    let seen = heads.get(name) ?? null;
+    if (!seen) {
+      warnings.push(`${label}: couldn't reach ${name}, showing its last fetch`);
+      seen = new Map(
+        [...trackingRefs]
+          .filter(([ref]) => ref.startsWith(`${name}/`))
+          .map(([ref, b]) => [ref.slice(name.length + 1), b.sha]),
+      );
+    }
+    return { remote: name, heads: seen, web };
+  });
+  const prs = /* @__PURE__ */ new Map();
+  for (const { prs: list } of found.sort((a, b) => a.i - b.i))
+    for (const [head, pr] of list) if (!prs.has(head)) prs.set(head, pr);
   remotes.sort((a, b) => (a.remote === "origin" ? -1 : b.remote === "origin" ? 1 : 0));
   const branches = mergeBranches({
     key: `${repo.machine ?? ""}:${cwd}`,
-    current: current.stdout.trim(),
-    local: parseLocal(local.stdout),
+    current: current.trim(),
+    local: parseLocal(local),
     remotes,
     tracking: trackingRefs,
     prs,
@@ -1104,18 +1240,20 @@ var Branches = class extends ListView {
     return 3 * 6e4;
   }
   async fetch(scope, space) {
-    const fj = await forgejo();
     const targets = scope === "space" ? (space ? [space] : []) : spaces3();
     if (!targets.length) return { items: [], note: "No space is shown." };
+    const fjLoad = forgejo();
+    fjLoad.catch(() => void 0);
     const repos = /* @__PURE__ */ new Map();
-    for (const s of targets) {
-      const repo = await repoOf(s).catch(() => null);
-      if (!repo?.root) continue;
+    const looked = await Promise.all(targets.map((s) => repoOf(s).catch(() => null)));
+    targets.forEach((s, i) => {
+      const repo = looked[i];
+      if (!repo?.root) return;
       const key = `${repo.machine ?? ""}:${repo.root}`;
       const label = repo.remotes[0]?.slug ?? repo.root.split("/").pop() ?? s.name;
       if (!repos.has(key))
         repos.set(key, { repo, label: repo.machine ? `${label} · ${repo.machine}` : label });
-    }
+    });
     if (!repos.size) {
       return {
         items: [],
@@ -1125,6 +1263,7 @@ var Branches = class extends ListView {
             : "No space is in a git repository.",
       };
     }
+    const fj = await fjLoad;
     const results = await Promise.all(
       [...repos.values()].map(({ repo, label }) =>
         loadRepo(repo, label, fj).catch((e) => ({
@@ -1145,25 +1284,56 @@ var Branches = class extends ListView {
       token: results.find((r) => r.token)?.token ?? void 0,
     };
   }
+  /** Search result, kept while the items and the query stay the same (render runs often). */
+  found = null;
+  /** Counts, the filtered rows and their groups, kept while items, filter and scope stay. */
+  derived = null;
   visible(items, query) {
-    return items.filter((b) =>
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items.filter((b) =>
       matches(query, b.name, b.subject, b.repo, b.pr ? `#${b.pr.number} ${b.pr.title}` : ""),
     );
+    this.found = { items, query, out };
+    return out;
   }
-  shown(items) {
-    if (this.filter === "local") return items.filter((b) => kindOf(b) === "local");
-    if (this.filter === "remote") return items.filter((b) => kindOf(b) === "remote");
-    if (this.filter === "pr") return items.filter((b) => b.pr);
-    return items;
+  derive(items) {
+    const all = this.scope() === "all";
+    const d = this.derived;
+    if (d && d.items === items && d.filter === this.filter && d.all === all) return d;
+    const counts = { all: 0, local: 0, remote: 0, pr: 0 };
+    const rows = [];
+    for (const b of items) {
+      const kind = kindOf(b);
+      counts.all++;
+      if (kind === "local") counts.local++;
+      if (kind === "remote") counts.remote++;
+      if (b.pr) counts.pr++;
+      if (
+        this.filter === "all" ||
+        (this.filter === "local" && kind === "local") ||
+        (this.filter === "remote" && kind === "remote") ||
+        (this.filter === "pr" && b.pr)
+      )
+        rows.push(b);
+    }
+    const byRepo = /* @__PURE__ */ new Map();
+    for (const b of rows) {
+      const list = byRepo.get(b.repo);
+      if (list) list.push(b);
+      else byRepo.set(b.repo, [b]);
+    }
+    const next = {
+      items,
+      filter: this.filter,
+      all,
+      counts,
+      groups: [...byRepo].map(([repo, list]) => ({ repo, rows: list })),
+    };
+    this.derived = next;
+    return next;
   }
   subbar(_t, items) {
-    const count = (f) => {
-      const keep = this.filter;
-      this.filter = f;
-      const n = this.shown(items).length;
-      this.filter = keep;
-      return n;
-    };
+    const { counts } = this.derive(items);
     return h_flex3()
       .flex_none()
       .px(14)
@@ -1172,7 +1342,7 @@ var Branches = class extends ListView {
       .items_center()
       .children(
         FILTERS.map((f) =>
-          countChip(`filter-${f.id}`, f.label, count(f.id), this.filter === f.id, (cx) => {
+          countChip(`filter-${f.id}`, f.label, counts[f.id], this.filter === f.id, (cx) => {
             this.filter = f.id;
             cx.notify();
           }),
@@ -1180,9 +1350,7 @@ var Branches = class extends ListView {
       );
   }
   body(t, items, _cx) {
-    const shown = this.shown(items);
-    const all = this.scope() === "all";
-    const repos = [...new Set(shown.map((b) => b.repo))];
+    const { groups, all } = this.derive(items);
     return v_flex3()
       .id("branches")
       .flex_1()
@@ -1192,7 +1360,7 @@ var Branches = class extends ListView {
       .gap(1)
       .overflow_y_scrollbar()
       .children(
-        repos.flatMap((repo) => [
+        groups.flatMap(({ repo, rows }) => [
           ...(all
             ? [
                 h_flex3()
@@ -1204,15 +1372,10 @@ var Branches = class extends ListView {
                   .text_size(12)
                   .text_color(t.muted)
                   .child(repo)
-                  .child(
-                    div3()
-                      .text_size(11)
-                      .text_color(t.dim)
-                      .child(String(shown.filter((b) => b.repo === repo).length)),
-                  ),
+                  .child(div3().text_size(11).text_color(t.dim).child(String(rows.length))),
               ]
             : []),
-          ...shown.filter((b) => b.repo === repo).map((b) => this.row(t, b)),
+          ...rows.map((b) => this.row(t, b)),
         ]),
       );
   }
@@ -1220,10 +1383,10 @@ var Branches = class extends ListView {
     return div3()
       .flex_none()
       .px(5)
-      .h(17)
+      .h(18)
       .flex()
       .items_center()
-      .rounded(4)
+      .rounded(5)
       .border(1)
       .border_color(t.border)
       .text_size(10.5)
@@ -1257,7 +1420,7 @@ var Branches = class extends ListView {
       .cursor_pointer()
       .when(b.current, (el) => el.bg(t.selected))
       .hover((s) => s.bg(t.hover))
-      .when(Boolean(link), (el) => el.on_click(() => void openUrl(link)))
+      .on_click(() => void (link ? openUrl(link) : copyText(b.name)))
       .on_mouse_down("right", (_e, cx) => {
         cx.stop_propagation();
         void copyText(b.name);
@@ -1265,7 +1428,7 @@ var Branches = class extends ListView {
       .tooltip(
         link
           ? `Open ${b.pr ? `#${b.pr.number}` : "on the web"} · right-click copies the name`
-          : "Right-click copies the name",
+          : "Click copies the name",
       )
       .child(
         h_flex3()
@@ -1315,6 +1478,9 @@ var Branches = class extends ListView {
                 .bg(t.surface)
                 .text_size(11.5)
                 .text_color(pr.draft ? t.dim : t.accent)
+                .cursor_pointer()
+                .hover((s) => s.bg(t.hover))
+                .on_mouse_down("left", stopPress)
                 .tooltip(`${pr.draft ? "Draft: " : ""}${pr.title}`)
                 .on_click((_e, cx) => {
                   cx.stop_propagation();

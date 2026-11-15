@@ -2,21 +2,31 @@
 // (`layout.resize` on its own node) so the Agents list under it takes all the height left:
 // adding spaces pushes Agents down, removing them lets it float back up. Past the room
 // Agents needs, the list scrolls instead.
+//
+// Each row shows its repo's git state (↓ commits to pull, ↑ to push, ● uncommitted changes),
+// read every 15 s and fetched every 5 min in the background, and its agents' state as mc-agents
+// publishes it: working (spinner), waiting for you (red), finished unseen (green), idle (ring).
 
 import { div, svg, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex, InputState } from "gpui-base";
 import {
+  exec,
   hc,
   layout,
   machines,
+  nextCommand,
   openOverlay,
+  panes,
   run,
   setShared,
   shared,
   spaces,
   theme,
+  type PaneInfo,
   type SpaceInfo,
+  type Status,
 } from "herdr";
+import { spaceAgents, urgent, type SpaceAgents } from "../../shared/space-agents.ts";
 import { KEYS, NODES } from "../../shared/sources.ts";
 import {
   asset,
@@ -24,12 +34,62 @@ import {
   iconButton,
   searchBox,
   sectionHeader,
+  SPACE_MARKS,
+  spaceFill,
   statusMark,
-  stopPress,
   type Theme,
 } from "../../shared/ui.ts";
-import { findNode, matches, parseJson } from "../../shared/util.ts";
+import { findNode, matches, parseJson, stepIn } from "../../shared/util.ts";
+import { backoff, BATCH_SCRIPT, describe, FETCH_SCRIPT, parseBatch, type GitState } from "./git.ts";
 import { GROUP, PAD, ROW, SEARCH, targetHeight } from "./size.ts";
+
+const GIT_MS = 15000;
+const FETCH_MS = 5 * 60000;
+
+/** Where a space's repo is asked: its machine and its first terminal's folder. */
+interface Checkout {
+  key: string;
+  machine: string | null;
+  cwd: string;
+  spaces: string[];
+}
+
+/** Groups spaces by (machine, folder), from one `spaces()` and one `panes()` read. */
+function checkouts(all: SpaceInfo[], live: PaneInfo[]): Checkout[] {
+  const cwdOfTab = new Map<string, string>();
+  for (const p of live) if (p.cwd && !cwdOfTab.has(p.tab)) cwdOfTab.set(p.tab, p.cwd);
+  const by = new Map<string, Checkout>();
+  for (const s of all) {
+    const cwd =
+      s.tabs.map((t) => cwdOfTab.get(t.id)).find(Boolean) ||
+      live.find((p) => s.tabs.some((t) => t.id === p.tab) && p.cwd)?.cwd ||
+      s.folder ||
+      "";
+    if (!cwd) continue;
+    const machine = s.machine ?? null;
+    const key = JSON.stringify([machine, cwd]);
+    const c = by.get(key) ?? { key, machine, cwd, spaces: [] };
+    c.spaces.push(s.id);
+    by.set(key, c);
+  }
+  return [...by.values()];
+}
+
+/** Every checkout of one machine's git state in a single process; rejects when unreachable. */
+async function readGitBatch(
+  machine: string | null,
+  list: Checkout[],
+): Promise<(GitState | null)[]> {
+  const r = await exec("sh", ["-c", BATCH_SCRIPT, "sh", ...list.map((c) => c.cwd)], {
+    on: machine ?? undefined,
+  });
+  if (r.code !== 0) throw new Error(`git status failed on ${machine ?? "this computer"}`);
+  return parseBatch(r.stdout, list.length);
+}
+
+async function readGit(c: Checkout): Promise<GitState | null> {
+  return (await readGitBatch(c.machine, [c]))[0] ?? null;
+}
 
 interface Machine {
   name: string;
@@ -37,18 +97,10 @@ interface Machine {
   temporary?: boolean;
 }
 
-// The same avatar colors Herdr's own spaces list uses, kept in the same shared key.
-const MARK: Record<string, string> = {
-  ansi6: "#22a99a",
-  ansi3: "#e3814f",
-  ansi4: "#5b8def",
-  ansi5: "#8b7cf6",
-  ansi2: "#3fae6a",
-  ansi1: "#d9649a",
-};
-const PALETTE = Object.keys(MARK);
+const PALETTE = Object.keys(SPACE_MARKS);
 
-const narrow = (): boolean => (findNode(layout(), NODES.sidebar)?.size?.px ?? Infinity) < 160;
+const narrow = (root: unknown): boolean =>
+  (findNode(root, NODES.sidebar)?.size?.px ?? Infinity) < 160;
 
 export default class Spaces extends View {
   declare search: InputState;
@@ -59,6 +111,17 @@ export default class Spaces extends View {
   declare over: string | null;
   declare height: number;
   declare lastResize: { px: number; at: number } | null;
+  /** Each space's git state, by space id. */
+  declare git: Map<string, GitState>;
+  /** When each checkout (Checkout.key) was last fetched. */
+  declare fetched: Map<string, number>;
+  declare reading: boolean;
+  declare fetching: boolean;
+  declare listing: boolean;
+  /** Unreachable machines (key "" never): consecutive failures and when to try again. */
+  declare down: Map<string, { failures: number; until: number }>;
+  /** Machines whose git state is being read for the first time (a spinner in their header). */
+  declare loadingGit: Set<string>;
 
   init(_props: unknown, cx: Cx): void {
     this.search = InputState.new({ placeholder: "Find a space" });
@@ -70,22 +133,269 @@ export default class Spaces extends View {
     this.over = null;
     this.height = 0;
     this.lastResize = null;
+    this.git = new Map();
+    this.fetched = new Map();
+    this.reading = false;
+    this.fetching = false;
+    this.listing = false;
+    this.down = new Map();
+    this.loadingGit = new Set();
     this.refreshMachines(cx);
-    cx.timer.every(20000, (cx) => this.refreshMachines(cx));
+    cx.timer.every(30000, (cx) => this.refreshMachines(cx));
+    cx.timer.after(800, (cx) => this.refreshGit(cx));
+    cx.timer.every(GIT_MS, (cx) => this.refreshGit(cx));
+    // keys.json: mc-spaces.next / .prev (show) and mc-spaces.move-up / .move-down (reorder)
+    cx.spawn(async (cx) => {
+      for (;;) {
+        const c = await nextCommand();
+        try {
+          if (c === "next") this.step(1);
+          else if (c === "prev") this.step(-1);
+          else if (c === "move-up") this.move(-1);
+          else if (c === "move-down") this.move(1);
+        } catch {
+          // one failed command must not stop the bindings
+        }
+        cx.notify();
+      }
+    });
+  }
+
+  /**
+   * Spaces in the order this list draws them, so the keys walk what you see: grouped by machine,
+   * without folded machines (unless that leaves none). The search box doesn't narrow it.
+   */
+  ordered(): SpaceInfo[] {
+    const all = spaces();
+    if (narrow(layout())) return all;
+    const groups = this.groups(all);
+    const grouped = groups.length > 1;
+    const shown = groups
+      .filter((g) => !(grouped && this.folded.has(g.machine ?? "")))
+      .flatMap((g) => g.spaces);
+    return shown.length ? shown : all;
+  }
+
+  /** Shows the next (or previous) space in list order, wrapping at the ends. */
+  step(step: 1 | -1): void {
+    const list = this.ordered();
+    const next = stepIn(
+      list,
+      list.findIndex((s) => s.active),
+      step,
+    );
+    if (next && !next.active) run("space.select", { id: next.id });
+  }
+
+  /** Moves the shown space one place up or down among its machine's spaces, as dragging it would. */
+  move(step: 1 | -1): void {
+    const all = spaces();
+    const space = all.find((s) => s.active);
+    if (!space) return;
+    const same = all.filter((s) => (s.machine ?? null) === (space.machine ?? null));
+    const target = same[same.indexOf(space) + step];
+    if (target) run("space.move", { id: space.id, index: all.indexOf(target) + 1 });
+  }
+
+  /** Whether this checkout is worth reading now: shown, and its machine isn't known to be away. */
+  worthReading(c: Checkout, now: number): boolean {
+    if (!c.machine) return true;
+    if (this.folded.has(c.machine)) return false;
+    const state = this.machineList.find((m) => m.name === c.machine)?.state;
+    if (state && state !== "connected") return false;
+    return now >= (this.down.get(c.machine)?.until ?? 0);
+  }
+
+  /**
+   * Reads the git state of every shown space, one process per machine (all machines at once, never
+   * overlapping a run still in flight); redraws only when one changed. Then fetches stale ones.
+   * Nothing runs while the Spaces section is folded, and folded or unreachable machines are
+   * skipped (an unreachable one is retried with a growing delay).
+   */
+  refreshGit(cx: Cx): void {
+    if (this.reading || this.spacesFolded()) return;
+    this.reading = true;
+    cx.spawn(async (cx) => {
+      const list = checkouts(spaces(), panes());
+      const now = Date.now();
+      const active = list.filter((c) => this.worthReading(c, now));
+      const next = new Map<string, GitState>();
+      for (const c of list) {
+        const old = c.spaces.map((id) => this.git.get(id)).find(Boolean);
+        if (old) for (const id of c.spaces) next.set(id, old);
+      }
+      const byMachine = new Map<string, Checkout[]>();
+      for (const c of active) {
+        const k = c.machine ?? "";
+        byMachine.set(k, [...(byMachine.get(k) ?? []), c]);
+      }
+      const first = [...byMachine]
+        .filter(([k, cs]) => k && cs.some((c) => c.spaces.some((id) => !this.git.has(id))))
+        .map(([k]) => k);
+      if (first.length) {
+        for (const k of first) this.loadingGit.add(k);
+        cx.notify();
+      }
+      try {
+        await Promise.all(
+          [...byMachine].map(async ([k, cs]) => {
+            try {
+              const states = await readGitBatch(k || null, cs);
+              this.down.delete(k);
+              cs.forEach((c, i) => {
+                for (const id of c.spaces) {
+                  const st = states[i];
+                  if (st) next.set(id, st);
+                  else next.delete(id);
+                }
+              });
+            } catch {
+              // Machine away: keep what was last read, and leave it alone for a while.
+              const failures = (this.down.get(k)?.failures ?? 0) + 1;
+              this.down.set(k, { failures, until: Date.now() + backoff(failures) });
+            }
+          }),
+        );
+      } finally {
+        this.reading = false;
+      }
+      const hadLoading = this.loadingGit.size > 0;
+      this.loadingGit.clear();
+      const flat = (m: Map<string, GitState>) => JSON.stringify([...m].sort());
+      if (flat(next) !== flat(this.git)) {
+        this.git = next;
+        cx.notify();
+      } else if (hadLoading) cx.notify();
+      const at = Date.now();
+      this.fetchGit(
+        active.filter(
+          (c) =>
+            c.spaces.some((id) => next.get(id)?.upstream) &&
+            at - (this.fetched.get(c.key) ?? 0) > FETCH_MS,
+        ),
+        cx,
+      );
+    });
+  }
+
+  /** Fetches each checkout's remote, one at a time, and reads it again: so "behind" is current. */
+  fetchGit(list: Checkout[], cx: Cx): void {
+    if (this.fetching || !list.length) return;
+    this.fetching = true;
+    cx.spawn(async (cx) => {
+      try {
+        for (const c of list) {
+          this.fetched.set(c.key, Date.now());
+          try {
+            const on = c.machine ?? undefined;
+            const r = await exec("sh", ["-c", FETCH_SCRIPT], { cwd: c.cwd, on });
+            if (r.code !== 0) continue;
+            const state = await readGit(c);
+            if (!state) continue;
+            const before = JSON.stringify(this.git.get(c.spaces[0]));
+            for (const id of c.spaces) this.git.set(id, state);
+            if (JSON.stringify(state) !== before) cx.notify();
+          } catch {
+            // Unreachable now: tried again in FETCH_MS.
+          }
+        }
+      } finally {
+        this.fetching = false;
+      }
+    });
+  }
+
+  /** The git chips on a row: ↓ to pull, ↑ to push, ● uncommitted changes. */
+  gitChips(t: Theme, s: SpaceInfo): El | null {
+    const g = this.git.get(s.id);
+    if (!g) return null;
+    const dirty = g.changed + g.untracked;
+    if (!g.ahead && !g.behind && !dirty) return null;
+    const chip = (text: string, color: string) =>
+      div().flex_none().text_size(11).font_semibold().text_color(color).child(text);
+    return h_flex()
+      .id(`space-git-${s.id}`)
+      .flex_none()
+      .gap(5)
+      .items_center()
+      .tooltip(describe(g))
+      .when(g.behind > 0, (el: El) => el.child(chip(`↓${g.behind}`, t.ansi4 ?? t.accent)))
+      .when(g.ahead > 0, (el: El) => el.child(chip(`↑${g.ahead}`, t.ansi2 ?? t.done)))
+      .when(dirty > 0, (el: El) =>
+        el.child(
+          div()
+            .size(6)
+            .flex_none()
+            .rounded(3)
+            .bg(t.ansi3 ?? t.working),
+        ),
+      );
+  }
+
+  /**
+   * The row's agent marks: working, waiting for you and finished, each with a count past one;
+   * a ring when its agents are all idle. Herdr's own space status when mc-agents publishes none.
+   */
+  agentMarks(t: Theme, s: SpaceInfo, counts: SpaceAgents | null): El | null {
+    if (!counts) {
+      const st = s.status;
+      return st === "working" || st === "blocked" || st === "done" ? statusMark(st, true) : null;
+    }
+    const marks: [Status, number, string][] = [
+      ["blocked", counts.blocked, "needs you"],
+      ["done", counts.done, "finished"],
+      ["working", counts.working, "working"],
+    ];
+    const shown = marks.filter(([, n]) => n > 0);
+    if (!shown.length && !counts.idle) return null;
+    const tip = [...marks, ["idle", counts.idle, "idle"] as [Status, number, string]]
+      .filter(([, n]) => n > 0)
+      .map(([, n, label]) => `${n} ${label}`)
+      .join(" · ");
+    return h_flex()
+      .id(`space-agents-${s.id}`)
+      .flex_none()
+      .gap(3)
+      .items_center()
+      .tooltip(`Agents: ${tip}`)
+      .when(!shown.length, (el: El) => el.child(statusMark("idle", true)))
+      .children(
+        shown.map(([status, n]) =>
+          h_flex()
+            .flex_none()
+            .items_center()
+            .child(statusMark(status, true))
+            .when(n > 1, (el: El) =>
+              el.child(
+                div()
+                  .text_size(10.5)
+                  .text_color(t[status] ?? t.dim)
+                  .child(String(n)),
+              ),
+            ),
+        ),
+      );
   }
 
   refreshMachines(cx: Cx): void {
+    if (this.listing) return;
+    this.listing = true;
     cx.spawn(async (cx) => {
       try {
         const r = await hc(["machine", "ls", "--json"]);
         if (r.code === 0) {
           const list = parseJson<{ machines?: Machine[] }>(r.stdout, {}).machines ?? [];
-          this.machineList = list.filter((m) => !m.temporary);
+          const next = list.filter((m) => !m.temporary);
+          if (JSON.stringify(next) !== JSON.stringify(this.machineList)) {
+            this.machineList = next;
+            cx.notify();
+          }
         }
       } catch {
         // keep the last list
+      } finally {
+        this.listing = false;
       }
-      cx.notify();
     });
   }
 
@@ -123,8 +433,8 @@ export default class Spaces extends View {
   }
 
   /** Sizes this block to its rows, leaving Agents the rest (see size.ts). */
-  autosize(rows: number, groups: number): void {
-    const node = findNode(layout(), NODES.spaces);
+  autosize(root: unknown, rows: number, groups: number): void {
+    const node = findNode(root, NODES.spaces);
     const current = node?.size?.px;
     if (current === undefined) return;
     const agentsHeight = shared(KEYS.agentsHeight);
@@ -153,14 +463,14 @@ export default class Spaces extends View {
     });
   }
 
-  row(t: Theme, s: SpaceInfo, color: string): El {
+  row(t: Theme, s: SpaceInfo, color: string, counts: SpaceAgents | null, all: SpaceInfo[]): El {
     const on = s.active;
-    const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color] ?? t.accent);
+    const fill = spaceFill(t, color);
     const sameMachine = (id: string | null) =>
-      (spaces().find((x) => x.id === id)?.machine ?? null) === (s.machine ?? null);
+      (all.find((x) => x.id === id)?.machine ?? null) === (s.machine ?? null);
     const dragging = this.pressed !== null && this.pressed !== s.id && this.over === s.id;
-    const from = spaces().findIndex((x) => x.id === this.pressed);
-    const index = spaces().findIndex((x) => x.id === s.id);
+    const from = dragging ? all.findIndex((x) => x.id === this.pressed) : -1;
+    const index = all.findIndex((x) => x.id === s.id);
     const branch = s.branch && !["main", "master", s.name].includes(s.branch) ? s.branch : "";
     const hovered = this.hovered === s.id;
     return h_flex()
@@ -230,7 +540,7 @@ export default class Spaces extends View {
       )
       .child(
         div()
-          .flex_shrink(0)
+          .min_w(0)
           .max_w(150)
           .truncate()
           .text_color(on ? t.foreground : t.muted)
@@ -245,8 +555,8 @@ export default class Spaces extends View {
           .text_color(t.dim)
           .when(Boolean(branch), (el: El) => el.child(branch)),
       )
-      .when(s.status === "working" || s.status === "blocked" || s.status === "done", (el: El) =>
-        el.child(statusMark(s.status, true)),
+      .children(
+        [this.gitChips(t, s), this.agentMarks(t, s, counts)].filter((e): e is El => e !== null),
       )
       .when(hovered, (el: El) =>
         el.child(
@@ -264,10 +574,14 @@ export default class Spaces extends View {
       );
   }
 
-  machineHeader(t: Theme, machine: string | null, count: number): El {
+  machineHeader(
+    t: Theme,
+    machine: string | null,
+    count: number,
+    layoutState: string | undefined,
+  ): El {
     const key = machine ?? "";
     const info = this.machineList.find((m) => m.name === machine);
-    const layoutState = machines().find((m) => m.name === machine)?.layout;
     const connected = !machine || info?.state === "connected";
     const folded = this.folded.has(key);
     return h_flex()
@@ -282,8 +596,10 @@ export default class Spaces extends View {
       .cursor_pointer()
       .hover((s: El) => s.text_color(t.muted))
       .on_click((_e: unknown, cx: Cx) => {
-        if (folded) this.folded.delete(key);
-        else this.folded.add(key);
+        if (folded) {
+          this.folded.delete(key);
+          this.refreshGit(cx);
+        } else this.folded.add(key);
         localStorage.setItem("machines.folded", JSON.stringify([...this.folded]));
         cx.notify();
       })
@@ -315,33 +631,41 @@ export default class Spaces extends View {
       .when(connected && layoutState === "loading", (el: El) =>
         el.child(div().flex_none().child("loading…")),
       )
+      .when(connected && this.loadingGit.has(key), (el: El) =>
+        el.child(svg(chromeIcon("spinner")).size(10).flex_none().text_color(t.dim).spin(900)),
+      )
       .when(connected, (el: El) =>
         el.child(
-          div()
-            .id(`machine-new-${machine ?? "local"}`)
-            .flex_none()
-            .px(4)
-            .rounded(4)
-            .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-            .on_mouse_down("left", stopPress)
-            .on_click((_e: unknown, cx: Cx) => {
+          iconButton(
+            `machine-new-${machine ?? "local"}`,
+            chromeIcon("plus"),
+            `New space on ${machine ?? "this computer"}`,
+            (_e, cx) => {
               cx.stop_propagation();
               run("space.new", { machine: machine ?? "" });
-            })
-            .tooltip(`New space on ${machine ?? "this computer"}`)
-            .child("+"),
+            },
+            { size: 20, iconSize: 12 },
+          ),
         ),
       )
       .child(
         div()
+          .id(`machine-state-${machine ?? "local"}`)
           .size(6)
           .rounded(3)
           .flex_none()
-          .bg(connected ? t.ansi2 : t.dim),
+          .bg(connected ? t.ansi2 : t.dim)
+          .tooltip(
+            connected
+              ? machine
+                ? "Connected"
+                : "This computer"
+              : `${(info?.state ?? "offline").replace(/_/g, " ")}`,
+          ),
       );
   }
 
-  compact(t: Theme, list: SpaceInfo[]): El {
+  compact(t: Theme, list: SpaceInfo[], counts: Record<string, SpaceAgents> | null): El {
     return v_flex()
       .size_full()
       .bg(t.chrome)
@@ -356,15 +680,17 @@ export default class Spaces extends View {
             .justify_center()
             .items_center()
             .gap(4)
+            .cursor_pointer()
             .when(s.active, (el: El) => el.bg(t.selected))
             .hover((st: El) => st.bg(t.hover))
             .on_click(() => run("space.select", { id: s.id }))
+            .tooltip(s.machine ? `${s.name} · ${s.machine}` : s.name)
             .child(
               div()
                 .text_color(s.active ? t.foreground : t.muted)
                 .child(String(i + 1)),
             )
-            .child(statusMark(s.status, true)),
+            .child(statusMark(counts ? urgent(counts[s.id]) : s.status, true)),
         ),
       );
   }
@@ -372,20 +698,27 @@ export default class Spaces extends View {
   render(): El {
     const t = theme();
     const all = spaces();
+    const root = layout();
     const colors = this.colors(all);
-    if (narrow()) return this.compact(t, all);
+    const agentCounts = spaceAgents();
+    const countsOf = (id: string): SpaceAgents | null =>
+      agentCounts ? (agentCounts[id] ?? { working: 0, blocked: 0, done: 0, idle: 0 }) : null;
+    if (narrow(root)) return this.compact(t, all, agentCounts);
 
     const open = !this.spacesFolded();
     const query = this.search.value();
     const shown = all.filter((s) => matches(query, s.name, s.branch, s.machine ?? "this computer"));
     const groups = this.groups(shown);
     const grouped = groups.length > 1;
+    const layoutOf = new Map(machines().map((m) => [m.name, m.layout]));
     const rows: El[] = [];
     let rowCount = 0;
     for (const g of groups) {
-      if (grouped) rows.push(this.machineHeader(t, g.machine, g.spaces.length));
+      if (grouped)
+        rows.push(this.machineHeader(t, g.machine, g.spaces.length, layoutOf.get(g.machine)));
       if (grouped && this.folded.has(g.machine ?? "")) continue;
-      for (const s of g.spaces) rows.push(this.row(t, s, colors[s.id] ?? "ansi6"));
+      for (const s of g.spaces)
+        rows.push(this.row(t, s, colors[s.id] ?? "ansi6", countsOf(s.id), all));
       rowCount += g.spaces.length;
     }
     if (!shown.length) {
@@ -399,7 +732,7 @@ export default class Spaces extends View {
       );
       rowCount += 1;
     }
-    this.autosize(rowCount, grouped ? groups.length : 0);
+    this.autosize(root, rowCount, grouped ? groups.length : 0);
 
     return v_flex()
       .id("root")
@@ -424,7 +757,11 @@ export default class Spaces extends View {
           "Spaces",
           all.length,
           open,
-          () => setShared(KEYS.spacesFolded, open),
+          (cx) => {
+            setShared(KEYS.spacesFolded, open);
+            // Unfolded: read git now rather than at the next tick (folded skips it).
+            if (!open) cx.timer.after(50, (cx) => this.refreshGit(cx));
+          },
           [
             iconButton("space-new", chromeIcon("plus"), "New space", () => run("space.new"), {
               size: 24,

@@ -85,6 +85,16 @@ function columnForStatus(status, open) {
 import { appHome, exec, readTextFile, writeTextFile } from "herdr";
 
 // .config/herdr-app/src/shared/util.ts
+function findNode(node, id) {
+  const n = node;
+  if (!n) return null;
+  if (n.id === id) return n;
+  for (const child of n.children ?? []) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+}
 function duration(ms) {
   const m = Math.floor(Math.max(0, ms) / 6e4);
   if (m < 1) return "<1m";
@@ -108,6 +118,18 @@ function parseJson(text, fallback) {
   } catch {
     return fallback;
   }
+}
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length) }, worker));
+  return out;
 }
 
 // .config/herdr-app/src/shared/config.ts
@@ -163,6 +185,8 @@ async function loadConfig() {
   return config;
 }
 var secrets = /* @__PURE__ */ new Map();
+var missing = /* @__PURE__ */ new Map();
+var MISS_MS = 5 * 6e4;
 var ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function tokenPath(service) {
   return `${appHome()}/mission-control/${service}.token`;
@@ -176,6 +200,7 @@ async function loginEnv(name) {
 async function readSecret(spec, service) {
   const known = secrets.get(service);
   if (known !== void 0) return known;
+  if (Date.now() - (missing.get(service) ?? 0) < MISS_MS) return "";
   let value = "";
   if (spec.tokenCommand?.length) {
     const [cmd, ...args] = spec.tokenCommand;
@@ -188,10 +213,12 @@ async function readSecret(spec, service) {
   }
   if (!value) value = ((await readTextFile(tokenPath(service)).catch(() => null)) ?? "").trim();
   if (value) secrets.set(service, value);
+  else missing.set(service, Date.now());
   return value;
 }
 function forgetSecret(service) {
   secrets.delete(service);
+  missing.delete(service);
 }
 async function saveToken(service, token) {
   const path = tokenPath(service);
@@ -352,38 +379,62 @@ function repoAt(machine, cwd) {
   value.catch(() => cache2.delete(key));
   return value;
 }
+var SEP = "";
 async function ask(machine, cwd) {
   const none = { machine, cwd, root: null, remotes: [] };
   if (!cwd) return none;
-  const on = machine ?? void 0;
-  const top = await exec2("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-  if (top.code !== 0) return none;
-  const list = await exec2("git", ["remote", "-v"], { cwd, on });
+  const r = await exec2(
+    "sh",
+    ["-c", `git rev-parse --show-toplevel && printf '${SEP}\\n' && git remote -v`],
+    { cwd, on: machine ?? void 0 },
+  );
+  const cut = r.stdout.indexOf(SEP);
+  if (r.code !== 0 || cut < 0) return none;
   const urls = /* @__PURE__ */ new Map();
-  for (const line of list.stdout.split("\n")) {
+  for (const line of r.stdout.slice(cut + 1).split("\n")) {
     const [name, url] = line.split(/\s+/);
     if (name && url && !urls.has(name)) urls.set(name, url);
   }
   const names = [...urls.keys()].sort((a, b) => (a === "origin" ? -1 : b === "origin" ? 1 : 0));
   const remotes = names
     .map((n) => {
-      const r = parseRemote(urls.get(n));
-      return r ? { ...r, remoteName: n } : null;
+      const r2 = parseRemote(urls.get(n));
+      return r2 ? { ...r2, remoteName: n } : null;
     })
-    .filter((r) => r !== null);
-  return { machine, cwd, root: top.stdout.trim(), remotes };
+    .filter((r2) => r2 !== null);
+  return { machine, cwd, root: r.stdout.slice(0, cut).trim(), remotes };
 }
 async function spacesForSlug(slug) {
   const want = slug.toLowerCase();
-  const found = [];
-  for (const space of spaces()) {
-    const repo = await repoOf(space).catch(() => null);
-    if (repo?.remotes.some((r) => r.slug.toLowerCase() === want)) found.push(space);
-  }
-  return found;
+  const all = spaces();
+  const repos = await Promise.all(all.map((space) => repoOf(space).catch(() => null)));
+  return all.filter((_, i) => repos[i]?.remotes.some((r) => r.slug.toLowerCase() === want));
 }
 
 // .config/herdr-app/src/shared/launch.ts
+var pending = /* @__PURE__ */ new Set();
+function isPending(name) {
+  return pending.has(name);
+}
+function trackPending(name, cx, task) {
+  if (pending.has(name)) return;
+  pending.add(name);
+  cx.notify();
+  cx.spawn(async (cx2) => {
+    try {
+      await task();
+    } catch (e) {
+      notify({
+        title: `Couldn't start ${name}`,
+        body: String(e?.message ?? e).slice(-300),
+        level: "error",
+      });
+    } finally {
+      pending.delete(name);
+      cx2.notify();
+    }
+  });
+}
 function findTab(name) {
   for (const space of spaces2()) {
     const tab = space.tabs.find((t) => t.named && t.name === name);
@@ -541,9 +592,22 @@ async function runIssueAction(action, item) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
+import {
+  layout,
+  run as run2,
+  setShared as setShared2,
+  shared as shared2,
+  theme as theme2,
+} from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
+var NODES = {
+  sidebar: "sidebar",
+  spaces: "mc-spaces",
+  agents: "mc-agents",
+  panel: "panel",
+  body: "panel-body",
+};
 var KEYS = {
   agentsHeight: "mc.agents.height",
   agentsFolded: "mc.agents.folded",
@@ -687,7 +751,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function textButton(id, label, onClick, opts = {}) {
   const t = theme();
@@ -776,6 +844,7 @@ function countChip(id, label, count, on, onClick) {
     .cursor_pointer()
     .when(on, (el) => el.bg(t.selected).text_color(t.accent))
     .when(!on, (el) => el.text_color(t.muted).hover((s) => s.text_color(t.foreground)))
+    .on_mouse_down("left", stopPress)
     .on_click((_e, cx) => onClick(cx))
     .child(label)
     .child(
@@ -784,6 +853,38 @@ function countChip(id, label, count, on, onClick) {
         .text_color(on ? t.accent : t.dim)
         .child(String(count)),
     );
+}
+function statusMark(status, compact = false) {
+  const t = theme();
+  if (status === "working") {
+    return svg(chromeIcon("spinner")).size(12).mx(1).flex_none().text_color(t.working).spin(900);
+  }
+  if (status === "blocked") {
+    return compact
+      ? div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked)
+      : div()
+          .flex_none()
+          .px(6)
+          .h(18)
+          .rounded(5)
+          .bg(alpha(t.blocked, "26"))
+          .text_size(10.5)
+          .font_semibold()
+          .text_color(t.blocked)
+          .flex()
+          .items_center()
+          .child("Needs you");
+  }
+  if (status === "done") return div().size(7).mx(3).flex_none().rounded(4).bg(t.done);
+  if (status === "idle")
+    return div()
+      .size(7)
+      .mx(3)
+      .flex_none()
+      .rounded(4)
+      .border(1.5)
+      .border_color(t.idle ?? t.dim);
+  return div().size(7).mx(3).flex_none();
 }
 function emptyState(title, body, actions = []) {
   const t = theme();
@@ -802,6 +903,7 @@ function emptyState(title, body, actions = []) {
 }
 
 // .config/herdr-app/src/shared/list-view.ts
+var FRESH_MS = 3e4;
 var SCOPES = [
   { value: "space", label: "This space" },
   { value: "all", label: "All spaces" },
@@ -849,6 +951,7 @@ var ListView = class extends View {
     this.snap = { items: [], caption: "", note: "", setup: null, token: null, warning: "", at: 0 };
     this.cache = /* @__PURE__ */ new Map();
     this.loading = false;
+    this.busy = false;
     this.error = null;
     this.width = 0;
     this.seq = 0;
@@ -859,11 +962,26 @@ var ListView = class extends View {
     this.tokenInput = InputState.new({ placeholder: "Paste an access token" });
     this.tokenInput.set_masked(true);
     this.tokenInput.on("submit", (_e, cx2) => this.saveToken(cx2));
-    this.reload(cx);
-    cx.timer.every(1500, (cx2) => {
-      if (this.key() !== this.loadedKey) this.reload(cx2);
+    this.tried = 0;
+    this.memo = null;
+    cx.timer.every(Math.min(this.interval(), 6e4), (cx2) => {
+      if (this.shown() && this.due()) this.reload(cx2, true);
     });
-    cx.timer.every(this.interval(), (cx2) => this.reload(cx2, true));
+  }
+  /**
+   * Whether this copy is on screen: the panel is open and its stack shows this source. Copies stay
+   * alive while hidden (another source, panel closed), so they skip loading and drawing then.
+   * True when it isn't in the panel at all.
+   */
+  shown() {
+    const root = layout();
+    const body = findNode(root, NODES.body);
+    if (!body?.children?.some((c) => c.id === this.source())) return true;
+    return !findNode(root, NODES.panel)?.hidden && body.active === this.source();
+  }
+  /** Time to look again: never loaded, or `interval()` since the last try. */
+  due() {
+    return !this.busy && Date.now() - this.tried >= this.interval();
   }
   /** Saves the pasted token for the service the panel asked about, then loads again. */
   saveToken(cx) {
@@ -954,11 +1072,35 @@ var ListView = class extends View {
   }
   setScope(scope, cx) {
     setShared2(KEYS.scope(this.source()), scope);
-    this.reload(cx);
+    this.switchTo(cx, this.key());
+    cx.notify();
   }
+  /** Loads again now and redraws (from a handler or a task, never from render). */
   reload(cx, quiet = false) {
-    const key = this.key();
+    this.load(cx, quiet);
+    cx.notify();
+  }
+  /**
+   * Shows another scope (a space switch, This space / All spaces): what it had last time at once,
+   * then asks again unless that was moments ago. No redraw, so render may call it.
+   */
+  switchTo(cx, key) {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < FRESH_MS) {
+      this.seq++;
+      this.snap = hit;
+      this.loadedKey = key;
+      this.tried = hit.at;
+      this.error = null;
+      this.loading = this.busy = false;
+      return;
+    }
+    this.load(cx, Boolean(hit), key);
+  }
+  /** Starts a load without asking for a redraw, so render may call it: render draws the result. */
+  load(cx, quiet = false, key = this.key()) {
     const seq = ++this.seq;
+    this.tried = Date.now();
     if (key !== this.loadedKey) {
       this.snap = this.cache.get(key) ?? {
         items: [],
@@ -972,8 +1114,8 @@ var ListView = class extends View {
       this.error = null;
     }
     this.loadedKey = key;
-    if (!quiet) this.loading = true;
-    cx.notify();
+    this.loading = !quiet;
+    this.busy = true;
     cx.spawn(async (cx2) => {
       try {
         const r = await this.fetch(this.scope(), activeSpace());
@@ -998,6 +1140,7 @@ var ListView = class extends View {
       } finally {
         if (seq === this.seq) {
           this.loading = false;
+          this.busy = false;
           cx2.notify();
         }
       }
@@ -1012,9 +1155,13 @@ var ListView = class extends View {
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton("refresh", asset("refresh"), "Refresh", (_e, cx) => this.reload(cx), {
-          active: this.loading,
-        }),
+        iconButton(
+          "refresh",
+          asset("refresh"),
+          this.busy ? "Loading…" : "Refresh",
+          (_e, cx) => this.reload(cx),
+          { active: this.busy, spin: this.busy },
+        ),
       )
       .when(this.hasSettings(), (el) =>
         el.child(
@@ -1045,9 +1192,20 @@ var ListView = class extends View {
   }
   footer(t, shown) {
     const total = this.snap.items.length;
-    const count =
-      shown === total ? `${total} ${this.noun()}` : `${shown} of ${total} ${this.noun()}`;
-    const when = this.loading ? "Loading…" : this.snap.at ? `Updated ${ago(this.snap.at)}` : "";
+    const explained =
+      total === 0 && Boolean(this.snap.setup || this.snap.token || this.snap.note || this.error);
+    const count = explained
+      ? ""
+      : shown === total
+        ? `${total} ${this.noun()}`
+        : `${shown} of ${total} ${this.noun()}`;
+    const when = this.loading
+      ? "Loading…"
+      : this.busy
+        ? "Refreshing…"
+        : this.snap.at
+          ? `Updated ${ago(this.snap.at)}`
+          : "";
     return h_flex2()
       .flex_none()
       .h(30)
@@ -1068,9 +1226,35 @@ var ListView = class extends View {
         el.child(div2().min_w(0).truncate().child(this.snap.caption)),
       );
   }
+  /** `visible()` for the current rows and query, worked out again only when either changed. */
+  shownItems() {
+    const query = this.search.value();
+    const m = this.memo;
+    if (m && m.items === this.snap.items && m.query === query) return m.shown;
+    const shown = this.visible(this.snap.items, query);
+    this.memo = { items: this.snap.items, query, shown };
+    return shown;
+  }
   render(cx) {
     const t = theme2();
-    const items = this.visible(this.snap.items, this.search.value());
+    const root = v_flex2()
+      .id("root")
+      .size_full()
+      .min_h(0)
+      .bg(t.background)
+      .text_size(13)
+      .text_color(t.foreground)
+      .on_size_change((size, cx2) => {
+        if (Math.abs(size.width - this.width) >= 1) {
+          this.width = size.width;
+          cx2.notify();
+        }
+      });
+    if (!this.shown()) return root;
+    const key = this.key();
+    if (key !== this.loadedKey) this.switchTo(cx, key);
+    else if (this.due()) this.load(cx, true, key);
+    const items = this.shownItems();
     let content;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
@@ -1103,23 +1287,8 @@ var ListView = class extends View {
             .child(this.body(t, items, cx))
         : this.body(t, items, cx);
     }
-    const sub =
-      this.snap.items.length && !this.snap.setup
-        ? this.subbar(t, this.visible(this.snap.items, this.search.value()))
-        : null;
-    return v_flex2()
-      .id("root")
-      .size_full()
-      .min_h(0)
-      .bg(t.background)
-      .text_size(13)
-      .text_color(t.foreground)
-      .on_size_change((size, cx2) => {
-        if (Math.abs(size.width - this.width) >= 1) {
-          this.width = size.width;
-          cx2.notify();
-        }
-      })
+    const sub = this.snap.items.length && !this.snap.setup ? this.subbar(t, items) : null;
+    return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el) => el.child(sub))
       .child(v_flex2().flex_1().min_h(0).pt(10).child(content))
@@ -1287,7 +1456,7 @@ var BoardView = class extends ListView {
               .text_color(t.accent)
               .cursor_pointer()
               .hover((s) => s.underline())
-              .tooltip(item.url)
+              .tooltip(`${item.url} · right-click copies it`)
               .on_click(() => void openUrl(item.url))
               .on_mouse_down("right", (_e, cx) => {
                 cx.stop_propagation();
@@ -1310,6 +1479,7 @@ var BoardView = class extends ListView {
           .text_size(13.5)
           .text_color(t.foreground)
           .cursor_pointer()
+          .hover((s) => s.underline())
           .on_click(() => void openUrl(item.url))
           .child(item.title),
       )
@@ -1478,6 +1648,7 @@ function actionRow(t, item, { actions, main, tabs, sessions }) {
         const name = actionTabName(a, item);
         const tab = tabs.has(name);
         const open = tab || sessions.has(name);
+        const starting = isPending(name);
         return h_flex3()
           .id(`action-${i}-${item.id}`)
           .flex_none()
@@ -1493,16 +1664,19 @@ function actionRow(t, item, { actions, main, tabs, sessions }) {
           .cursor_pointer()
           .hover((s) => s.bg(t.hover).text_color(t.foreground))
           .on_mouse_down("left", stopPress)
-          .on_click(() => void runIssueAction(a, item))
+          .on_click((_e, cx) => trackPending(name, cx, () => runIssueAction(a, item)))
           .tooltip(
-            tab
-              ? `Show the "${name}" tab`
-              : open
-                ? `"${name}" is running in the background: open it from Agents`
-                : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
+            starting
+              ? `Starting "${name}"…`
+              : tab
+                ? `Show the "${name}" tab`
+                : open
+                  ? `"${name}" is running in the background: open it from Agents`
+                  : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
           )
+          .when(starting, (el) => el.child(statusMark("working")))
           .child(a.label)
-          .when(Boolean(open), (el) => el.child(div3().size(5).rounded(3).bg(t.working)));
+          .when(open && !starting, (el) => el.child(div3().size(5).rounded(3).bg(t.working)));
       }),
     );
 }
@@ -1560,6 +1734,7 @@ function checksOf(state) {
 }
 
 // .config/herdr-app/src/shared/forgejo.ts
+var settled = /* @__PURE__ */ new Map();
 var TokenError = class extends Error {
   ask;
   constructor(message, ask2) {
@@ -1599,6 +1774,16 @@ async function forgejo() {
       return await r.json();
     },
   };
+}
+async function commitStatus(fj, slug, sha) {
+  const key = `${fj.base} ${slug}@${sha}`;
+  const known = settled.get(key);
+  if (known) return known;
+  const s = await fj.get(`/repos/${slug}/commits/${sha}/status`).catch(() => null);
+  if (s?.state === "success" || s?.state === "failure" || s?.state === "error") {
+    settled.set(key, s.state);
+  }
+  return s?.state;
 }
 
 // .config/herdr-app/src/shared/github.ts
@@ -1829,12 +2014,10 @@ async function forgejoChecks(fj, items, work) {
     }
   }
   const found = /* @__PURE__ */ new Map();
-  await Promise.all(
-    [...wanted].slice(0, 30).map(async ([key, { slug, sha }]) => {
-      const s = await fj.get(`/repos/${slug}/commits/${sha}/status`).catch(() => null);
-      if (s) found.set(key, checksOf(s.state));
-    }),
-  );
+  await mapLimit([...wanted].slice(0, 30), 6, async ([key, { slug, sha }]) => {
+    const state = await commitStatus(fj, slug, sha);
+    if (state !== void 0) found.set(key, checksOf(state));
+  });
   for (const item of items) {
     for (const p of item.pulls ?? []) {
       const checks = found.get(`${item.repo?.toLowerCase()}#${p.number}`);
@@ -1913,9 +2096,9 @@ var ForgejoIssues = class extends BoardView {
     return "Search Forgejo issues";
   }
   async fetch(scope, space) {
-    const fj = await forgejo();
+    const [fj, all] = await Promise.all([forgejo(), loadConfig()]);
     if (!fj) return { setup: SETUP };
-    const config = (await loadConfig()).forgejo;
+    const config = all.forgejo;
     const since = encodeURIComponent(
       new Date(Date.now() - config.closedDays * 864e5).toISOString(),
     );

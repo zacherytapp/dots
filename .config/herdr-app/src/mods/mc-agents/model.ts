@@ -105,6 +105,27 @@ export function liveStatus(title: string | null | undefined, job: Job | null): S
   return titleMark(title) ?? (job ? jobStatus(job.state) : "idle");
 }
 
+/**
+ * Herdr marks an agent that reports its status "done" when it finishes while you aren't looking,
+ * until you look. An agent whose state is guessed (from its title or job) only goes from working
+ * to idle, so this does the same for it: the agents in a pane that went from working to idle
+ * unseen, kept until seen (`seen`: focused, or its tab is shown) or busy again.
+ */
+export function trackFinished(
+  rows: Row[],
+  before: Map<string, string> | null,
+  finished: Set<string>,
+  seen: (r: Row) => boolean,
+): Set<string> {
+  const next = new Set<string>();
+  for (const r of rows) {
+    if (!r.guessed || !r.pane || r.depth > 0) continue;
+    if ((r.status !== "idle" && r.status !== "done") || seen(r)) continue;
+    if (finished.has(r.address) || before?.get(r.address) === "working") next.add(r.address);
+  }
+  return next;
+}
+
 /** A title worth showing: not the program's own name, a path, a prompt or a bare number. */
 export function meaningful(
   title: string | null | undefined,
@@ -134,6 +155,8 @@ export interface Input {
   folded: Set<string>;
   /** Claude Code job records from every machine (see jobs.ts). */
   jobs?: Job[];
+  /** Agents that finished while nobody looked (see trackFinished): shown as done. */
+  finished?: Set<string>;
   now?: number;
 }
 
@@ -143,8 +166,8 @@ export interface Model {
   order: string[];
   /** Every top-level row, also those in folded groups. */
   all: Row[];
-  /** Agents and recent jobs waiting for you (not stopped or week-old jobs). */
-  needsYou: number;
+  /** Agents and recent jobs waiting for you (not stopped or week-old jobs), in list order. */
+  needsYou: Row[];
   total: number;
 }
 
@@ -240,6 +263,8 @@ export function buildModel(input: Input): Model {
     const alone = left.filter((o) => o.machine === r.machine && o.cwd === r.cwd).length === 1;
     if (alone) attach(r, matchJob(jobs, r.machine, r.cwd, titles(r), taken, true));
   }
+  for (const r of nativeRows)
+    if (r.guessed && r.status === "idle" && input.finished?.has(r.address)) r.status = "done";
 
   const isAgent = (t: TerminalRecord) =>
     t.state === "live" && (t.program?.agent === true || (t.status != null && t.status !== ""));
@@ -422,7 +447,7 @@ export function buildModel(input: Input): Model {
     .map((r) => r.address);
   for (const a of input.agents) if (!order.includes(a.address)) order.push(a.address);
   const stale = new Set([...stoppedJobs, ...oldJobs].map((r) => r.address));
-  const needsYou = all.filter((r) => r.status === "blocked" && !stale.has(r.address)).length;
+  const needsYou = all.filter((r) => r.status === "blocked" && !stale.has(r.address));
   return {
     groups,
     order,

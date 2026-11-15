@@ -6,11 +6,9 @@
 import { exec } from "herdr";
 import { claudeProjectDir } from "../../shared/util.ts";
 import type { Row } from "./model.ts";
-import { parseUsage, splitBlocks, type Usage } from "./usage.ts";
+import { parseUsage, splitBlocks, type Reading } from "./usage.ts";
 
-export interface Reading extends Usage {
-  at: number;
-}
+export type { Reading };
 
 // Each argument is "f:<dir>/<session>.jsonl" (that file) or "d:<dir>" (its newest file).
 const READER = [

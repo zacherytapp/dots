@@ -12,6 +12,16 @@ import { knownAgents as knownAgents2 } from "herdr";
 import { appHome, exec, readTextFile, writeTextFile } from "herdr";
 
 // .config/herdr-app/src/shared/util.ts
+function findNode(node, id) {
+  const n = node;
+  if (!n) return null;
+  if (n.id === id) return n;
+  for (const child of n.children ?? []) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+}
 function duration(ms) {
   const m = Math.floor(Math.max(0, ms) / 6e4);
   if (m < 1) return "<1m";
@@ -41,6 +51,18 @@ function parseJson(text, fallback) {
   } catch {
     return fallback;
   }
+}
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length) }, worker));
+  return out;
 }
 
 // .config/herdr-app/src/shared/config.ts
@@ -96,6 +118,8 @@ async function loadConfig() {
   return config;
 }
 var secrets = /* @__PURE__ */ new Map();
+var missing = /* @__PURE__ */ new Map();
+var MISS_MS = 5 * 6e4;
 var ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function tokenPath(service) {
   return `${appHome()}/mission-control/${service}.token`;
@@ -109,6 +133,7 @@ async function loginEnv(name) {
 async function readSecret(spec, service) {
   const known = secrets.get(service);
   if (known !== void 0) return known;
+  if (Date.now() - (missing.get(service) ?? 0) < MISS_MS) return "";
   let value = "";
   if (spec.tokenCommand?.length) {
     const [cmd, ...args] = spec.tokenCommand;
@@ -121,10 +146,12 @@ async function readSecret(spec, service) {
   }
   if (!value) value = ((await readTextFile(tokenPath(service)).catch(() => null)) ?? "").trim();
   if (value) secrets.set(service, value);
+  else missing.set(service, Date.now());
   return value;
 }
 function forgetSecret(service) {
   secrets.delete(service);
+  missing.delete(service);
 }
 async function saveToken(service, token) {
   const path = tokenPath(service);
@@ -255,44 +282,71 @@ function repoAt(machine, cwd) {
   value.catch(() => cache2.delete(key));
   return value;
 }
+var SEP = "";
 async function ask(machine, cwd) {
   const none = { machine, cwd, root: null, remotes: [] };
   if (!cwd) return none;
-  const on = machine ?? void 0;
-  const top = await exec2("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-  if (top.code !== 0) return none;
-  const list = await exec2("git", ["remote", "-v"], { cwd, on });
+  const r = await exec2(
+    "sh",
+    ["-c", `git rev-parse --show-toplevel && printf '${SEP}\\n' && git remote -v`],
+    { cwd, on: machine ?? void 0 },
+  );
+  const cut = r.stdout.indexOf(SEP);
+  if (r.code !== 0 || cut < 0) return none;
   const urls = /* @__PURE__ */ new Map();
-  for (const line of list.stdout.split("\n")) {
+  for (const line of r.stdout.slice(cut + 1).split("\n")) {
     const [name, url] = line.split(/\s+/);
     if (name && url && !urls.has(name)) urls.set(name, url);
   }
   const names = [...urls.keys()].sort((a, b) => (a === "origin" ? -1 : b === "origin" ? 1 : 0));
   const remotes = names
     .map((n) => {
-      const r = parseRemote(urls.get(n));
-      return r ? { ...r, remoteName: n } : null;
+      const r2 = parseRemote(urls.get(n));
+      return r2 ? { ...r2, remoteName: n } : null;
     })
-    .filter((r) => r !== null);
-  return { machine, cwd, root: top.stdout.trim(), remotes };
+    .filter((r2) => r2 !== null);
+  return { machine, cwd, root: r.stdout.slice(0, cut).trim(), remotes };
 }
 async function spacesForSlug(slug) {
   const want = slug.toLowerCase();
-  const found = [];
-  for (const space of spaces()) {
-    const repo = await repoOf(space).catch(() => null);
-    if (repo?.remotes.some((r) => r.slug.toLowerCase() === want)) found.push(space);
-  }
-  return found;
+  const all = spaces();
+  const repos = await Promise.all(all.map((space) => repoOf(space).catch(() => null)));
+  return all.filter((_, i) => repos[i]?.remotes.some((r) => r.slug.toLowerCase() === want));
 }
 
 // .config/herdr-app/src/shared/launch.ts
+var pending = /* @__PURE__ */ new Set();
+function isPending(name) {
+  return pending.has(name);
+}
+function trackPending(name, cx, task) {
+  if (pending.has(name)) return;
+  pending.add(name);
+  cx.notify();
+  cx.spawn(async (cx2) => {
+    try {
+      await task();
+    } catch (e) {
+      notify({
+        title: `Couldn't start ${name}`,
+        body: String(e?.message ?? e).slice(-300),
+        level: "error",
+      });
+    } finally {
+      pending.delete(name);
+      cx2.notify();
+    }
+  });
+}
 function findTab(name) {
   for (const space of spaces2()) {
     const tab = space.tabs.find((t) => t.named && t.name === name);
     if (tab) return { space, tab: tab.id };
   }
   return null;
+}
+function namedTabs() {
+  return new Set(spaces2().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
 }
 var SESSIONS_KEY = "mc.agents.sessions";
 function backgroundSessions() {
@@ -409,9 +463,22 @@ async function copyText(text) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
+import {
+  layout,
+  run as run2,
+  setShared as setShared2,
+  shared as shared2,
+  theme as theme2,
+} from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
+var NODES = {
+  sidebar: "sidebar",
+  spaces: "mc-spaces",
+  agents: "mc-agents",
+  panel: "panel",
+  body: "panel-body",
+};
 var KEYS = {
   agentsHeight: "mc.agents.height",
   agentsFolded: "mc.agents.folded",
@@ -535,6 +602,8 @@ function asset(name) {
 // .config/herdr-app/src/shared/ui.ts
 var chromeIcon = (name) => `mods/workspace-chrome/${name}.svg`;
 var stopPress = (_e, cx) => cx.stop_propagation();
+var alpha = (color, a) =>
+  color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}${a}` : (color ?? "#00000000");
 function iconButton(id, icon, tooltip, onClick, opts = {}) {
   const t = theme();
   const size = opts.size ?? 26;
@@ -553,7 +622,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function textButton(id, label, onClick, opts = {}) {
   const t = theme();
@@ -628,6 +701,38 @@ function searchBox(id, state, opts = {}) {
     .child(svg(chromeIcon("search")).size(13).flex_none().text_color(t.dim))
     .child(Input.new(state).flex_1().min_w(0).h_full().text_size(12.5).text_color(t.foreground));
 }
+function statusMark(status, compact = false) {
+  const t = theme();
+  if (status === "working") {
+    return svg(chromeIcon("spinner")).size(12).mx(1).flex_none().text_color(t.working).spin(900);
+  }
+  if (status === "blocked") {
+    return compact
+      ? div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked)
+      : div()
+          .flex_none()
+          .px(6)
+          .h(18)
+          .rounded(5)
+          .bg(alpha(t.blocked, "26"))
+          .text_size(10.5)
+          .font_semibold()
+          .text_color(t.blocked)
+          .flex()
+          .items_center()
+          .child("Needs you");
+  }
+  if (status === "done") return div().size(7).mx(3).flex_none().rounded(4).bg(t.done);
+  if (status === "idle")
+    return div()
+      .size(7)
+      .mx(3)
+      .flex_none()
+      .rounded(4)
+      .border(1.5)
+      .border_color(t.idle ?? t.dim);
+  return div().size(7).mx(3).flex_none();
+}
 function emptyState(title, body, actions = []) {
   const t = theme();
   return v_flex()
@@ -645,6 +750,7 @@ function emptyState(title, body, actions = []) {
 }
 
 // .config/herdr-app/src/shared/list-view.ts
+var FRESH_MS = 3e4;
 var SCOPES = [
   { value: "space", label: "This space" },
   { value: "all", label: "All spaces" },
@@ -692,6 +798,7 @@ var ListView = class extends View {
     this.snap = { items: [], caption: "", note: "", setup: null, token: null, warning: "", at: 0 };
     this.cache = /* @__PURE__ */ new Map();
     this.loading = false;
+    this.busy = false;
     this.error = null;
     this.width = 0;
     this.seq = 0;
@@ -702,11 +809,26 @@ var ListView = class extends View {
     this.tokenInput = InputState.new({ placeholder: "Paste an access token" });
     this.tokenInput.set_masked(true);
     this.tokenInput.on("submit", (_e, cx2) => this.saveToken(cx2));
-    this.reload(cx);
-    cx.timer.every(1500, (cx2) => {
-      if (this.key() !== this.loadedKey) this.reload(cx2);
+    this.tried = 0;
+    this.memo = null;
+    cx.timer.every(Math.min(this.interval(), 6e4), (cx2) => {
+      if (this.shown() && this.due()) this.reload(cx2, true);
     });
-    cx.timer.every(this.interval(), (cx2) => this.reload(cx2, true));
+  }
+  /**
+   * Whether this copy is on screen: the panel is open and its stack shows this source. Copies stay
+   * alive while hidden (another source, panel closed), so they skip loading and drawing then.
+   * True when it isn't in the panel at all.
+   */
+  shown() {
+    const root = layout();
+    const body = findNode(root, NODES.body);
+    if (!body?.children?.some((c) => c.id === this.source())) return true;
+    return !findNode(root, NODES.panel)?.hidden && body.active === this.source();
+  }
+  /** Time to look again: never loaded, or `interval()` since the last try. */
+  due() {
+    return !this.busy && Date.now() - this.tried >= this.interval();
   }
   /** Saves the pasted token for the service the panel asked about, then loads again. */
   saveToken(cx) {
@@ -797,11 +919,35 @@ var ListView = class extends View {
   }
   setScope(scope, cx) {
     setShared2(KEYS.scope(this.source()), scope);
-    this.reload(cx);
+    this.switchTo(cx, this.key());
+    cx.notify();
   }
+  /** Loads again now and redraws (from a handler or a task, never from render). */
   reload(cx, quiet = false) {
-    const key = this.key();
+    this.load(cx, quiet);
+    cx.notify();
+  }
+  /**
+   * Shows another scope (a space switch, This space / All spaces): what it had last time at once,
+   * then asks again unless that was moments ago. No redraw, so render may call it.
+   */
+  switchTo(cx, key) {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < FRESH_MS) {
+      this.seq++;
+      this.snap = hit;
+      this.loadedKey = key;
+      this.tried = hit.at;
+      this.error = null;
+      this.loading = this.busy = false;
+      return;
+    }
+    this.load(cx, Boolean(hit), key);
+  }
+  /** Starts a load without asking for a redraw, so render may call it: render draws the result. */
+  load(cx, quiet = false, key = this.key()) {
     const seq = ++this.seq;
+    this.tried = Date.now();
     if (key !== this.loadedKey) {
       this.snap = this.cache.get(key) ?? {
         items: [],
@@ -815,8 +961,8 @@ var ListView = class extends View {
       this.error = null;
     }
     this.loadedKey = key;
-    if (!quiet) this.loading = true;
-    cx.notify();
+    this.loading = !quiet;
+    this.busy = true;
     cx.spawn(async (cx2) => {
       try {
         const r = await this.fetch(this.scope(), activeSpace());
@@ -841,6 +987,7 @@ var ListView = class extends View {
       } finally {
         if (seq === this.seq) {
           this.loading = false;
+          this.busy = false;
           cx2.notify();
         }
       }
@@ -855,9 +1002,13 @@ var ListView = class extends View {
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton("refresh", asset("refresh"), "Refresh", (_e, cx) => this.reload(cx), {
-          active: this.loading,
-        }),
+        iconButton(
+          "refresh",
+          asset("refresh"),
+          this.busy ? "Loading…" : "Refresh",
+          (_e, cx) => this.reload(cx),
+          { active: this.busy, spin: this.busy },
+        ),
       )
       .when(this.hasSettings(), (el) =>
         el.child(
@@ -888,9 +1039,20 @@ var ListView = class extends View {
   }
   footer(t, shown) {
     const total = this.snap.items.length;
-    const count =
-      shown === total ? `${total} ${this.noun()}` : `${shown} of ${total} ${this.noun()}`;
-    const when = this.loading ? "Loading…" : this.snap.at ? `Updated ${ago(this.snap.at)}` : "";
+    const explained =
+      total === 0 && Boolean(this.snap.setup || this.snap.token || this.snap.note || this.error);
+    const count = explained
+      ? ""
+      : shown === total
+        ? `${total} ${this.noun()}`
+        : `${shown} of ${total} ${this.noun()}`;
+    const when = this.loading
+      ? "Loading…"
+      : this.busy
+        ? "Refreshing…"
+        : this.snap.at
+          ? `Updated ${ago(this.snap.at)}`
+          : "";
     return h_flex2()
       .flex_none()
       .h(30)
@@ -911,9 +1073,35 @@ var ListView = class extends View {
         el.child(div2().min_w(0).truncate().child(this.snap.caption)),
       );
   }
+  /** `visible()` for the current rows and query, worked out again only when either changed. */
+  shownItems() {
+    const query = this.search.value();
+    const m = this.memo;
+    if (m && m.items === this.snap.items && m.query === query) return m.shown;
+    const shown = this.visible(this.snap.items, query);
+    this.memo = { items: this.snap.items, query, shown };
+    return shown;
+  }
   render(cx) {
     const t = theme2();
-    const items = this.visible(this.snap.items, this.search.value());
+    const root = v_flex2()
+      .id("root")
+      .size_full()
+      .min_h(0)
+      .bg(t.background)
+      .text_size(13)
+      .text_color(t.foreground)
+      .on_size_change((size, cx2) => {
+        if (Math.abs(size.width - this.width) >= 1) {
+          this.width = size.width;
+          cx2.notify();
+        }
+      });
+    if (!this.shown()) return root;
+    const key = this.key();
+    if (key !== this.loadedKey) this.switchTo(cx, key);
+    else if (this.due()) this.load(cx, true, key);
+    const items = this.shownItems();
     let content;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
@@ -946,23 +1134,8 @@ var ListView = class extends View {
             .child(this.body(t, items, cx))
         : this.body(t, items, cx);
     }
-    const sub =
-      this.snap.items.length && !this.snap.setup
-        ? this.subbar(t, this.visible(this.snap.items, this.search.value()))
-        : null;
-    return v_flex2()
-      .id("root")
-      .size_full()
-      .min_h(0)
-      .bg(t.background)
-      .text_size(13)
-      .text_color(t.foreground)
-      .on_size_change((size, cx2) => {
-        if (Math.abs(size.width - this.width) >= 1) {
-          this.width = size.width;
-          cx2.notify();
-        }
-      })
+    const sub = this.snap.items.length && !this.snap.setup ? this.subbar(t, items) : null;
+    return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el) => el.child(sub))
       .child(v_flex2().flex_1().min_h(0).pt(10).child(content))
@@ -1059,6 +1232,10 @@ function forgejoPull(p, slug, viewer, checks, reviews) {
 }
 
 // .config/herdr-app/src/shared/forgejo.ts
+var PARALLEL = 6;
+var settled = /* @__PURE__ */ new Map();
+var reviewCache = /* @__PURE__ */ new Map();
+var viewers = /* @__PURE__ */ new Map();
 var TokenError = class extends Error {
   ask;
   constructor(message, ask2) {
@@ -1101,18 +1278,42 @@ async function forgejo() {
 }
 async function forgejoRepoPulls(fj, slug, viewer) {
   const pulls = await fj.get(`/repos/${slug}/pulls?state=open&limit=50`);
-  return Promise.all(pulls.map((p) => detail(fj, slug, p, viewer)));
+  return mapLimit(pulls, PARALLEL, (p) => detail(fj, slug, p, viewer));
+}
+async function commitStatus(fj, slug, sha) {
+  const key = `${fj.base} ${slug}@${sha}`;
+  const known = settled.get(key);
+  if (known) return known;
+  const s = await fj.get(`/repos/${slug}/commits/${sha}/status`).catch(() => null);
+  if (s?.state === "success" || s?.state === "failure" || s?.state === "error") {
+    settled.set(key, s.state);
+  }
+  return s?.state;
+}
+async function pullReviews(fj, slug, p) {
+  const key = `${fj.base} ${slug}#${p.number}`;
+  const hit = reviewCache.get(key);
+  if (hit && hit.updated === p.updated_at) return hit.reviews;
+  const reviews = await fj.get(`/repos/${slug}/pulls/${p.number}/reviews`).catch(() => null);
+  if (!reviews) return hit?.reviews ?? [];
+  reviewCache.set(key, { updated: p.updated_at, reviews });
+  return reviews;
 }
 async function detail(fj, slug, p, viewer) {
-  const [status, reviews] = await Promise.all([
-    p.head?.sha ? fj.get(`/repos/${slug}/commits/${p.head.sha}/status`).catch(() => null) : null,
-    fj.get(`/repos/${slug}/pulls/${p.number}/reviews`).catch(() => []),
+  const [state, reviews] = await Promise.all([
+    p.head?.sha ? commitStatus(fj, slug, p.head.sha) : void 0,
+    pullReviews(fj, slug, p),
   ]);
-  return forgejoPull(p, slug, viewer, checksOf(status?.state), reviews);
+  return forgejoPull(p, slug, viewer, checksOf(state), reviews);
 }
 async function forgejoViewer(fj) {
   if (!fj.token) return "";
-  return (await fj.get("/user").catch(() => null))?.login ?? "";
+  const key = `${fj.base} ${fj.token}`;
+  const known = viewers.get(key);
+  if (known) return known;
+  const login = (await fj.get("/user").catch(() => null))?.login ?? "";
+  if (login) viewers.set(key, login);
+  return login;
 }
 async function forgejoMyPulls(fj, viewer) {
   const search = "/repos/issues/search?type=pulls&state=open&limit=30";
@@ -1126,12 +1327,10 @@ async function forgejoMyPulls(fj, viewer) {
     const slug = i.repository?.full_name;
     if (slug) seen.set(`${slug}#${i.number}`, { slug, number: i.number });
   }
-  return Promise.all(
-    [...seen.values()].slice(0, 30).map(async ({ slug, number }) => {
-      const p = await fj.get(`/repos/${slug}/pulls/${number}`);
-      return detail(fj, slug, p, viewer);
-    }),
-  );
+  return mapLimit([...seen.values()].slice(0, 30), PARALLEL, async ({ slug, number }) => {
+    const p = await fj.get(`/repos/${slug}/pulls/${number}`);
+    return detail(fj, slug, p, viewer);
+  });
 }
 
 // .config/herdr-app/src/shared/github.ts
@@ -1326,14 +1525,31 @@ var Pulls = class extends ListView {
       warning: [why(gh, "GitHub"), why(fj, "Forgejo")].filter(Boolean).join("; "),
     };
   }
+  found = null;
+  grouped = null;
   visible(items, query) {
-    return items
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items
       .filter((p) => matches(query, `#${p.number}`, p.title, p.slug, p.author, p.head))
       .sort((a, b) => b.updated - a.updated);
+    this.found = { items, query, out };
+    return out;
+  }
+  /** The non-empty groups, rebuilt only when the rows change. */
+  groups(items) {
+    if (this.grouped?.items === items) return this.grouped.groups;
+    const groups = GROUPS.map((g) => ({
+      label: g.label,
+      rows: items.filter((p) => p.group === g.id),
+    })).filter((g) => g.rows.length);
+    this.grouped = { items, groups };
+    return groups;
   }
   body(t, items, cx) {
     const program = useAgentProgram(cx);
     const all = this.scope() === "all";
+    const tabs = namedTabs();
+    const background = backgroundSessions();
     return v_flex4()
       .id("pulls")
       .flex_1()
@@ -1343,22 +1559,18 @@ var Pulls = class extends ListView {
       .gap(6)
       .overflow_y_scrollbar()
       .children(
-        GROUPS.flatMap((g) => {
-          const mine = items.filter((p) => p.group === g.id);
-          if (!mine.length) return [];
-          return [
-            h_flex4()
-              .h(26)
-              .pt(4)
-              .gap(7)
-              .items_center()
-              .text_size(12.5)
-              .text_color(t.muted)
-              .child(g.label)
-              .child(div4().text_size(11).text_color(t.dim).child(String(mine.length))),
-            ...mine.map((p) => this.row(t, p, program, all)),
-          ];
-        }),
+        this.groups(items).flatMap((g) => [
+          h_flex4()
+            .h(26)
+            .pt(4)
+            .gap(7)
+            .items_center()
+            .text_size(12.5)
+            .text_color(t.muted)
+            .child(g.label)
+            .child(div4().text_size(11).text_color(t.dim).child(String(g.rows.length))),
+          ...g.rows.map((p) => this.row(t, p, program, all, tabs, background)),
+        ]),
       );
   }
   badge(t, icon, text, color, tooltip) {
@@ -1371,9 +1583,14 @@ var Pulls = class extends ListView {
       .child(svg4(icon).size(12))
       .child(text);
   }
-  row(t, p, program, all) {
-    const tab = findTab(p.tabName);
-    const started = Boolean(tab) || backgroundSessions().has(p.tabName);
+  row(t, p, program, all, tabs, background) {
+    const tab = tabs.has(p.tabName);
+    const starting = isPending(p.tabName);
+    const started = tab || background.has(p.tabName);
+    const start = (action, cx) =>
+      trackPending(p.tabName, cx, () =>
+        startWork({ name: p.tabName, task: pullTask(p, action), repo: p.slug }),
+      );
     const shown = tab
       ? `Show the ${p.tabName} tab`
       : `${p.tabName} is running in the background: open it from Agents`;
@@ -1418,7 +1635,8 @@ var Pulls = class extends ListView {
               .text_size(12)
               .text_color(t.accent)
               .cursor_pointer()
-              .tooltip(p.url)
+              .hover((s) => s.underline())
+              .tooltip(`${p.url} · right-click copies it`)
               .on_click(() => void openUrl(p.url))
               .on_mouse_down("right", (_e, cx) => {
                 cx.stop_propagation();
@@ -1434,6 +1652,7 @@ var Pulls = class extends ListView {
               .truncate()
               .text_size(13.5)
               .cursor_pointer()
+              .hover((s) => s.underline())
               .on_click(() => void openUrl(p.url))
               .tooltip(p.title)
               .child(p.title),
@@ -1498,7 +1717,7 @@ var Pulls = class extends ListView {
             agentButton(
               `agent-${p.id}`,
               started ? shown : `Start ${agentName} to review #${p.number}`,
-              () => void startWork({ name: p.tabName, task: pullTask(p, "review"), repo: p.slug }),
+              (_e, cx) => start("review", cx),
               program,
               t,
             ),
@@ -1518,15 +1737,15 @@ var Pulls = class extends ListView {
                 .border(1)
                 .border_color(t.border)
                 .hover((s) => s.bg(t.hover).text_color(t.foreground))
+                .on_mouse_down("left", stopPress)
                 .tooltip(started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`)
-                .on_click(
-                  () => void startWork({ name: p.tabName, task: pullTask(p, a.id), repo: p.slug }),
-                )
+                .on_click((_e, cx) => start(a.id, cx))
                 .child(a.label),
             ),
           )
           .child(div4().flex_1())
-          .when(started, (el) => el.child(div4().size(6).rounded(3).bg(t.working)))
+          .when(starting, (el) => el.child(statusMark("working")))
+          .when(started && !starting, (el) => el.child(div4().size(6).rounded(3).bg(t.working)))
           .child(
             iconButton(
               `open-${p.id}`,

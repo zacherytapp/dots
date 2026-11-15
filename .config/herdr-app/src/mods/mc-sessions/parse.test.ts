@@ -76,3 +76,19 @@ test("days group sessions", () => {
   assert.equal(dayOf(new Date(2026, 10, 3, 9, 0).getTime(), now), "This week");
   assert.equal(dayOf(new Date(2026, 9, 1).getTime(), now), "Earlier");
 });
+
+test("the newest line's folder, branch and time win; titles are still found among many lines", () => {
+  const rows: object[] = [{ type: "custom-title", customTitle: "Named" }];
+  for (let i = 0; i < 100; i++)
+    rows.push({
+      type: "assistant",
+      cwd: i < 99 ? "/old" : "/new",
+      gitBranch: i < 99 ? "old" : "topic",
+      timestamp: `2026-11-07T10:${String(i % 60).padStart(2, "0")}:00Z`,
+    });
+  const s = parseTail(entry, null, lines(...rows));
+  assert.equal(s.title, "Named");
+  assert.equal(s.cwd, "/new");
+  assert.equal(s.branch, "topic");
+  assert.equal(s.updated, Date.parse("2026-11-07T10:39:00Z"));
+});

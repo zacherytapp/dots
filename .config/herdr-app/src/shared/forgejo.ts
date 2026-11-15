@@ -7,6 +7,17 @@ import { checksOf, forgejoPull, type ForgejoPull, type ForgejoReview } from "./f
 import type { PullItem } from "./github-model.ts";
 import type { TokenAsk } from "./list-view.ts";
 import { hostOf, onHost, type Remote } from "./remote.ts";
+import { mapLimit } from "./util.ts";
+
+/** Requests at once per batch of pull request details: enough to be quick, not a flood. */
+const PARALLEL = 6;
+
+/** A commit's settled status (success, failure, error), by "slug@sha": it never changes again. */
+const settled = new Map<string, string>();
+/** A pull request's reviews, by "slug#number", kept while its updated_at stays the same. */
+const reviewCache = new Map<string, { updated: string; reviews: ForgejoReview[] }>();
+/** The signed-in login per server and token. */
+const viewers = new Map<string, string>();
 
 export class TokenError extends Error {
   ask: TokenAsk;
@@ -71,7 +82,37 @@ export async function forgejoRepoPulls(
   viewer: string,
 ): Promise<PullItem[]> {
   const pulls = await fj.get<ForgejoPull[]>(`/repos/${slug}/pulls?state=open&limit=50`);
-  return Promise.all(pulls.map((p) => detail(fj, slug, p, viewer)));
+  return mapLimit(pulls, PARALLEL, (p) => detail(fj, slug, p, viewer));
+}
+
+/** A commit's combined status ("success", "pending", ...), or undefined when it can't be read. */
+export async function commitStatus(
+  fj: Forgejo,
+  slug: string,
+  sha: string,
+): Promise<string | undefined> {
+  const key = `${fj.base} ${slug}@${sha}`;
+  const known = settled.get(key);
+  if (known) return known;
+  const s = await fj
+    .get<{ state?: string }>(`/repos/${slug}/commits/${sha}/status`)
+    .catch(() => null);
+  if (s?.state === "success" || s?.state === "failure" || s?.state === "error") {
+    settled.set(key, s.state);
+  }
+  return s?.state;
+}
+
+async function pullReviews(fj: Forgejo, slug: string, p: ForgejoPull): Promise<ForgejoReview[]> {
+  const key = `${fj.base} ${slug}#${p.number}`;
+  const hit = reviewCache.get(key);
+  if (hit && hit.updated === p.updated_at) return hit.reviews;
+  const reviews = await fj
+    .get<ForgejoReview[]>(`/repos/${slug}/pulls/${p.number}/reviews`)
+    .catch(() => null);
+  if (!reviews) return hit?.reviews ?? [];
+  reviewCache.set(key, { updated: p.updated_at, reviews });
+  return reviews;
 }
 
 async function detail(
@@ -80,19 +121,22 @@ async function detail(
   p: ForgejoPull,
   viewer: string,
 ): Promise<PullItem> {
-  const [status, reviews] = await Promise.all([
-    p.head?.sha
-      ? fj.get<{ state?: string }>(`/repos/${slug}/commits/${p.head.sha}/status`).catch(() => null)
-      : null,
-    fj.get<ForgejoReview[]>(`/repos/${slug}/pulls/${p.number}/reviews`).catch(() => []),
+  const [state, reviews] = await Promise.all([
+    p.head?.sha ? commitStatus(fj, slug, p.head.sha) : undefined,
+    pullReviews(fj, slug, p),
   ]);
-  return forgejoPull(p, slug, viewer, checksOf(status?.state), reviews);
+  return forgejoPull(p, slug, viewer, checksOf(state), reviews);
 }
 
 /** The signed-in user's login, or "" without a token. */
 export async function forgejoViewer(fj: Forgejo): Promise<string> {
   if (!fj.token) return "";
-  return (await fj.get<{ login: string }>("/user").catch(() => null))?.login ?? "";
+  const key = `${fj.base} ${fj.token}`;
+  const known = viewers.get(key);
+  if (known) return known;
+  const login = (await fj.get<{ login: string }>("/user").catch(() => null))?.login ?? "";
+  if (login) viewers.set(key, login);
+  return login;
 }
 
 /** Open pull requests involving you on the whole server (needs a token). */
@@ -110,10 +154,8 @@ export async function forgejoMyPulls(fj: Forgejo, viewer: string): Promise<PullI
     const slug = i.repository?.full_name;
     if (slug) seen.set(`${slug}#${i.number}`, { slug, number: i.number });
   }
-  return Promise.all(
-    [...seen.values()].slice(0, 30).map(async ({ slug, number }) => {
-      const p = await fj.get<ForgejoPull>(`/repos/${slug}/pulls/${number}`);
-      return detail(fj, slug, p, viewer);
-    }),
-  );
+  return mapLimit([...seen.values()].slice(0, 30), PARALLEL, async ({ slug, number }) => {
+    const p = await fj.get<ForgejoPull>(`/repos/${slug}/pulls/${number}`);
+    return detail(fj, slug, p, viewer);
+  });
 }

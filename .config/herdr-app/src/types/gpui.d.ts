@@ -24,6 +24,7 @@ declare module "gpui-kit" {
     readonly timer: Timer;
     stop_propagation(): void;
     focus_handle(): FocusHandle;
+    write_to_clipboard(text: string): void;
   }
 
   export interface Size {

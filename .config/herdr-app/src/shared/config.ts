@@ -126,6 +126,9 @@ export async function loadConfig(): Promise<Config> {
 }
 
 const secrets = new Map<string, string>();
+/** Services with no token anywhere, and when that was found: not looked for again for a while. */
+const missing = new Map<string, number>();
+const MISS_MS = 5 * 60000;
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** Where a token saved from a panel lives: in the live app home only, never in the dots repo. */
@@ -149,6 +152,8 @@ async function loginEnv(name: string): Promise<string> {
 export async function readSecret(spec: SecretSpec, service: string): Promise<string> {
   const known = secrets.get(service);
   if (known !== undefined) return known;
+  // Finding none runs a login shell (slow): don't do that on every refresh.
+  if (Date.now() - (missing.get(service) ?? 0) < MISS_MS) return "";
   let value = "";
   if (spec.tokenCommand?.length) {
     const [cmd, ...args] = spec.tokenCommand;
@@ -161,11 +166,13 @@ export async function readSecret(spec: SecretSpec, service: string): Promise<str
   }
   if (!value) value = ((await readTextFile(tokenPath(service)).catch(() => null)) ?? "").trim();
   if (value) secrets.set(service, value);
+  else missing.set(service, Date.now());
   return value;
 }
 
 export function forgetSecret(service: string): void {
   secrets.delete(service);
+  missing.delete(service);
 }
 
 /** Saves a token pasted into a panel: a 700 folder, a 600 file, outside the repo. */

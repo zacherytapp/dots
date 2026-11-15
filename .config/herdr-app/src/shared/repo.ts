@@ -52,15 +52,22 @@ export function repoAt(machine: string | null, cwd: string): Promise<SpaceRepo> 
   return value;
 }
 
+/** Splits `git rev-parse --show-toplevel` from `git remote -v` in one run's output. */
+const SEP = "\x1e";
+
 async function ask(machine: string | null, cwd: string): Promise<SpaceRepo> {
   const none: SpaceRepo = { machine, cwd, root: null, remotes: [] };
   if (!cwd) return none;
-  const on = machine ?? undefined;
-  const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-  if (top.code !== 0) return none;
-  const list = await exec("git", ["remote", "-v"], { cwd, on });
+  // One run for both questions: on another machine each run is a round trip.
+  const r = await exec(
+    "sh",
+    ["-c", `git rev-parse --show-toplevel && printf '${SEP}\\n' && git remote -v`],
+    { cwd, on: machine ?? undefined },
+  );
+  const cut = r.stdout.indexOf(SEP);
+  if (r.code !== 0 || cut < 0) return none;
   const urls = new Map<string, string>();
-  for (const line of list.stdout.split("\n")) {
+  for (const line of r.stdout.slice(cut + 1).split("\n")) {
     const [name, url] = line.split(/\s+/);
     if (name && url && !urls.has(name)) urls.set(name, url);
   }
@@ -71,16 +78,14 @@ async function ask(machine: string | null, cwd: string): Promise<SpaceRepo> {
       return r ? { ...r, remoteName: n } : null;
     })
     .filter((r): r is Remote => r !== null);
-  return { machine, cwd, root: top.stdout.trim(), remotes };
+  return { machine, cwd, root: r.stdout.slice(0, cut).trim(), remotes };
 }
 
 /** Spaces whose repo has a remote with this slug, on any machine. Resolves every space once. */
 export async function spacesForSlug(slug: string): Promise<SpaceInfo[]> {
   const want = slug.toLowerCase();
-  const found: SpaceInfo[] = [];
-  for (const space of spaces()) {
-    const repo = await repoOf(space).catch(() => null);
-    if (repo?.remotes.some((r) => r.slug.toLowerCase() === want)) found.push(space);
-  }
-  return found;
+  // Every space at once: each is a git call, maybe on another machine, cached for a few minutes.
+  const all = spaces();
+  const repos = await Promise.all(all.map((space) => repoOf(space).catch(() => null)));
+  return all.filter((_, i) => repos[i]?.remotes.some((r) => r.slug.toLowerCase() === want));
 }

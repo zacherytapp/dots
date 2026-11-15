@@ -8,6 +8,9 @@ export interface TabLabel {
   name: string;
   /** The small text: folder, and branch when it isn't main/master. */
   detail: string;
+  /** What a compact pill says beside the program icon, at most SHORT characters: the name, or
+   *  the folder when the name would only repeat the program the icon already shows. */
+  short: string;
   /** Full path, branch and panes, for the tooltip. */
   tooltip: string;
   /** The pane whose program and folder the pill shows. */
@@ -18,6 +21,20 @@ export interface TabLabel {
 export function leadPane(tab: TabInfo, all: PaneInfo[]): PaneInfo | null {
   const mine = all.filter((p) => p.tab === tab.id);
   return mine.find((p) => p.program?.agent) ?? mine.find((p) => p.focused) ?? mine[0] ?? null;
+}
+
+/** How many characters a compact pill shows. */
+export const SHORT = 8;
+
+/** Cuts text to `max` characters (by code point), the last one an ellipsis. */
+export function clip(text: string, max = SHORT): string {
+  const chars = [...text.trim()];
+  return chars.length <= max
+    ? chars.join("")
+    : `${chars
+        .slice(0, max - 1)
+        .join("")
+        .trimEnd()}…`;
 }
 
 const SHELL_TITLE = /^[\w.-]+@[\w.-]+[:\s]|^[~/]|^[A-Za-z]:\\/;
@@ -33,6 +50,7 @@ export function tabLabel(tab: TabInfo, all: PaneInfo[], home: string): TabLabel 
     !/^(claude(?: code)?|zsh|bash|fish|sh)$/i.test(title);
   const name = tab.named ? tab.name : telling ? title : (program?.name ?? `Tab ${tab.index}`);
   const folder = lead?.cwd ? (lead.cwd === home ? "~" : baseName(lead.cwd)) : "";
+  const short = clip(tab.named || telling || !program?.icon ? name : folder || name);
   const branch = lead?.branch && !["main", "master"].includes(lead.branch) ? lead.branch : "";
   const detail = [folder, branch].filter(Boolean).join(" · ");
   const tooltip = [
@@ -44,5 +62,5 @@ export function tabLabel(tab: TabInfo, all: PaneInfo[], home: string): TabLabel 
   ]
     .filter(Boolean)
     .join("\n");
-  return { name, detail: detail === name ? "" : detail, tooltip, lead };
+  return { name, detail: detail === name ? "" : detail, short, tooltip, lead };
 }

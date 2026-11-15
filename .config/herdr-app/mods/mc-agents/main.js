@@ -6,13 +6,14 @@ import {
   agents,
   home as home2,
   layout,
+  nextCommand,
   notify as notify2,
   panes as panes3,
   playSound,
   run as run2,
   setAgentOrder,
-  setShared as setShared2,
-  shared as shared2,
+  setShared as setShared3,
+  shared as shared3,
   spaces as spaces3,
   terminals,
   theme as theme2,
@@ -89,6 +90,11 @@ function matches(query, ...hay) {
   const text = hay.filter(Boolean).join(" ").toLowerCase();
   return words.every((w) => text.includes(w));
 }
+function stepIn(list, current, step) {
+  if (!list.length) return null;
+  if (current < 0 || current >= list.length) return list[step === 1 ? 0 : list.length - 1];
+  return list[(current + step + list.length) % list.length];
+}
 function claudeProjectDir(cwd) {
   return cwd.replace(/[^A-Za-z0-9]/g, "-");
 }
@@ -100,6 +106,9 @@ function parseJson(text, fallback) {
     return fallback;
   }
 }
+
+// .config/herdr-app/src/shared/config.ts
+var MISS_MS = 5 * 6e4;
 
 // .config/herdr-app/src/shared/repo.ts
 import { exec as exec2, panes, spaces } from "herdr";
@@ -130,6 +139,48 @@ function publishSessions(names) {
   const next = [...new Set(names)].sort();
   const now = [...backgroundSessions()].sort();
   if (next.join("\n") !== now.join("\n")) setShared(SESSIONS_KEY, next);
+}
+
+// .config/herdr-app/src/shared/space-agents.ts
+import { setShared as setShared2, shared as shared2 } from "herdr";
+
+// .config/herdr-app/src/shared/space-agents-model.ts
+var WEEK = 7 * 864e5;
+var inside = (folder, path) => {
+  const f = folder.replace(/\/+$/, "");
+  return path === f || path.startsWith(`${f}/`);
+};
+function placeOf(row, places) {
+  const cwd = row.job?.cwd ?? row.cwd;
+  if (!cwd) return null;
+  let best = null;
+  for (const p of places) {
+    if ((p.machine ?? null) !== (row.machine ?? null)) continue;
+    for (const f of p.folders) {
+      if (f && inside(f, cwd) && (!best || f.length > best.len)) best = { id: p.id, len: f.length };
+    }
+  }
+  return best?.id ?? null;
+}
+function countBySpace(rows, places, now = Date.now()) {
+  const out = {};
+  for (const r of rows) {
+    if (r.depth > 0) continue;
+    if (r.job && now - r.job.updated > WEEK) continue;
+    const id = r.space ?? (r.job ? placeOf(r, places) : null);
+    if (!id) continue;
+    const c = (out[id] ??= { working: 0, blocked: 0, done: 0, idle: 0 });
+    c[r.status] += 1;
+  }
+  return out;
+}
+
+// .config/herdr-app/src/shared/space-agents.ts
+var SPACE_AGENTS_KEY = "mc.agents.bySpace";
+function publishSpaceAgents(counts) {
+  const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+  if (JSON.stringify(shared2(SPACE_AGENTS_KEY)) === JSON.stringify(sorted)) return;
+  setShared2(SPACE_AGENTS_KEY, sorted);
 }
 
 // .config/herdr-app/src/shared/ui.ts
@@ -273,7 +324,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function searchBox(id, state, opts = {}) {
   const t = theme();
@@ -403,6 +458,19 @@ function splitBlocks(stdout) {
   }
   return out;
 }
+function contextKey(rows) {
+  return rows
+    .map((r) => `${r.address}|${r.machine}|${r.job?.sessionId ?? ""}|${r.job?.updated ?? 0}`)
+    .join("\n");
+}
+function sameReadings(a, b) {
+  if (a.size !== b.size) return false;
+  for (const [k, v] of a) {
+    const w = b.get(k);
+    if (!w || w.tokens !== v.tokens || w.model !== v.model || w.effort !== v.effort) return false;
+  }
+  return true;
+}
 
 // .config/herdr-app/src/mods/mc-agents/context.ts
 var READER = [
@@ -525,6 +593,12 @@ function matchJob(jobs, machine, cwd, titles, taken, fallback = false) {
   const open = near.filter((j) => j.cwd === cwd && !CLOSED.has(j.state));
   return open.length === 1 ? open[0] : null;
 }
+function skipAfterFailures(fails) {
+  return fails <= 0 ? 0 : Math.min(2 ** fails - 1, 11);
+}
+function jobsKey(jobs) {
+  return jobs.map((j) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`).join("\n");
+}
 
 // .config/herdr-app/src/mods/mc-agents/jobs.ts
 var READER2 = [
@@ -544,10 +618,10 @@ function jobMachines() {
 }
 async function readJobsOn(machine) {
   try {
-    const r = await exec6("sh", ["-c", READER2], { on: machine ?? void 0 });
+    const r = await exec6("sh", ["-c", READER2], { on: machine ?? void 0, timeout: 15e3 });
     return parseJobs(r.stdout, machine);
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -578,6 +652,15 @@ function titleMark(title) {
 function liveStatus(title, job) {
   if (job?.state === "blocked") return "blocked";
   return titleMark(title) ?? (job ? jobStatus(job.state) : "idle");
+}
+function trackFinished(rows, before, finished, seen) {
+  const next = /* @__PURE__ */ new Set();
+  for (const r of rows) {
+    if (!r.guessed || !r.pane || r.depth > 0) continue;
+    if ((r.status !== "idle" && r.status !== "done") || seen(r)) continue;
+    if (finished.has(r.address) || before?.get(r.address) === "working") next.add(r.address);
+  }
+  return next;
 }
 function meaningful(title, program) {
   const t = cleanTitle(title);
@@ -675,6 +758,8 @@ function buildModel(input) {
     const alone = left.filter((o) => o.machine === r.machine && o.cwd === r.cwd).length === 1;
     if (alone) attach(r, matchJob(jobs, r.machine, r.cwd, titles(r), taken, true));
   }
+  for (const r of nativeRows)
+    if (r.guessed && r.status === "idle" && input.finished?.has(r.address)) r.status = "done";
   const isAgent = (t) =>
     t.state === "live" && (t.program?.agent === true || (t.status != null && t.status !== ""));
   const extraRow = (t, depth) => {
@@ -756,9 +841,9 @@ function buildModel(input) {
     detail: j.detail || (j.state === "stopped" ? "Stopped" : null),
     job: j,
   });
-  const WEEK = 7 * 864e5;
+  const WEEK2 = 7 * 864e5;
   const openJobs = jobs.filter((j) => !CLOSED.has(j.state) && !shown.has(j));
-  const recent = (j) => now - j.updated < WEEK;
+  const recent = (j) => now - j.updated < WEEK2;
   const activeJobs = openJobs.filter((j) => recent(j) && j.state !== "stopped").map(jobRow);
   const stoppedJobs = openJobs.filter((j) => recent(j) && j.state === "stopped").map(jobRow);
   const oldJobs = openJobs.filter((j) => !recent(j)).map(jobRow);
@@ -840,7 +925,7 @@ function buildModel(input) {
     .map((r) => r.address);
   for (const a of input.agents) if (!order.includes(a.address)) order.push(a.address);
   const stale = new Set([...stoppedJobs, ...oldJobs].map((r) => r.address));
-  const needsYou = all.filter((r) => r.status === "blocked" && !stale.has(r.address)).length;
+  const needsYou = all.filter((r) => r.status === "blocked" && !stale.has(r.address));
   return {
     groups,
     order,
@@ -863,9 +948,9 @@ function attachJob(job) {
     return;
   }
   const argv = ["claude", "attach", job.id];
-  const inside = (f) => job.cwd === f || job.cwd.startsWith(`${f.replace(/\/+$/, "")}/`);
+  const inside2 = (f) => job.cwd === f || job.cwd.startsWith(`${f.replace(/\/+$/, "")}/`);
   const space = spaces3().find(
-    (s) => (s.machine ?? null) === job.machine && spaceFolders(s).some(inside),
+    (s) => (s.machine ?? null) === job.machine && spaceFolders(s).some(inside2),
   );
   if (space) {
     run2("space.select", { id: space.id });
@@ -888,15 +973,33 @@ var Agents = class extends View {
     this.jobsBy = /* @__PURE__ */ new Map();
     this.jobsBusy = /* @__PURE__ */ new Set();
     this.jobsAgain = /* @__PURE__ */ new Set();
+    this.jobsFails = /* @__PURE__ */ new Map();
+    this.contextSeen = { key: "", at: 0 };
     this.lastStatus = null;
+    this.finished = /* @__PURE__ */ new Set();
     this.drawnKey = "";
+    this.orderKey = null;
+    this.cursor = null;
+    this.urgent = [];
+    this.navRows = [];
+    cx.spawn(async (cx2) => {
+      for (;;) {
+        const c = await nextCommand();
+        try {
+          if (c === "next") this.step(1);
+          else if (c === "prev") this.step(-1);
+          else if (c === "needs-you") this.nextNeedingYou();
+        } catch {}
+        cx2.notify();
+      }
+    });
     cx.timer.every(1e3, (cx2) => {
       if (this.liveKey() !== this.drawnKey) cx2.notify();
     });
-    this.readJobs(null, cx);
+    this.readJobs(null, cx, true);
     this.readRemoteJobs(cx);
     this.watchJobs(cx);
-    cx.timer.every(LOCAL_JOBS_MS, (cx2) => this.readJobs(null, cx2));
+    cx.timer.every(LOCAL_JOBS_MS, (cx2) => this.readJobs(null, cx2, true));
     cx.timer.every(REMOTE_JOBS_MS, (cx2) => this.readRemoteJobs(cx2));
     cx.timer.every(15e3, (cx2) => this.readContext(cx2));
     cx.timer.after(1500, (cx2) => this.readContext(cx2));
@@ -906,27 +1009,33 @@ var Agents = class extends View {
    * mark. A title change alone may not redraw a mod, so a 1 s look compares this to what was drawn
    * and redraws only when an agent would change state (and then notifies at once if it waits).
    */
-  liveKey() {
-    return panes3()
-      .map((p) => `${p.terminal}:${p.status ?? titleMark(p.title) ?? ""}`)
-      .join("|");
+  liveKey(paneList = panes3()) {
+    return paneList.map((p) => `${p.terminal}:${p.status ?? titleMark(p.title) ?? ""}`).join("|");
   }
   mode() {
-    return shared2("mc.agents.mode") === "spaces" ? "spaces" : "priority";
+    return shared3("mc.agents.mode") === "spaces" ? "spaces" : "priority";
   }
   open() {
-    return shared2(KEYS.agentsFolded) !== true;
+    return shared3(KEYS.agentsFolded) !== true;
   }
   readContext(cx) {
     if (this.reading || !this.open()) return;
-    this.reading = true;
     const rows = this.rows.filter((r) => r.depth === 0);
+    const key = contextKey(rows);
+    const now = Date.now();
+    const working = rows.some((r) => r.status === "working");
+    if (key === this.contextSeen.key && !working && now - this.contextSeen.at < 12e4) return;
+    this.contextSeen = { key, at: now };
+    this.reading = true;
     cx.spawn(async (cx2) => {
       try {
-        this.readings = await readContexts(rows);
+        const next = await readContexts(rows);
+        if (!sameReadings(next, this.readings)) {
+          this.readings = next;
+          cx2.notify();
+        }
       } finally {
         this.reading = false;
-        cx2.notify();
       }
     });
   }
@@ -950,15 +1059,26 @@ var Agents = class extends View {
     for (const key of [...this.jobsBy.keys()])
       if (key && !live.includes(key)) {
         this.jobsBy.delete(key);
+        this.jobsFails.delete(key);
         this.publishJobs(cx);
       }
-    for (const m of live) this.readJobs(m, cx);
+    for (const m of live) {
+      const f = this.jobsFails.get(m);
+      if (f && f.wait > 0) {
+        f.wait--;
+        continue;
+      }
+      this.readJobs(m, cx, true);
+    }
   }
-  /** Reads one machine's jobs; a read asked for mid-read runs again right after it. */
-  readJobs(machine, cx) {
+  /**
+   * Reads one machine's jobs. A read asked for by a timer while one is running is dropped (a slow
+   * machine never stacks requests); one asked for by a change on disk runs again right after.
+   */
+  readJobs(machine, cx, timer = false) {
     const key = machine ?? "";
     if (this.jobsBusy.has(key)) {
-      this.jobsAgain.add(key);
+      if (!timer) this.jobsAgain.add(key);
       return;
     }
     this.jobsBusy.add(key);
@@ -966,22 +1086,44 @@ var Agents = class extends View {
       try {
         do {
           this.jobsAgain.delete(key);
-          this.jobsBy.set(key, await readJobsOn(machine));
-          this.publishJobs(cx2);
+          const jobs = await readJobsOn(machine);
+          const was = this.jobsFails.get(key);
+          const wasLoaded = this.jobsBy.has(key);
+          if (jobs) {
+            this.jobsBy.set(key, jobs);
+            this.jobsFails.delete(key);
+          } else if (machine) {
+            const fails = (was?.fails ?? 0) + 1;
+            this.jobsFails.set(key, { fails, wait: skipAfterFailures(fails) });
+            if (!this.jobsBy.has(key)) this.jobsBy.set(key, []);
+          }
+          const flipped =
+            Boolean(was) !== Boolean(this.jobsFails.get(key)) || (machine !== null && !wasLoaded);
+          if (!this.publishJobs(cx2) && flipped) cx2.notify();
         } while (this.jobsAgain.has(key));
       } finally {
         this.jobsBusy.delete(key);
       }
     });
   }
+  /** Machines not read yet (loading) and those that can't be reached, for the list to show. */
+  machineNotes() {
+    const live = jobMachines();
+    return {
+      loading: live.filter((m) => !this.jobsBy.has(m)),
+      away: live.filter((m) => this.jobsFails.has(m)),
+    };
+  }
   /** Redraws only when a job's state, detail or time changed. */
   publishJobs(cx) {
     const jobs = [...this.jobsBy.values()].flat();
-    const key = (j) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`;
-    if (jobs.map(key).join("\n") === this.jobs.map(key).join("\n")) return;
+    if (jobsKey(jobs) === jobsKey(this.jobs)) {
+      return false;
+    }
     this.jobs = jobs;
     publishSessions(jobs.map((j) => j.name));
     cx.notify();
+    return true;
   }
   /**
    * Posts a notification when an agent starts waiting for you. Herdr already does this for agents
@@ -1028,9 +1170,41 @@ var Agents = class extends View {
     localStorage.setItem("changed", JSON.stringify(this.changed));
   }
   focus(r) {
+    this.cursor = r.address;
     if (r.native && r.pane) run2("pane.focus", { pane: r.pane });
     else if (r.job) attachJob(r.job);
     else run2("terminal.peek", { terminal: r.address });
+  }
+  /** The agent being looked at: the focused pane in the shown tab, else where the keys last went. */
+  current() {
+    const tab = spaces3()
+      .find((s) => s.active)
+      ?.tabs.find((t) => t.active)?.id;
+    return panes3().find((p) => p.tab === tab && p.focused)?.terminal ?? this.cursor;
+  }
+  /**
+   * Shows the next (or previous) agent in a pane, in the order this list draws them. Background
+   * jobs without a tab are skipped: stepping past one shouldn't open a tab for it.
+   */
+  step(step) {
+    const list = this.navRows.filter((r) => r.depth === 0 && r.native && r.pane);
+    const here = this.current();
+    const next = stepIn(
+      list,
+      list.findIndex((r) => r.address === here),
+      step,
+    );
+    if (next) this.focus(next);
+  }
+  /** Shows the next agent waiting for you after the current one (a background job opens in a tab). */
+  nextNeedingYou() {
+    const here = this.current();
+    const next = stepIn(
+      this.urgent,
+      this.urgent.findIndex((r) => r.address === here),
+      1,
+    );
+    if (next) this.focus(next);
   }
   row(t, r) {
     const pic =
@@ -1111,6 +1285,7 @@ var Agents = class extends View {
                 .rounded(4)
                 .text_size(11)
                 .text_color(t.dim)
+                .cursor_pointer()
                 .hover((s) => s.bg(t.hover).text_color(t.foreground))
                 .on_click((_e, cx) => {
                   cx.stop_propagation();
@@ -1214,7 +1389,31 @@ var Agents = class extends View {
       )
       .child(div2().text_color(t.dim).child(String(g.count)))
       .child(div2().flex_1())
-      .when(!open, (el) => el.child(svg2(chromeIcon("chevron-right")).size(11).text_color(t.dim)));
+      .child(
+        svg2(chromeIcon(open ? "chevron-down" : "chevron-right"))
+          .size(11)
+          .text_color(t.dim),
+      );
+  }
+  /** A line per machine still being read (spinner) or unreachable, so it isn't silently empty. */
+  machineNotes_(t) {
+    const { loading, away } = this.machineNotes();
+    const line = (key, mark, text) =>
+      h_flex2()
+        .id(`note-${key}`)
+        .flex_none()
+        .px(8)
+        .py(4)
+        .gap(8)
+        .items_center()
+        .text_size(11.5)
+        .text_color(t.dim)
+        .child(mark ?? div2().w(12).flex_none())
+        .child(div2().flex_1().min_w(0).truncate().child(text));
+    return [
+      ...loading.map((m) => line(`l-${m}`, statusMark("working"), `Reading ${m}…`)),
+      ...away.map((m) => line(`a-${m}`, null, `${m} is unreachable; showing what was last seen`)),
+    ];
   }
   compact(t, rows) {
     return v_flex2()
@@ -1234,8 +1433,10 @@ var Agents = class extends View {
               .px(8)
               .gap(4)
               .items_center()
+              .cursor_pointer()
               .hover((s) => s.bg(t.hover))
               .on_click(() => this.focus(r))
+              .tooltip(`${r.title} · ${r.status}`)
               .child(
                 div2()
                   .flex_1()
@@ -1248,42 +1449,96 @@ var Agents = class extends View {
           ),
       );
   }
+  /** An agent you can see: focused, or in the shown tab. */
+  seen(spaceList, paneList) {
+    const tab = spaceList.find((s) => s.active)?.tabs.find((t) => t.active)?.id;
+    const shown = new Set(paneList.filter((p) => p.tab === tab).map((p) => p.pane));
+    return (r) => r.focused || (r.pane !== null && shown.has(r.pane));
+  }
+  /**
+   * The agents list as drawn, and every agent regardless of the search (what the Spaces rows,
+   * the finished marks and the notifications go by). Agents that just finished unseen show as done.
+   */
+  models(input) {
+    const seen = this.seen(input.spaces, input.panes);
+    const build = (finished) => {
+      const model = buildModel({ ...input, finished });
+      const full = input.query ? buildModel({ ...input, finished, query: "" }) : model;
+      return { model, full };
+    };
+    let built = build(this.finished);
+    const next = trackFinished(built.full.all, this.lastStatus, this.finished, seen);
+    if (next.size !== this.finished.size || [...next].some((a) => !this.finished.has(a))) {
+      this.finished = next;
+      built = build(next);
+    }
+    return built;
+  }
+  /** Tells mc-spaces how many agents in each space work, wait for you or finished. */
+  publishSpaces(rows, spaceList) {
+    const places = spaceList.map((s) => ({
+      id: s.id,
+      machine: s.machine ?? null,
+      folders: spaceFolders(s),
+    }));
+    publishSpaceAgents(countBySpace(rows, places));
+  }
   render() {
     const t = theme2();
     const open = this.open();
     const mode = this.mode();
-    this.drawnKey = this.liveKey();
-    const model = buildModel({
+    const spaceList = spaces3();
+    const paneList = panes3();
+    this.drawnKey = this.liveKey(paneList);
+    const { model, full } = this.models({
       agents: agents(),
       terminals: terminals(),
-      spaces: spaces3(),
-      panes: panes3(),
+      spaces: spaceList,
+      panes: paneList,
       mode,
       query: this.search.value(),
       folded: this.folded,
       jobs: this.jobs,
     });
-    this.alert(model.all);
-    setAgentOrder(model.order);
+    this.alert(full.all);
+    this.publishSpaces(full.all, spaceList);
+    const order = model.order.join("\n");
+    if (order !== this.orderKey) {
+      this.orderKey = order;
+      setAgentOrder(model.order);
+    }
     const rows = model.groups.flatMap((g) => g.rows);
     this.rows = rows;
     this.track(rows.filter((r) => r.depth === 0));
     if (narrow()) return this.compact(t, rows);
-    const urgent = model.needsYou;
+    this.urgent = full.needsYou;
+    this.navRows = full.groups.flatMap((g) => g.rows);
+    const urgent2 = full.needsYou.length;
     const needsYou = div2()
+      .id("needs-you")
       .flex_none()
       .px(6)
       .h(18)
       .flex()
       .items_center()
       .rounded(5)
-      .bg(`${t.blocked}26`)
+      .bg(alpha(t.blocked, "26"))
       .text_size(10.5)
       .font_semibold()
       .text_color(t.blocked)
-      .child(`${urgent} need${urgent === 1 ? "s" : ""} you`);
+      .cursor_pointer()
+      .hover((s) => s.bg(alpha(t.blocked, "40")))
+      .on_mouse_down("left", stopPress)
+      .on_click((_e, cx) => {
+        cx.stop_propagation();
+        this.nextNeedingYou();
+      })
+      .tooltip(
+        urgent2 === 1 ? "Show the agent waiting for you" : "Show the next agent waiting for you",
+      )
+      .child(`${urgent2} need${urgent2 === 1 ? "s" : ""} you`);
     const toggle = (m, icon, label) =>
-      iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared2("mc.agents.mode", m), {
+      iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared3("mc.agents.mode", m), {
         active: mode === m,
         size: 24,
         iconSize: 13,
@@ -1298,7 +1553,7 @@ var Agents = class extends View {
       .text_size(13)
       .on_size_change((size) => {
         const h = Math.round(size.height);
-        if (shared2(KEYS.agentsHeight) !== h) setShared2(KEYS.agentsHeight, h);
+        if (shared3(KEYS.agentsHeight) !== h) setShared3(KEYS.agentsHeight, h);
       })
       .child(
         sectionHeader(
@@ -1306,9 +1561,9 @@ var Agents = class extends View {
           "Agents",
           model.total,
           open,
-          () => setShared2(KEYS.agentsFolded, open),
+          () => setShared3(KEYS.agentsFolded, open),
           [
-            ...(urgent ? [needsYou] : []),
+            ...(urgent2 ? [needsYou] : []),
             ...(open
               ? [
                   toggle("priority", "clock", "Sort by priority"),
@@ -1332,6 +1587,7 @@ var Agents = class extends View {
               .pb(10)
               .gap(1)
               .overflow_y_scrollbar()
+              .children(this.machineNotes_(t))
               .when(model.total === 0, (e) =>
                 e.child(
                   div2()

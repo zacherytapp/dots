@@ -1,3 +1,5 @@
+import type { Row } from "./model.ts";
+
 // Token usage from a Claude Code session line. Pure, so tests feed it real lines.
 
 export interface Usage {
@@ -62,4 +64,28 @@ export function splitBlocks(stdout: string): Map<string, string> {
     out.set(block.slice(0, nl), block.slice(nl + 1));
   }
   return out;
+}
+
+export interface Reading extends Usage {
+  at: number;
+}
+
+/**
+ * What a context read depends on: each row's session (or folder) and its job's last update. When
+ * this is unchanged and no agent is working, the files haven't grown, so the read is skipped.
+ */
+export function contextKey(rows: Row[]): string {
+  return rows
+    .map((r) => `${r.address}|${r.machine}|${r.job?.sessionId ?? ""}|${r.job?.updated ?? 0}`)
+    .join("\n");
+}
+
+/** Whether two readings maps show the same thing (so no redraw is needed). */
+export function sameReadings(a: Map<string, Reading>, b: Map<string, Reading>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [k, v] of a) {
+    const w = b.get(k);
+    if (!w || w.tokens !== v.tokens || w.model !== v.model || w.effort !== v.effort) return false;
+  }
+  return true;
 }

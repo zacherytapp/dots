@@ -11,6 +11,8 @@ const LIST =
 const TAILS = 'for f in "$@"; do printf "\\036%s\\n" "$f"; tail -c 98304 "$f"; printf "\\n"; done';
 /** Files per `tail` call: 12 × 96 KB stays well under exec's 8 MiB. */
 const BATCH = 12;
+/** Concurrent `tail` calls per machine. */
+const PARALLEL = 3;
 
 const cache = new Map<string, { size: number; mtime: number; session: Session }>();
 
@@ -29,18 +31,25 @@ async function onMachine(machine: string | null, days: number, limit: number): P
     const hit = cache.get(key(e));
     return !hit || hit.size !== e.size || hit.mtime !== e.mtime;
   });
-  for (let i = 0; i < stale.length; i += BATCH) {
-    const batch = stale.slice(i, i + BATCH);
-    const r = await exec("sh", ["-c", TAILS, "sh", ...batch.map((e) => e.path)], { on });
-    const texts = splitFiles(r.stdout);
-    for (const e of batch) {
-      cache.set(key(e), {
-        size: e.size,
-        mtime: e.mtime,
-        session: parseTail(e, machine, texts.get(e.path) ?? ""),
-      });
+  const batches: FileEntry[][] = [];
+  for (let i = 0; i < stale.length; i += BATCH) batches.push(stale.slice(i, i + BATCH));
+  // A few `tail` processes at once per machine; each result is parsed as it arrives.
+  let next = 0;
+  const worker = async () => {
+    for (let n = next++; n < batches.length; n = next++) {
+      const batch = batches[n];
+      const r = await exec("sh", ["-c", TAILS, "sh", ...batch.map((e) => e.path)], { on });
+      const texts = splitFiles(r.stdout);
+      for (const e of batch) {
+        cache.set(key(e), {
+          size: e.size,
+          mtime: e.mtime,
+          session: parseTail(e, machine, texts.get(e.path) ?? ""),
+        });
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, batches.length) }, worker));
   return entries.map((e) => cache.get(key(e))?.session).filter((s): s is Session => Boolean(s));
 }
 

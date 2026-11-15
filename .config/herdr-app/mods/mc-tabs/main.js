@@ -159,6 +159,18 @@ function asset(name) {
 var chromeIcon = (name) => `mods/workspace-chrome/${name}.svg`;
 var sourceIcon = (s) => (s.own ? asset(s.icon) : s.icon);
 var stopPress = (_e, cx) => cx.stop_propagation();
+var SPACE_MARKS = {
+  ansi6: "#22a99a",
+  ansi3: "#e3814f",
+  ansi4: "#5b8def",
+  ansi5: "#8b7cf6",
+  ansi2: "#3fae6a",
+  ansi1: "#d9649a",
+};
+function spaceFill(t, color) {
+  if (color.startsWith("#")) return color;
+  return SPACE_MARKS[color] ?? t[color] ?? t.accent;
+}
 var alpha = (color, a) =>
   color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}${a}` : (color ?? "#00000000");
 function iconButton(id, icon, tooltip, onClick, opts = {}) {
@@ -179,7 +191,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function statusMark(status, compact = false) {
   const t = theme();
@@ -258,6 +274,16 @@ function leadPane(tab, all) {
   const mine = all.filter((p) => p.tab === tab.id);
   return mine.find((p) => p.program?.agent) ?? mine.find((p) => p.focused) ?? mine[0] ?? null;
 }
+var SHORT = 8;
+function clip(text, max = SHORT) {
+  const chars = [...text.trim()];
+  return chars.length <= max
+    ? chars.join("")
+    : `${chars
+        .slice(0, max - 1)
+        .join("")
+        .trimEnd()}…`;
+}
 var SHELL_TITLE = /^[\w.-]+@[\w.-]+[:\s]|^[~/]|^[A-Za-z]:\\/;
 function tabLabel(tab, all, home2) {
   const lead = leadPane(tab, all);
@@ -270,6 +296,7 @@ function tabLabel(tab, all, home2) {
     !/^(claude(?: code)?|zsh|bash|fish|sh)$/i.test(title);
   const name = tab.named ? tab.name : telling ? title : (program?.name ?? `Tab ${tab.index}`);
   const folder = lead?.cwd ? (lead.cwd === home2 ? "~" : baseName(lead.cwd)) : "";
+  const short = clip(tab.named || telling || !program?.icon ? name : folder || name);
   const branch = lead?.branch && !["main", "master"].includes(lead.branch) ? lead.branch : "";
   const detail = [folder, branch].filter(Boolean).join(" · ");
   const tooltip = [
@@ -281,21 +308,12 @@ function tabLabel(tab, all, home2) {
   ]
     .filter(Boolean)
     .join("\n");
-  return { name, detail: detail === name ? "" : detail, tooltip, lead };
+  return { name, detail: detail === name ? "" : detail, short, tooltip, lead };
 }
 
 // .config/herdr-app/src/mods/mc-tabs/main.ts
-var MARK = {
-  ansi6: "#22a99a",
-  ansi3: "#e3814f",
-  ansi4: "#5b8def",
-  ansi5: "#8b7cf6",
-  ansi2: "#3fae6a",
-  ansi1: "#d9649a",
-};
 var WINDOW_WIDTH = "mc.window.width";
-function panel() {
-  const root = layout();
+function panel(root = layout()) {
   const node = findNode(root, NODES.panel);
   const body = findNode(root, NODES.body);
   const ids = new Set((body?.children ?? []).map((c) => c.id));
@@ -324,7 +342,10 @@ var Tabs = class extends View {
     this.width = 0;
     this.normalWidth = Number(localStorage.getItem("normalWidth")) || 440;
     if (this.view() !== "topbar") return;
-    cx.timer.every(6e4, (cx2) => cx2.notify());
+    cx.timer.every(6e4, (cx2) => {
+      if (spaces().some((s) => s.active && s.tabs.some((t) => t.status === "working")))
+        cx2.notify();
+    });
     cx.spawn(async (cx2) => {
       for (;;) {
         const c = await nextCommand();
@@ -357,8 +378,7 @@ var Tabs = class extends View {
     }
   }
   /** Each space remembers its open source; switching space restores it. */
-  syncPanel(p) {
-    const space = spaces().find((s) => s.active);
+  syncPanel(p, space) {
     if (!space || !p.node) return;
     const now = p.open ? p.active : null;
     if (space.id !== this.space) {
@@ -385,22 +405,27 @@ var Tabs = class extends View {
     localStorage.setItem("panels", JSON.stringify(this.panels));
   }
   render() {
-    return this.view() === "navigation" ? this.navigation(theme2()) : this.topbar(theme2());
+    const t = theme2();
+    return this.view() === "navigation" ? this.navigation(t) : this.topbar(t);
   }
   // ---- topbar ---------------------------------------------------------------------------
-  spaceChip(t, sidebarWidth) {
-    const space = spaces().find((s) => s.active);
+  spaceChip(t, space, sidebarWidth) {
     const colors = shared("space.colors") ?? {};
     const color = space ? (colors[space.id] ?? "ansi6") : "ansi6";
-    const fill = color.startsWith("#") ? color : (MARK[color] ?? t.accent);
+    const fill = spaceFill(t, color);
     return h_flex2()
       .id("space-chip")
       .flex_none()
       .when(sidebarWidth > 0, (el) => el.w(sidebarWidth - 10))
       .h(30)
+      .ml(-5)
+      .pl(5)
       .pr(10)
       .gap(8)
       .items_center()
+      .rounded(7)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
       .on_mouse_down("left", stopPress)
       .on_click(() => run("mod.open", { name: "picker" }))
       .tooltip("Switch space")
@@ -442,30 +467,37 @@ var Tabs = class extends View {
           ),
       );
   }
-  pill(t, tabIndex) {
-    const space = spaces().find((s) => s.active);
+  /** A compact pill: its number, the program's icon and a few characters; the rest is in its tooltip. */
+  pill(t, space, tabIndex, live, homeDir) {
     const tabs = space?.tabs ?? [];
     const tab = tabs[tabIndex];
-    const label = tabLabel(tab, panes(), home());
+    const label = tabLabel(tab, live, homeDir);
     const program = label.lead?.program;
     const active = tab.active;
     const working = tab.status === "working" && tab.working_since;
+    const tooltip = [
+      label.tooltip,
+      working ? `working for ${duration(Date.now() - tab.working_since)}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
     return h_flex2()
       .id(`tab-${tab.id}`)
       .h(30)
       .pl(8)
-      .pr(active ? 6 : 10)
-      .gap(7)
+      .pr(active ? 4 : 8)
+      .gap(6)
       .items_center()
       .flex_none()
       .rounded(7)
-      .text_size(12.8)
+      .text_size(12.5)
       .border(1)
       .border_color(active ? t.border : alpha(t.chrome, "00"))
       .bg(active ? t.raised : t.chrome)
       .text_color(active ? t.foreground : t.muted)
+      .cursor_pointer()
       .hover((s) => s.bg(active ? t.raised : t.hover))
-      .tooltip(label.tooltip)
+      .tooltip(tooltip)
       .on_mouse_down("left", (e, cx) => {
         cx.stop_propagation();
         this.pressed = tabIndex;
@@ -498,40 +530,11 @@ var Tabs = class extends View {
             : image2(program?.icon).size(14).flex_none(),
         ),
       )
-      .child(div2().max_w(220).truncate().child(label.name))
-      .when(Boolean(label.detail), (el) =>
-        el.child(
-          div2().max_w(140).truncate().text_size(11.5).text_color(t.dim).child(label.detail),
-        ),
-      )
-      .when(tab.panes > 1, (el) =>
-        el.child(
-          div2()
-            .flex_none()
-            .px(4)
-            .h(16)
-            .flex()
-            .items_center()
-            .rounded(4)
-            .border(1)
-            .border_color(t.border)
-            .text_size(10.5)
-            .text_color(t.dim)
-            .child(String(tab.panes)),
-        ),
-      )
+      .child(div2().flex_none().child(label.short))
       .when(tab.zoomed, (el) =>
         el.child(div2().flex_none().text_size(10.5).font_bold().text_color(t.accent).child("Z")),
       )
-      .when(Boolean(working), (el) =>
-        el.child(statusMark("working")).child(
-          div2()
-            .flex_none()
-            .text_size(11)
-            .text_color(t.dim)
-            .child(duration(Date.now() - tab.working_since)),
-        ),
-      )
+      .when(Boolean(working), (el) => el.child(statusMark("working")))
       .when(tab.status === "blocked" || tab.status === "done", (el) =>
         el.child(statusMark(tab.status, true)),
       )
@@ -567,12 +570,15 @@ var Tabs = class extends View {
   topbar(t) {
     const space = spaces().find((s) => s.active);
     const tabs = space?.tabs ?? [];
-    const p = panel();
-    this.syncPanel(p);
-    const sidebar = findNode(layout(), NODES.sidebar);
+    const root = layout();
+    const live = panes();
+    const homeDir = home();
+    const p = panel(root);
+    this.syncPanel(p, space);
+    const sidebar = findNode(root, NODES.sidebar);
     const sidebarWidth = sidebar && !sidebar.hidden ? (sidebar.size?.px ?? 0) : 0;
     const w = window();
-    const button = (id, label, action) =>
+    const button = (id, label, tip, action) =>
       div2()
         .id(id)
         .size(26)
@@ -581,10 +587,12 @@ var Tabs = class extends View {
         .items_center()
         .justify_center()
         .rounded(6)
+        .cursor_pointer()
         .text_color(t.dim)
         .hover((s) => s.bg(t.hover).text_color(t.foreground))
         .on_mouse_down("left", stopPress)
         .on_click(action)
+        .tooltip(tip)
         .child(label);
     return h_flex2()
       .id("root")
@@ -598,7 +606,7 @@ var Tabs = class extends View {
       .border_b(1)
       .border_color(t.border)
       .on_size_change((size) => {
-        const width = Math.round(size.width);
+        const width = Math.round(size.width / 16) * 16;
         if (shared(WINDOW_WIDTH) !== width) setShared(WINDOW_WIDTH, width);
       })
       .on_mouse_up("left", () => {
@@ -607,7 +615,7 @@ var Tabs = class extends View {
       .on_scroll_wheel((e) => {
         if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next");
       })
-      .child(this.spaceChip(t, sidebarWidth))
+      .child(this.spaceChip(t, space, sidebarWidth))
       .child(
         h_flex2()
           .id("tab-scroll")
@@ -617,7 +625,7 @@ var Tabs = class extends View {
           .items_center()
           .gap(3)
           .overflow_x_scrollbar()
-          .children(tabs.map((_tab, i) => this.pill(t, i))),
+          .children(tabs.map((_tab, i) => this.pill(t, space, i, live, homeDir))),
       )
       .child(
         iconButton("tab-new", chromeIcon("plus"), "New tab", () =>
@@ -629,9 +637,17 @@ var Tabs = class extends View {
       .when(Boolean(w?.buttons), (el) =>
         el
           .child(div2().w(1).h(18).mx(4).bg(t.border))
-          .child(button("minimize", "−", () => run("window.minimize")))
-          .child(button("maximize", "□", () => run("window.maximize")))
-          .child(button("close-window", svg2(asset("close")).size(13), () => run("window.close"))),
+          .child(button("minimize", "−", "Minimize", () => run("window.minimize")))
+          .child(
+            button("maximize", "□", w?.maximized ? "Restore" : "Maximize", () =>
+              run("window.maximize"),
+            ),
+          )
+          .child(
+            button("close-window", svg2(asset("close")).size(13), "Close window", () =>
+              run("window.close"),
+            ),
+          ),
       );
   }
   // ---- navigation strip -----------------------------------------------------------------

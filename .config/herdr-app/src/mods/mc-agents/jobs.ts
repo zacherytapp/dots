@@ -24,12 +24,13 @@ export function jobMachines(): string[] {
     .map((m) => m.name as string);
 }
 
-/** One machine's job records; [] when it can't be reached. */
-export async function readJobsOn(machine: string | null): Promise<Job[]> {
+/** One machine's job records; null when it can't be reached (the caller keeps what it had). */
+export async function readJobsOn(machine: string | null): Promise<Job[] | null> {
   try {
-    const r = await exec("sh", ["-c", READER], { on: machine ?? undefined });
+    // A hung ssh must not hold the next read back: give up after 15 s and keep what was seen.
+    const r = await exec("sh", ["-c", READER], { on: machine ?? undefined, timeout: 15000 });
     return parseJobs(r.stdout, machine);
   } catch {
-    return [];
+    return null;
   }
 }

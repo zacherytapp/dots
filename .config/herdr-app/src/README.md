@@ -19,23 +19,41 @@ After adding an SVG to `assets/`, add it to `shared/icon-data.ts`.
 
 ## Mods
 
-| Mod                | Where                          | What                                                                                                            |
-| ------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `mc-tabs`          | top bar, panel strip           | Space chip, tab pills (index, program icon, title, folder · branch, panes, working time), panel source buttons  |
-| `mc-spaces`        | sidebar, top                   | Spaces by machine with search; sizes itself to its rows so Agents gets the rest                                 |
-| `mc-agents`        | sidebar, below Spaces          | Every agent and open Claude Code background job on every machine; notifies when one needs you                   |
-| `mc-github-issues` | panel `issues`                 | GitHub issues board (via `gh`)                                                                                  |
-| `mc-pulls`         | panel `pulls`                  | GitHub and Forgejo pull requests with checks and reviews; Review / Address comments / Fix checks start an agent |
-| `mc-branches`      | panel `branches`               | Local and remote branches together: local only, remote only or synced, ahead/behind, the PR on each             |
-| `mc-forgejo`       | panel `forgejo`                | Forgejo issues board                                                                                            |
-| `mc-jira`          | panel `jira`                   | Jira issues board                                                                                               |
-| `mc-sessions`      | panel `sessions`               | Previous Claude Code sessions from every machine, resumable                                                     |
-| `tmux-status`      | top bar, right                 | tmux status-right: zoom, cpu / temperature / battery, clock                                                     |
-| others             | `mod.open:<name>` in keys.json | One-shot actions: `cht`, `sessionizer*`, `goto-*`                                                               |
+| Mod                | Where                          | What                                                                                                                     |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `mc-tabs`          | top bar, panel strip           | Space chip, compact tab pills (number, program icon and a few characters; the rest in the tooltip), panel source buttons |
+| `mc-spaces`        | sidebar, top                   | Spaces by machine with search, each with its git state and its agents; sizes itself so Agents gets the rest              |
+| `mc-toast`         | layout root `"toast"`          | Notifications: click runs the action, × dismisses                                                                        |
+| `mc-agents`        | sidebar, below Spaces          | Every agent and open Claude Code background job on every machine; notifies when one needs you                            |
+| `mc-github-issues` | panel `issues`                 | GitHub issues board (via `gh`)                                                                                           |
+| `mc-pulls`         | panel `pulls`                  | GitHub and Forgejo pull requests with checks and reviews; Review / Address comments / Fix checks start an agent          |
+| `mc-branches`      | panel `branches`               | Local and remote branches together: local only, remote only or synced, ahead/behind, the PR on each                      |
+| `mc-forgejo`       | panel `forgejo`                | Forgejo issues board                                                                                                     |
+| `mc-jira`          | panel `jira`                   | Jira issues board                                                                                                        |
+| `mc-sessions`      | panel `sessions`               | Previous Claude Code sessions from every machine, resumable                                                              |
+| `tmux-status`      | top bar, right                 | tmux status-right: zoom, cpu / temperature / battery, clock                                                              |
+| others             | `mod.open:<name>` in keys.json | One-shot actions: `cht`, `sessionizer*`, `goto-*`                                                                        |
 
 The panel also keeps Herdr's own `files` and `changes` (diff and commit). Each space remembers
 which source it had open. Bind `mc-tabs.panel`, `mc-tabs.expand` or `mc-tabs.source-<id>` in
 `keys.json` to drive it from the keyboard.
+
+## Keys
+
+The sidebars take commands too, so the keyboard walks the lists as they are drawn (Herdr's own
+`space.next` and `agent.next` follow its order, and skip agents that report no status and
+background jobs):
+
+| Command                             | Bound to                                  | Does                                                                   |
+| ----------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| `mc-spaces.next` / `mc-spaces.prev` | `alt-shift-↓` / `↑`, `ctrl-shift-pgdn/up` | Show the next / previous space in sidebar order, minus folded machines |
+| `mc-spaces.move-down` / `move-up`   | `ctrl-space shift-↓` / `↑`                | Move the shown space one place among its machine's spaces              |
+| `mc-agents.next` / `mc-agents.prev` | `alt-↓` / `alt-↑`                         | Focus the next / previous agent pane in the Agents list's order        |
+| `mc-agents.needs-you`               | `ctrl-space a`                            | Show the next agent waiting for you (a background job opens in a tab)  |
+
+Stepping skips folded groups but not rows hidden by a search, and agents without a pane (background
+jobs nobody opened) so that stepping past one doesn't open a tab. The Agents header's "N needs
+you" badge does what `mc-agents.needs-you` does.
 
 ## Settings: `../mission-control.json`
 
@@ -73,6 +91,17 @@ waiting for you, a notification says so (Herdr already does this for agents that
 Context comes from the exact session file when the job is known, else from the folder's newest
 session only when one Claude agent is there. Its last reply also gives the model and the reasoning
 effort it ran at (`Context 104k · opus 5.5 · high effort`), read every 15 s.
+
+## Spaces
+
+Each space's row shows its repo's git state, read on its machine in its first terminal's folder
+every 15 s: `↓3` commits to pull, `↑2` to push (or, with no upstream, commits no remote has) and
+a yellow dot for uncommitted changes; the tooltip spells it out. The branch's remote is fetched
+in the background every 5 minutes (never prompting: no terminal prompt, ssh in batch mode), so
+`↓` is current. Beside it, the space's agents as `mc-agents` sees them (Claude Code started from
+a shell too, and background jobs in the space's folder): a spinner while one works, red when one
+needs you, green when one finished while you weren't looking (until you look at its tab), a ring
+when they are all idle, each with a count past one.
 
 ## Issue cards
 

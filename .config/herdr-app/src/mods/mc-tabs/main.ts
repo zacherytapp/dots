@@ -1,8 +1,8 @@
 // Two views from one mod (props.view):
 //
-//   "topbar":     the shown space, its tabs as pills (program icon, name, folder · branch, pane
-//                 count, how long it has been working), the + menu and one button per side
-//                 panel source. Keys: `mc-tabs.panel`, `mc-tabs.expand`, `mc-tabs.source-<id>`.
+//   "topbar":     the shown space, its tabs as compact pills (number, program icon and a few characters
+//                 of its name; folder, branch, panes and working time in the tooltip), the + menu
+//                 and one button per side panel source. Keys: `mc-tabs.panel`, `mc-tabs.expand`, `mc-tabs.source-<id>`.
 //   "navigation": the panel's own strip: every source with its label, widen and close.
 //
 // The panel is the layout's `panel` column holding the `panel-body` stack. Which source is
@@ -23,6 +23,8 @@ import {
   spaces,
   theme,
   window,
+  type PaneInfo,
+  type SpaceInfo,
 } from "herdr";
 import { NODES, SOURCES, type Source } from "../../shared/sources.ts";
 import {
@@ -31,6 +33,7 @@ import {
   chromeIcon,
   iconButton,
   sourceIcon,
+  spaceFill,
   statusMark,
   stopPress,
   type Theme,
@@ -38,14 +41,6 @@ import {
 import { duration, findNode, parseJson, type LayoutNode } from "../../shared/util.ts";
 import { tabLabel } from "./label.ts";
 
-const MARK: Record<string, string> = {
-  ansi6: "#22a99a",
-  ansi3: "#e3814f",
-  ansi4: "#5b8def",
-  ansi5: "#8b7cf6",
-  ansi2: "#3fae6a",
-  ansi1: "#d9649a",
-};
 const WINDOW_WIDTH = "mc.window.width";
 
 interface Panel {
@@ -55,8 +50,7 @@ interface Panel {
   available: Source[];
 }
 
-function panel(): Panel {
-  const root = layout();
+function panel(root: unknown = layout()): Panel {
   const node = findNode(root, NODES.panel);
   const body = findNode(root, NODES.body);
   const ids = new Set((body?.children ?? []).map((c) => c.id));
@@ -95,8 +89,11 @@ export default class Tabs extends View {
     this.width = 0;
     this.normalWidth = Number(localStorage.getItem("normalWidth")) || 440;
     if (this.view() !== "topbar") return;
-    // The pills' "working for 3m" only changes by the minute.
-    cx.timer.every(60000, (cx) => cx.notify());
+    // The pills' tooltips' "working for 3m" only changes by the minute.
+    // Only while the shown space has a working tab, and only then does a redraw show anything.
+    cx.timer.every(60000, (cx) => {
+      if (spaces().some((s) => s.active && s.tabs.some((t) => t.status === "working"))) cx.notify();
+    });
     cx.spawn(async (cx) => {
       for (;;) {
         const c = await nextCommand();
@@ -132,8 +129,7 @@ export default class Tabs extends View {
   }
 
   /** Each space remembers its open source; switching space restores it. */
-  syncPanel(p: Panel): void {
-    const space = spaces().find((s) => s.active);
+  syncPanel(p: Panel, space: SpaceInfo | undefined): void {
     if (!space || !p.node) return;
     const now = p.open ? p.active : null;
     if (space.id !== this.space) {
@@ -161,24 +157,29 @@ export default class Tabs extends View {
   }
 
   render(): El {
-    return this.view() === "navigation" ? this.navigation(theme()) : this.topbar(theme());
+    const t = theme();
+    return this.view() === "navigation" ? this.navigation(t) : this.topbar(t);
   }
 
   // ---- topbar ---------------------------------------------------------------------------
 
-  spaceChip(t: Theme, sidebarWidth: number): El {
-    const space = spaces().find((s) => s.active);
+  spaceChip(t: Theme, space: SpaceInfo | undefined, sidebarWidth: number): El {
     const colors = (shared("space.colors") ?? {}) as Record<string, string>;
     const color = space ? (colors[space.id] ?? "ansi6") : "ansi6";
-    const fill = color.startsWith("#") ? color : (MARK[color] ?? t.accent);
+    const fill = spaceFill(t, color);
     return h_flex()
       .id("space-chip")
       .flex_none()
       .when(sidebarWidth > 0, (el: El) => el.w(sidebarWidth - 10))
       .h(30)
+      .ml(-5)
+      .pl(5)
       .pr(10)
       .gap(8)
       .items_center()
+      .rounded(7)
+      .cursor_pointer()
+      .hover((s: El) => s.bg(t.hover))
       .on_mouse_down("left", stopPress)
       .on_click(() => run("mod.open", { name: "picker" }))
       .tooltip("Switch space")
@@ -221,30 +222,43 @@ export default class Tabs extends View {
       );
   }
 
-  pill(t: Theme, tabIndex: number): El {
-    const space = spaces().find((s) => s.active);
+  /** A compact pill: its number, the program's icon and a few characters; the rest is in its tooltip. */
+  pill(
+    t: Theme,
+    space: SpaceInfo | undefined,
+    tabIndex: number,
+    live: PaneInfo[],
+    homeDir: string,
+  ): El {
     const tabs = space?.tabs ?? [];
     const tab = tabs[tabIndex];
-    const label = tabLabel(tab, panes(), home());
+    const label = tabLabel(tab, live, homeDir);
     const program = label.lead?.program;
     const active = tab.active;
     const working = tab.status === "working" && tab.working_since;
+    const tooltip = [
+      label.tooltip,
+      working ? `working for ${duration(Date.now() - (tab.working_since as number))}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
     return h_flex()
       .id(`tab-${tab.id}`)
       .h(30)
       .pl(8)
-      .pr(active ? 6 : 10)
-      .gap(7)
+      .pr(active ? 4 : 8)
+      .gap(6)
       .items_center()
       .flex_none()
       .rounded(7)
-      .text_size(12.8)
+      .text_size(12.5)
       .border(1)
       .border_color(active ? t.border : alpha(t.chrome, "00"))
       .bg(active ? t.raised : t.chrome)
       .text_color(active ? t.foreground : t.muted)
+      .cursor_pointer()
       .hover((s: El) => s.bg(active ? t.raised : t.hover))
-      .tooltip(label.tooltip)
+      .tooltip(tooltip)
       .on_mouse_down("left", (e: { click_count?: number }, cx: Cx) => {
         cx.stop_propagation();
         this.pressed = tabIndex;
@@ -279,38 +293,11 @@ export default class Tabs extends View {
                 .flex_none(),
         ),
       )
-      .child(div().max_w(220).truncate().child(label.name))
-      .when(Boolean(label.detail), (el: El) =>
-        el.child(div().max_w(140).truncate().text_size(11.5).text_color(t.dim).child(label.detail)),
-      )
-      .when(tab.panes > 1, (el: El) =>
-        el.child(
-          div()
-            .flex_none()
-            .px(4)
-            .h(16)
-            .flex()
-            .items_center()
-            .rounded(4)
-            .border(1)
-            .border_color(t.border)
-            .text_size(10.5)
-            .text_color(t.dim)
-            .child(String(tab.panes)),
-        ),
-      )
+      .child(div().flex_none().child(label.short))
       .when(tab.zoomed, (el: El) =>
         el.child(div().flex_none().text_size(10.5).font_bold().text_color(t.accent).child("Z")),
       )
-      .when(Boolean(working), (el: El) =>
-        el.child(statusMark("working")).child(
-          div()
-            .flex_none()
-            .text_size(11)
-            .text_color(t.dim)
-            .child(duration(Date.now() - (tab.working_since as number))),
-        ),
-      )
+      .when(Boolean(working), (el: El) => el.child(statusMark("working")))
       .when(tab.status === "blocked" || tab.status === "done", (el: El) =>
         el.child(statusMark(tab.status, true)),
       )
@@ -346,14 +333,18 @@ export default class Tabs extends View {
   }
 
   topbar(t: Theme): El {
+    // Each host call once per render, passed down.
     const space = spaces().find((s) => s.active);
     const tabs = space?.tabs ?? [];
-    const p = panel();
-    this.syncPanel(p);
-    const sidebar = findNode(layout(), NODES.sidebar);
+    const root = layout();
+    const live = panes();
+    const homeDir = home();
+    const p = panel(root);
+    this.syncPanel(p, space);
+    const sidebar = findNode(root, NODES.sidebar);
     const sidebarWidth = sidebar && !sidebar.hidden ? (sidebar.size?.px ?? 0) : 0;
     const w = window();
-    const button = (id: string, label: El | string, action: () => void) =>
+    const button = (id: string, label: El | string, tip: string, action: () => void) =>
       div()
         .id(id)
         .size(26)
@@ -362,10 +353,12 @@ export default class Tabs extends View {
         .items_center()
         .justify_center()
         .rounded(6)
+        .cursor_pointer()
         .text_color(t.dim)
         .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
         .on_mouse_down("left", stopPress)
         .on_click(action)
+        .tooltip(tip)
         .child(label);
     return h_flex()
       .id("root")
@@ -379,7 +372,8 @@ export default class Tabs extends View {
       .border_b(1)
       .border_color(t.border)
       .on_size_change((size: { width: number }) => {
-        const width = Math.round(size.width);
+        // In 16 px steps: every change re-renders every mod, and a drag fires one per pixel.
+        const width = Math.round(size.width / 16) * 16;
         if (shared(WINDOW_WIDTH) !== width) setShared(WINDOW_WIDTH, width);
       })
       .on_mouse_up("left", () => {
@@ -388,7 +382,7 @@ export default class Tabs extends View {
       .on_scroll_wheel((e: { delta: { y: number } }) => {
         if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next");
       })
-      .child(this.spaceChip(t, sidebarWidth))
+      .child(this.spaceChip(t, space, sidebarWidth))
       .child(
         h_flex()
           .id("tab-scroll")
@@ -398,7 +392,7 @@ export default class Tabs extends View {
           .items_center()
           .gap(3)
           .overflow_x_scrollbar()
-          .children(tabs.map((_tab, i) => this.pill(t, i))),
+          .children(tabs.map((_tab, i) => this.pill(t, space, i, live, homeDir))),
       )
       .child(
         iconButton("tab-new", chromeIcon("plus"), "New tab", () =>
@@ -410,9 +404,17 @@ export default class Tabs extends View {
       .when(Boolean(w?.buttons), (el: El) =>
         el
           .child(div().w(1).h(18).mx(4).bg(t.border))
-          .child(button("minimize", "−", () => run("window.minimize")))
-          .child(button("maximize", "□", () => run("window.maximize")))
-          .child(button("close-window", svg(asset("close")).size(13), () => run("window.close"))),
+          .child(button("minimize", "−", "Minimize", () => run("window.minimize")))
+          .child(
+            button("maximize", "□", w?.maximized ? "Restore" : "Maximize", () =>
+              run("window.maximize"),
+            ),
+          )
+          .child(
+            button("close-window", svg(asset("close")).size(13), "Close window", () =>
+              run("window.close"),
+            ),
+          ),
       );
   }
 

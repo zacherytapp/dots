@@ -13,6 +13,16 @@ import { knownAgents as knownAgents2 } from "herdr";
 import { appHome, exec, readTextFile, writeTextFile } from "herdr";
 
 // .config/herdr-app/src/shared/util.ts
+function findNode(node, id) {
+  const n = node;
+  if (!n) return null;
+  if (n.id === id) return n;
+  for (const child of n.children ?? []) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+}
 function baseName(path) {
   const trimmed = (path ?? "").replace(/\/+$/, "");
   return trimmed.split("/").pop() || trimmed || "/";
@@ -107,11 +117,14 @@ async function loadConfig() {
   return config;
 }
 var secrets = /* @__PURE__ */ new Map();
+var missing = /* @__PURE__ */ new Map();
+var MISS_MS = 5 * 6e4;
 function tokenPath(service) {
   return `${appHome()}/mission-control/${service}.token`;
 }
 function forgetSecret(service) {
   secrets.delete(service);
+  missing.delete(service);
 }
 async function saveToken(service, token) {
   const path = tokenPath(service);
@@ -208,35 +221,65 @@ function repoAt(machine, cwd) {
   value.catch(() => cache2.delete(key));
   return value;
 }
+var SEP = "";
 async function ask(machine, cwd) {
   const none = { machine, cwd, root: null, remotes: [] };
   if (!cwd) return none;
-  const on = machine ?? void 0;
-  const top = await exec2("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-  if (top.code !== 0) return none;
-  const list = await exec2("git", ["remote", "-v"], { cwd, on });
+  const r = await exec2(
+    "sh",
+    ["-c", `git rev-parse --show-toplevel && printf '${SEP}\\n' && git remote -v`],
+    { cwd, on: machine ?? void 0 },
+  );
+  const cut = r.stdout.indexOf(SEP);
+  if (r.code !== 0 || cut < 0) return none;
   const urls = /* @__PURE__ */ new Map();
-  for (const line of list.stdout.split("\n")) {
+  for (const line of r.stdout.slice(cut + 1).split("\n")) {
     const [name, url] = line.split(/\s+/);
     if (name && url && !urls.has(name)) urls.set(name, url);
   }
   const names = [...urls.keys()].sort((a, b) => (a === "origin" ? -1 : b === "origin" ? 1 : 0));
   const remotes = names
     .map((n) => {
-      const r = parseRemote(urls.get(n));
-      return r ? { ...r, remoteName: n } : null;
+      const r2 = parseRemote(urls.get(n));
+      return r2 ? { ...r2, remoteName: n } : null;
     })
-    .filter((r) => r !== null);
-  return { machine, cwd, root: top.stdout.trim(), remotes };
+    .filter((r2) => r2 !== null);
+  return { machine, cwd, root: r.stdout.slice(0, cut).trim(), remotes };
 }
 
 // .config/herdr-app/src/shared/launch.ts
+var pending = /* @__PURE__ */ new Set();
+function isPending(name) {
+  return pending.has(name);
+}
+function trackPending(name, cx, task) {
+  if (pending.has(name)) return;
+  pending.add(name);
+  cx.notify();
+  cx.spawn(async (cx2) => {
+    try {
+      await task();
+    } catch (e) {
+      notify({
+        title: `Couldn't start ${name}`,
+        body: String(e?.message ?? e).slice(-300),
+        level: "error",
+      });
+    } finally {
+      pending.delete(name);
+      cx2.notify();
+    }
+  });
+}
 function findTab(name) {
   for (const space of spaces2()) {
     const tab = space.tabs.find((t) => t.named && t.name === name);
     if (tab) return { space, tab: tab.id };
   }
   return null;
+}
+function namedTabs() {
+  return new Set(spaces2().flatMap((s) => s.tabs.filter((t) => t.named).map((t) => t.name)));
 }
 async function openUrl(url) {
   try {
@@ -269,9 +312,22 @@ async function copyText(text) {
 // .config/herdr-app/src/shared/list-view.ts
 import { div as div2, svg as svg2, View } from "gpui-kit";
 import { h_flex as h_flex2, v_flex as v_flex2, InputState } from "gpui-base";
-import { run as run2, setShared as setShared2, shared as shared2, theme as theme2 } from "herdr";
+import {
+  layout,
+  run as run2,
+  setShared as setShared2,
+  shared as shared2,
+  theme as theme2,
+} from "herdr";
 
 // .config/herdr-app/src/shared/sources.ts
+var NODES = {
+  sidebar: "sidebar",
+  spaces: "mc-spaces",
+  agents: "mc-agents",
+  panel: "panel",
+  body: "panel-body",
+};
 var KEYS = {
   agentsHeight: "mc.agents.height",
   agentsFolded: "mc.agents.folded",
@@ -395,6 +451,8 @@ function asset(name) {
 // .config/herdr-app/src/shared/ui.ts
 var chromeIcon = (name) => `mods/workspace-chrome/${name}.svg`;
 var stopPress = (_e, cx) => cx.stop_propagation();
+var alpha = (color, a) =>
+  color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}${a}` : (color ?? "#00000000");
 function iconButton(id, icon, tooltip, onClick, opts = {}) {
   const t = theme();
   const size = opts.size ?? 26;
@@ -413,7 +471,11 @@ function iconButton(id, icon, tooltip, onClick, opts = {}) {
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el) => el.spin(900)),
+    );
 }
 function textButton(id, label, onClick, opts = {}) {
   const t = theme();
@@ -488,6 +550,38 @@ function searchBox(id, state, opts = {}) {
     .child(svg(chromeIcon("search")).size(13).flex_none().text_color(t.dim))
     .child(Input.new(state).flex_1().min_w(0).h_full().text_size(12.5).text_color(t.foreground));
 }
+function statusMark(status, compact = false) {
+  const t = theme();
+  if (status === "working") {
+    return svg(chromeIcon("spinner")).size(12).mx(1).flex_none().text_color(t.working).spin(900);
+  }
+  if (status === "blocked") {
+    return compact
+      ? div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked)
+      : div()
+          .flex_none()
+          .px(6)
+          .h(18)
+          .rounded(5)
+          .bg(alpha(t.blocked, "26"))
+          .text_size(10.5)
+          .font_semibold()
+          .text_color(t.blocked)
+          .flex()
+          .items_center()
+          .child("Needs you");
+  }
+  if (status === "done") return div().size(7).mx(3).flex_none().rounded(4).bg(t.done);
+  if (status === "idle")
+    return div()
+      .size(7)
+      .mx(3)
+      .flex_none()
+      .rounded(4)
+      .border(1.5)
+      .border_color(t.idle ?? t.dim);
+  return div().size(7).mx(3).flex_none();
+}
 function emptyState(title, body, actions = []) {
   const t = theme();
   return v_flex()
@@ -505,6 +599,7 @@ function emptyState(title, body, actions = []) {
 }
 
 // .config/herdr-app/src/shared/list-view.ts
+var FRESH_MS = 3e4;
 var SCOPES = [
   { value: "space", label: "This space" },
   { value: "all", label: "All spaces" },
@@ -552,6 +647,7 @@ var ListView = class extends View {
     this.snap = { items: [], caption: "", note: "", setup: null, token: null, warning: "", at: 0 };
     this.cache = /* @__PURE__ */ new Map();
     this.loading = false;
+    this.busy = false;
     this.error = null;
     this.width = 0;
     this.seq = 0;
@@ -562,11 +658,26 @@ var ListView = class extends View {
     this.tokenInput = InputState.new({ placeholder: "Paste an access token" });
     this.tokenInput.set_masked(true);
     this.tokenInput.on("submit", (_e, cx2) => this.saveToken(cx2));
-    this.reload(cx);
-    cx.timer.every(1500, (cx2) => {
-      if (this.key() !== this.loadedKey) this.reload(cx2);
+    this.tried = 0;
+    this.memo = null;
+    cx.timer.every(Math.min(this.interval(), 6e4), (cx2) => {
+      if (this.shown() && this.due()) this.reload(cx2, true);
     });
-    cx.timer.every(this.interval(), (cx2) => this.reload(cx2, true));
+  }
+  /**
+   * Whether this copy is on screen: the panel is open and its stack shows this source. Copies stay
+   * alive while hidden (another source, panel closed), so they skip loading and drawing then.
+   * True when it isn't in the panel at all.
+   */
+  shown() {
+    const root = layout();
+    const body = findNode(root, NODES.body);
+    if (!body?.children?.some((c) => c.id === this.source())) return true;
+    return !findNode(root, NODES.panel)?.hidden && body.active === this.source();
+  }
+  /** Time to look again: never loaded, or `interval()` since the last try. */
+  due() {
+    return !this.busy && Date.now() - this.tried >= this.interval();
   }
   /** Saves the pasted token for the service the panel asked about, then loads again. */
   saveToken(cx) {
@@ -657,11 +768,35 @@ var ListView = class extends View {
   }
   setScope(scope, cx) {
     setShared2(KEYS.scope(this.source()), scope);
-    this.reload(cx);
+    this.switchTo(cx, this.key());
+    cx.notify();
   }
+  /** Loads again now and redraws (from a handler or a task, never from render). */
   reload(cx, quiet = false) {
-    const key = this.key();
+    this.load(cx, quiet);
+    cx.notify();
+  }
+  /**
+   * Shows another scope (a space switch, This space / All spaces): what it had last time at once,
+   * then asks again unless that was moments ago. No redraw, so render may call it.
+   */
+  switchTo(cx, key) {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < FRESH_MS) {
+      this.seq++;
+      this.snap = hit;
+      this.loadedKey = key;
+      this.tried = hit.at;
+      this.error = null;
+      this.loading = this.busy = false;
+      return;
+    }
+    this.load(cx, Boolean(hit), key);
+  }
+  /** Starts a load without asking for a redraw, so render may call it: render draws the result. */
+  load(cx, quiet = false, key = this.key()) {
     const seq = ++this.seq;
+    this.tried = Date.now();
     if (key !== this.loadedKey) {
       this.snap = this.cache.get(key) ?? {
         items: [],
@@ -675,8 +810,8 @@ var ListView = class extends View {
       this.error = null;
     }
     this.loadedKey = key;
-    if (!quiet) this.loading = true;
-    cx.notify();
+    this.loading = !quiet;
+    this.busy = true;
     cx.spawn(async (cx2) => {
       try {
         const r = await this.fetch(this.scope(), activeSpace());
@@ -701,6 +836,7 @@ var ListView = class extends View {
       } finally {
         if (seq === this.seq) {
           this.loading = false;
+          this.busy = false;
           cx2.notify();
         }
       }
@@ -715,9 +851,13 @@ var ListView = class extends View {
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton("refresh", asset("refresh"), "Refresh", (_e, cx) => this.reload(cx), {
-          active: this.loading,
-        }),
+        iconButton(
+          "refresh",
+          asset("refresh"),
+          this.busy ? "Loading…" : "Refresh",
+          (_e, cx) => this.reload(cx),
+          { active: this.busy, spin: this.busy },
+        ),
       )
       .when(this.hasSettings(), (el) =>
         el.child(
@@ -748,9 +888,20 @@ var ListView = class extends View {
   }
   footer(t, shown) {
     const total = this.snap.items.length;
-    const count =
-      shown === total ? `${total} ${this.noun()}` : `${shown} of ${total} ${this.noun()}`;
-    const when = this.loading ? "Loading…" : this.snap.at ? `Updated ${ago(this.snap.at)}` : "";
+    const explained =
+      total === 0 && Boolean(this.snap.setup || this.snap.token || this.snap.note || this.error);
+    const count = explained
+      ? ""
+      : shown === total
+        ? `${total} ${this.noun()}`
+        : `${shown} of ${total} ${this.noun()}`;
+    const when = this.loading
+      ? "Loading…"
+      : this.busy
+        ? "Refreshing…"
+        : this.snap.at
+          ? `Updated ${ago(this.snap.at)}`
+          : "";
     return h_flex2()
       .flex_none()
       .h(30)
@@ -771,9 +922,35 @@ var ListView = class extends View {
         el.child(div2().min_w(0).truncate().child(this.snap.caption)),
       );
   }
+  /** `visible()` for the current rows and query, worked out again only when either changed. */
+  shownItems() {
+    const query = this.search.value();
+    const m = this.memo;
+    if (m && m.items === this.snap.items && m.query === query) return m.shown;
+    const shown = this.visible(this.snap.items, query);
+    this.memo = { items: this.snap.items, query, shown };
+    return shown;
+  }
   render(cx) {
     const t = theme2();
-    const items = this.visible(this.snap.items, this.search.value());
+    const root = v_flex2()
+      .id("root")
+      .size_full()
+      .min_h(0)
+      .bg(t.background)
+      .text_size(13)
+      .text_color(t.foreground)
+      .on_size_change((size, cx2) => {
+        if (Math.abs(size.width - this.width) >= 1) {
+          this.width = size.width;
+          cx2.notify();
+        }
+      });
+    if (!this.shown()) return root;
+    const key = this.key();
+    if (key !== this.loadedKey) this.switchTo(cx, key);
+    else if (this.due()) this.load(cx, true, key);
+    const items = this.shownItems();
     let content;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
@@ -806,23 +983,8 @@ var ListView = class extends View {
             .child(this.body(t, items, cx))
         : this.body(t, items, cx);
     }
-    const sub =
-      this.snap.items.length && !this.snap.setup
-        ? this.subbar(t, this.visible(this.snap.items, this.search.value()))
-        : null;
-    return v_flex2()
-      .id("root")
-      .size_full()
-      .min_h(0)
-      .bg(t.background)
-      .text_size(13)
-      .text_color(t.foreground)
-      .on_size_change((size, cx2) => {
-        if (Math.abs(size.width - this.width) >= 1) {
-          this.width = size.width;
-          cx2.notify();
-        }
-      })
+    const sub = this.snap.items.length && !this.snap.setup ? this.subbar(t, items) : null;
+    return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el) => el.child(sub))
       .child(v_flex2().flex_1().min_h(0).pt(10).child(content))
@@ -892,6 +1054,7 @@ function splitFiles(stdout) {
   }
   return out;
 }
+var TITLE_TYPE = /"type":\s*"(custom-title|agent-name|ai-title|last-prompt|continued-in)"/;
 var isNoise = (s) =>
   /^<(command|local-command|system-reminder|bash-|task-notification)/.test(s.trim());
 function parseTail(entry, machine, text) {
@@ -903,14 +1066,18 @@ function parseTail(entry, machine, text) {
   let branch = "";
   let last = 0;
   let continued = false;
-  for (const line of text.split("\n")) {
-    if (!line.startsWith("{")) continue;
-    let row;
+  const lines = text.split("\n").filter((l) => l.startsWith("{"));
+  const parse = (line) => {
     try {
-      row = JSON.parse(line);
+      return JSON.parse(line);
     } catch {
-      continue;
+      return null;
     }
+  };
+  for (const line of lines) {
+    if (!TITLE_TYPE.test(line)) continue;
+    const row = parse(line);
+    if (!row) continue;
     const type = row.type;
     if (type === "custom-title" && typeof row.customTitle === "string") custom = row.customTitle;
     else if (type === "agent-name" && typeof row.agentName === "string") agentName = row.agentName;
@@ -922,13 +1089,19 @@ function parseTail(entry, machine, text) {
     )
       prompt = row.lastPrompt;
     else if (type === "continued-in") continued = true;
-    if (typeof row.cwd === "string" && row.cwd) cwd = row.cwd;
-    if (typeof row.gitBranch === "string" && row.gitBranch && row.gitBranch !== "HEAD")
-      branch = row.gitBranch;
-    if (typeof row.timestamp === "string") {
+  }
+  let got = 0;
+  for (let i = lines.length - 1; i >= 0 && got < 3; i--) {
+    const row = parse(lines[i]);
+    if (!row) continue;
+    if (!cwd && typeof row.cwd === "string" && row.cwd) ((cwd = row.cwd), got++);
+    if (!branch && typeof row.gitBranch === "string" && row.gitBranch && row.gitBranch !== "HEAD")
+      ((branch = row.gitBranch), got++);
+    if (!last && typeof row.timestamp === "string") {
       const t = Date.parse(row.timestamp);
-      if (Number.isFinite(t) && t > last) last = t;
+      if (Number.isFinite(t)) ((last = t), got++);
     }
+    if (lines.length - i >= 40) break;
   }
   const id =
     entry.path
@@ -975,6 +1148,7 @@ var LIST =
   'find "$HOME/.claude/projects" -mindepth 2 -maxdepth 2 -name "*.jsonl" -size +1k -mtime "-$1" -printf "%T@\\t%s\\t%p\\n" 2>/dev/null | sort -rn | head -n "$2"';
 var TAILS = 'for f in "$@"; do printf "\\036%s\\n" "$f"; tail -c 98304 "$f"; printf "\\n"; done';
 var BATCH = 12;
+var PARALLEL = 3;
 var cache3 = /* @__PURE__ */ new Map();
 async function onMachine(machine, days, limit) {
   const on = machine ?? void 0;
@@ -985,18 +1159,24 @@ async function onMachine(machine, days, limit) {
     const hit = cache3.get(key(e));
     return !hit || hit.size !== e.size || hit.mtime !== e.mtime;
   });
-  for (let i = 0; i < stale.length; i += BATCH) {
-    const batch = stale.slice(i, i + BATCH);
-    const r = await exec5("sh", ["-c", TAILS, "sh", ...batch.map((e) => e.path)], { on });
-    const texts = splitFiles(r.stdout);
-    for (const e of batch) {
-      cache3.set(key(e), {
-        size: e.size,
-        mtime: e.mtime,
-        session: parseTail(e, machine, texts.get(e.path) ?? ""),
-      });
+  const batches = [];
+  for (let i = 0; i < stale.length; i += BATCH) batches.push(stale.slice(i, i + BATCH));
+  let next = 0;
+  const worker = async () => {
+    for (let n = next++; n < batches.length; n = next++) {
+      const batch = batches[n];
+      const r = await exec5("sh", ["-c", TAILS, "sh", ...batch.map((e) => e.path)], { on });
+      const texts = splitFiles(r.stdout);
+      for (const e of batch) {
+        cache3.set(key(e), {
+          size: e.size,
+          mtime: e.mtime,
+          session: parseTail(e, machine, texts.get(e.path) ?? ""),
+        });
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, batches.length) }, worker));
   return entries.map((e) => cache3.get(key(e))?.session).filter((s) => Boolean(s));
 }
 async function collect() {
@@ -1078,15 +1258,33 @@ var Sessions = class extends ListView {
       note: `No Claude Code sessions in ${space.name} in the last ${(await loadConfig()).sessions.days} days.`,
     };
   }
+  found = null;
+  grouped = null;
   visible(items, query) {
-    return items.filter((s) =>
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items.filter((s) =>
       matches(query, s.title, s.cwd, s.branch, s.machine ?? "this computer", s.id),
     );
+    this.found = { items, query, out };
+    return out;
+  }
+  /** Day groups, rebuilt only when the rows or the calendar day change. */
+  groups(items) {
+    const today = /* @__PURE__ */ new Date().toDateString();
+    if (this.grouped?.items === items && this.grouped.today === today) return this.grouped.days;
+    const now = Date.now();
+    const days = DAYS.map((day) => ({
+      day,
+      rows: items.filter((s) => dayOf(s.updated, now) === day),
+    })).filter((g) => g.rows.length);
+    this.grouped = { items, today, days };
+    return days;
   }
   body(t, items, cx) {
     const program = useAgentProgram(cx);
     const all = this.scope() === "all";
-    const now = Date.now();
+    const tabs = namedTabs();
+    const here = home2();
     return v_flex4()
       .id("sessions")
       .flex_1()
@@ -1106,28 +1304,27 @@ var Sessions = class extends ListView {
         ),
       )
       .children(
-        DAYS.flatMap((day) => {
-          const mine = items.filter((s) => dayOf(s.updated, now) === day);
-          if (!mine.length) return [];
-          return [
-            h_flex4()
-              .h(26)
-              .pt(6)
-              .px(6)
-              .gap(7)
-              .items_center()
-              .text_size(12)
-              .text_color(t.muted)
-              .child(day)
-              .child(div4().text_size(11).text_color(t.dim).child(String(mine.length))),
-            ...mine.map((s) => this.row(t, s, program, all)),
-          ];
-        }),
+        this.groups(items).flatMap(({ day, rows }) => [
+          h_flex4()
+            .h(26)
+            .pt(6)
+            .px(6)
+            .gap(7)
+            .items_center()
+            .text_size(12)
+            .text_color(t.muted)
+            .child(day)
+            .child(div4().text_size(11).text_color(t.dim).child(String(rows.length))),
+          ...rows.map((s) => this.row(t, s, program, all, tabs, here)),
+        ]),
       );
   }
-  row(t, s, program, all) {
-    const open = findTab(tabNameOf(s));
-    const folder = s.cwd === home2() ? "~" : baseName(s.cwd);
+  row(t, s, program, all, tabs, here) {
+    const open = tabs.has(tabNameOf(s));
+    const key = `resume-${s.machine ?? ""}-${s.id}`;
+    const starting = isPending(key);
+    const go = (cx) => trackPending(key, cx, () => resume(s));
+    const folder = s.cwd === here ? "~" : baseName(s.cwd);
     const where = [all || s.machine ? folder : null, s.branch, s.machine, ago(s.updated)]
       .filter(Boolean)
       .join(" · ");
@@ -1146,7 +1343,7 @@ var Sessions = class extends ListView {
         `${tildify(s.cwd, home2())}
 ${s.id}`,
       )
-      .on_click(() => void resume(s))
+      .on_click((_e, cx) => go(cx))
       .on_mouse_down("right", (_e, cx) => {
         cx.stop_propagation();
         void copyText(s.id);
@@ -1155,7 +1352,7 @@ ${s.id}`,
         agentButton(
           `resume-${s.machine ?? ""}-${s.id}`,
           open ? `Show the ${tabNameOf(s)} tab` : `Resume with ${agentName}`,
-          () => void resume(s),
+          (_e, cx) => go(cx),
           program,
           t,
         ),
@@ -1168,7 +1365,8 @@ ${s.id}`,
           .child(div4().truncate().text_size(13).text_color(t.foreground).child(s.title))
           .child(div4().truncate().text_size(11.5).text_color(t.dim).child(where)),
       )
-      .when(Boolean(open), (el) => el.child(div4().size(6).rounded(3).bg(t.working)));
+      .when(starting, (el) => el.child(statusMark("working")))
+      .when(open && !starting, (el) => el.child(div4().size(6).rounded(3).bg(t.working)));
   }
 };
 export { Sessions as default };

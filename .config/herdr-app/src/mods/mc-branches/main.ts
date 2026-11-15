@@ -13,15 +13,23 @@ import type { ForgejoPull } from "../../shared/forgejo-model.ts";
 import { copyText, openUrl } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope, type TokenAsk } from "../../shared/list-view.ts";
 import { repoOf, type SpaceRepo } from "../../shared/repo.ts";
-import { asset, chromeIcon, countChip, iconButton, type Theme } from "../../shared/ui.ts";
+import {
+  asset,
+  chromeIcon,
+  countChip,
+  iconButton,
+  stopPress,
+  type Theme,
+} from "../../shared/ui.ts";
 import { ago, matches } from "../../shared/util.ts";
 import {
   kindOf,
   mergeBranches,
   parseLocal,
-  parseLsRemote,
   parseRemoteRefs,
   REF_FORMAT,
+  splitLsRemotes,
+  splitSections,
   type Branch,
   type BranchPr,
   type RemoteHeads,
@@ -41,8 +49,18 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "pr", label: "With PR" },
 ];
 
-const LS_REMOTE =
-  'GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=8" git ls-remote --heads "$1"';
+/** The local half in one process: heads, the current branch, remote-tracking refs. */
+const LOCAL_INFO =
+  'git for-each-ref --format="$1" refs/heads; printf "\\036\\n"; git branch --show-current; printf "\\036\\n"; git for-each-ref --format="$1" refs/remotes';
+
+/** `git ls-remote` of every remote at once, in one process (one ssh hop on a remote machine). */
+const LS_REMOTES = [
+  'export GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=8"',
+  "d=$(mktemp -d) || exit 1",
+  'i=0; for r in "$@"; do i=$((i+1)); ( git ls-remote --heads "$r" >"$d/$i.out" 2>/dev/null; echo $? >"$d/$i.rc" ) & done; wait',
+  'i=0; for r in "$@"; do i=$((i+1)); printf "\\036%s\\t%s\\n" "$r" "$(cat "$d/$i.rc")"; cat "$d/$i.out"; done',
+  'rm -rf "$d"',
+].join("\n");
 
 interface RepoResult {
   items: Item[];
@@ -100,60 +118,70 @@ async function forgejoPrs(fj: Forgejo, slug: string): Promise<Map<string, Branch
 async function loadRepo(repo: SpaceRepo, label: string, fj: Forgejo | null): Promise<RepoResult> {
   const on = repo.machine ?? undefined;
   const cwd = repo.root as string;
-  const git = (...args: string[]) => exec("git", args, { cwd, on });
   const warnings: string[] = [];
   let token: TokenAsk | null = null;
-  const [local, current, tracking] = await Promise.all([
-    git("for-each-ref", `--format=${REF_FORMAT}`, "refs/heads"),
-    git("branch", "--show-current"),
-    git("for-each-ref", `--format=${REF_FORMAT}`, "refs/remotes"),
-  ]);
-  const trackingRefs = parseRemoteRefs(tracking.stdout);
+  const names = repo.remotes.map((r) => r.remoteName ?? "origin");
 
-  const remotes: RemoteHeads[] = [];
-  const prs = new Map<string, BranchPr>();
-  await Promise.all(
-    repo.remotes.map(async (remote) => {
-      const name = remote.remoteName ?? "origin";
+  // Three processes at most per repository, however many remotes: the local look, one batched
+  // ls-remote, and the pull request lists, all at once.
+  const info = exec("sh", ["-c", LOCAL_INFO, "sh", REF_FORMAT], { cwd, on });
+  const ls = names.length
+    ? exec("sh", ["-c", LS_REMOTES, "sh", ...names], { cwd, on })
+        .then((r) => splitLsRemotes(r.stdout, names))
+        .catch(() => new Map<string, Map<string, string> | null>())
+    : Promise.resolve(new Map<string, Map<string, string> | null>());
+  const found = await Promise.all(
+    repo.remotes.map(async (remote, i) => {
       const onForgejo = fj?.isRemote(remote) ?? false;
-      const web =
-        remote.host === "github.com"
-          ? `https://github.com/${remote.slug}/tree/`
-          : onForgejo && fj
-            ? `${fj.base}/${remote.slug}/src/branch/`
-            : null;
-      const ls = await exec("sh", ["-c", LS_REMOTE, "sh", name], { cwd, on }).catch(() => null);
-      let heads = ls?.code === 0 ? parseLsRemote(ls.stdout) : null;
-      if (!heads) {
-        // Unreachable: what the last fetch saw.
-        warnings.push(`${label}: couldn't reach ${name}, showing its last fetch`);
-        heads = new Map(
-          [...trackingRefs]
-            .filter(([ref]) => ref.startsWith(`${name}/`))
-            .map(([ref, b]) => [ref.slice(name.length + 1), b.sha]),
-        );
-      }
-      remotes.push({ remote: name, heads, web });
       try {
-        const found =
+        const prs =
           remote.host === "github.com"
             ? await githubPrs(remote.slug)
             : onForgejo && fj
               ? await forgejoPrs(fj, remote.slug)
               : new Map<string, BranchPr>();
-        for (const [head, pr] of found) if (!prs.has(head)) prs.set(head, pr);
+        return { i, prs };
       } catch (e) {
         if (e instanceof TokenError) token = e.ask;
-        else warnings.push(`${label}: pull requests from ${name} unavailable`);
+        else warnings.push(`${label}: pull requests from ${names[i]} unavailable`);
+        return { i, prs: new Map<string, BranchPr>() };
       }
     }),
   );
+  const [infoOut, heads] = await Promise.all([info, ls]);
+  const [local, current, tracking] = splitSections(infoOut.stdout);
+  const trackingRefs = parseRemoteRefs(tracking);
+
+  const remotes: RemoteHeads[] = repo.remotes.map((remote, i) => {
+    const name = names[i];
+    const onForgejo = fj?.isRemote(remote) ?? false;
+    const web =
+      remote.host === "github.com"
+        ? `https://github.com/${remote.slug}/tree/`
+        : onForgejo && fj
+          ? `${fj.base}/${remote.slug}/src/branch/`
+          : null;
+    let seen = heads.get(name) ?? null;
+    if (!seen) {
+      // Unreachable: what the last fetch saw.
+      warnings.push(`${label}: couldn't reach ${name}, showing its last fetch`);
+      seen = new Map(
+        [...trackingRefs]
+          .filter(([ref]) => ref.startsWith(`${name}/`))
+          .map(([ref, b]) => [ref.slice(name.length + 1), b.sha]),
+      );
+    }
+    return { remote: name, heads: seen, web };
+  });
+  const prs = new Map<string, BranchPr>();
+  for (const { prs: list } of found.sort((a, b) => a.i - b.i))
+    for (const [head, pr] of list) if (!prs.has(head)) prs.set(head, pr);
   remotes.sort((a, b) => (a.remote === "origin" ? -1 : b.remote === "origin" ? 1 : 0));
 
   const branches = mergeBranches({
     key: `${repo.machine ?? ""}:${cwd}`,
-    current: current.stdout.trim(),
-    local: parseLocal(local.stdout),
+    current: current.trim(),
+    local: parseLocal(local),
     remotes,
     tracking: trackingRefs,
     prs,
@@ -190,19 +218,21 @@ export default class Branches extends ListView<Item> {
   }
 
   async fetch(scope: Scope, space: SpaceInfo | null): Promise<Loaded<Item>> {
-    const fj = await forgejo();
     const targets = scope === "space" ? (space ? [space] : []) : spaces();
     if (!targets.length) return { items: [], note: "No space is shown." };
+    const fjLoad = forgejo();
+    fjLoad.catch(() => undefined); // surfaced where it is awaited
     // One look per repository, however many spaces are in it.
     const repos = new Map<string, { repo: SpaceRepo; label: string }>();
-    for (const s of targets) {
-      const repo = await repoOf(s).catch(() => null);
-      if (!repo?.root) continue;
+    const looked = await Promise.all(targets.map((s) => repoOf(s).catch(() => null)));
+    targets.forEach((s, i) => {
+      const repo = looked[i];
+      if (!repo?.root) return;
       const key = `${repo.machine ?? ""}:${repo.root}`;
       const label = repo.remotes[0]?.slug ?? repo.root.split("/").pop() ?? s.name;
       if (!repos.has(key))
         repos.set(key, { repo, label: repo.machine ? `${label} · ${repo.machine}` : label });
-    }
+    });
     if (!repos.size) {
       return {
         items: [],
@@ -212,6 +242,7 @@ export default class Branches extends ListView<Item> {
             : "No space is in a git repository.",
       };
     }
+    const fj = await fjLoad;
     const results = await Promise.all(
       [...repos.values()].map(({ repo, label }) =>
         loadRepo(repo, label, fj).catch((e: unknown): RepoResult => ({
@@ -233,27 +264,65 @@ export default class Branches extends ListView<Item> {
     };
   }
 
+  /** Search result, kept while the items and the query stay the same (render runs often). */
+  private found: { items: Item[]; query: string; out: Item[] } | null = null;
+  /** Counts, the filtered rows and their groups, kept while items, filter and scope stay. */
+  private derived: {
+    items: Item[];
+    filter: Filter;
+    all: boolean;
+    counts: Record<Filter, number>;
+    groups: { repo: string; rows: Item[] }[];
+  } | null = null;
+
   visible(items: Item[], query: string): Item[] {
-    return items.filter((b) =>
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items.filter((b) =>
       matches(query, b.name, b.subject, b.repo, b.pr ? `#${b.pr.number} ${b.pr.title}` : ""),
     );
+    this.found = { items, query, out };
+    return out;
   }
 
-  shown(items: Item[]): Item[] {
-    if (this.filter === "local") return items.filter((b) => kindOf(b) === "local");
-    if (this.filter === "remote") return items.filter((b) => kindOf(b) === "remote");
-    if (this.filter === "pr") return items.filter((b) => b.pr);
-    return items;
+  derive(items: Item[]): NonNullable<Branches["derived"]> {
+    const all = this.scope() === "all";
+    const d = this.derived;
+    if (d && d.items === items && d.filter === this.filter && d.all === all) return d;
+    const counts: Record<Filter, number> = { all: 0, local: 0, remote: 0, pr: 0 };
+    const rows: Item[] = [];
+    for (const b of items) {
+      const kind = kindOf(b);
+      counts.all++;
+      if (kind === "local") counts.local++;
+      if (kind === "remote") counts.remote++;
+      if (b.pr) counts.pr++;
+      if (
+        this.filter === "all" ||
+        (this.filter === "local" && kind === "local") ||
+        (this.filter === "remote" && kind === "remote") ||
+        (this.filter === "pr" && b.pr)
+      )
+        rows.push(b);
+    }
+    const byRepo = new Map<string, Item[]>();
+    for (const b of rows) {
+      const list = byRepo.get(b.repo);
+      if (list) list.push(b);
+      else byRepo.set(b.repo, [b]);
+    }
+    const next = {
+      items,
+      filter: this.filter,
+      all,
+      counts,
+      groups: [...byRepo].map(([repo, list]) => ({ repo, rows: list })),
+    };
+    this.derived = next;
+    return next;
   }
 
   subbar(_t: Theme, items: Item[]): El {
-    const count = (f: Filter) => {
-      const keep = this.filter;
-      this.filter = f;
-      const n = this.shown(items).length;
-      this.filter = keep;
-      return n;
-    };
+    const { counts } = this.derive(items);
     return h_flex()
       .flex_none()
       .px(14)
@@ -262,7 +331,7 @@ export default class Branches extends ListView<Item> {
       .items_center()
       .children(
         FILTERS.map((f) =>
-          countChip(`filter-${f.id}`, f.label, count(f.id), this.filter === f.id, (cx) => {
+          countChip(`filter-${f.id}`, f.label, counts[f.id], this.filter === f.id, (cx) => {
             this.filter = f.id;
             cx.notify();
           }),
@@ -271,9 +340,7 @@ export default class Branches extends ListView<Item> {
   }
 
   body(t: Theme, items: Item[], _cx: Cx): El {
-    const shown = this.shown(items);
-    const all = this.scope() === "all";
-    const repos = [...new Set(shown.map((b) => b.repo))];
+    const { groups, all } = this.derive(items);
     return v_flex()
       .id("branches")
       .flex_1()
@@ -283,7 +350,7 @@ export default class Branches extends ListView<Item> {
       .gap(1)
       .overflow_y_scrollbar()
       .children(
-        repos.flatMap((repo) => [
+        groups.flatMap(({ repo, rows }) => [
           ...(all
             ? [
                 h_flex()
@@ -295,15 +362,10 @@ export default class Branches extends ListView<Item> {
                   .text_size(12)
                   .text_color(t.muted)
                   .child(repo)
-                  .child(
-                    div()
-                      .text_size(11)
-                      .text_color(t.dim)
-                      .child(String(shown.filter((b) => b.repo === repo).length)),
-                  ),
+                  .child(div().text_size(11).text_color(t.dim).child(String(rows.length))),
               ]
             : []),
-          ...shown.filter((b) => b.repo === repo).map((b) => this.row(t, b)),
+          ...rows.map((b) => this.row(t, b)),
         ]),
       );
   }
@@ -312,10 +374,10 @@ export default class Branches extends ListView<Item> {
     return div()
       .flex_none()
       .px(5)
-      .h(17)
+      .h(18)
       .flex()
       .items_center()
-      .rounded(4)
+      .rounded(5)
       .border(1)
       .border_color(t.border)
       .text_size(10.5)
@@ -340,108 +402,116 @@ export default class Branches extends ListView<Item> {
               inStep ? `Same commit on ${remoteNames}` : `On ${remoteNames}, at a different commit`,
             );
     const link = b.pr?.url ?? b.web;
-    return v_flex()
-      .id(`branch-${b.id}`)
-      .flex_none()
-      .px(8)
-      .py(6)
-      .gap(3)
-      .rounded(8)
-      .cursor_pointer()
-      .when(b.current, (el: El) => el.bg(t.selected))
-      .hover((s: El) => s.bg(t.hover))
-      .when(Boolean(link), (el: El) => el.on_click(() => void openUrl(link as string)))
-      .on_mouse_down("right", (_e: unknown, cx: Cx) => {
-        cx.stop_propagation();
-        void copyText(b.name);
-      })
-      .tooltip(
-        link
-          ? `Open ${b.pr ? `#${b.pr.number}` : "on the web"} · right-click copies the name`
-          : "Right-click copies the name",
-      )
-      .child(
-        h_flex()
-          .gap(7)
-          .items_center()
-          .child(
-            svg(chromeIcon("git-branch"))
-              .size(13)
-              .flex_none()
-              .text_color(b.current ? t.accent : t.dim),
-          )
-          .child(
-            div()
-              .min_w(0)
-              .truncate()
-              .text_size(13)
-              .text_color(b.current ? t.foreground : t.muted)
-              .when(b.current, (el: El) => el.font_medium())
-              .child(b.name),
-          )
-          .child(where)
-          .when(Boolean(b.local?.gone), (el: El) =>
-            el.child(this.pill(t, "upstream gone", t.blocked, "Its upstream branch was deleted")),
-          )
-          .child(div().flex_1())
-          .when((b.local?.ahead ?? 0) > 0, (el: El) =>
-            el.child(
-              div().flex_none().text_size(11.5).text_color(t.ansi2).child(`↑${b.local?.ahead}`),
-            ),
-          )
-          .when((b.local?.behind ?? 0) > 0, (el: El) =>
-            el.child(
-              div().flex_none().text_size(11.5).text_color(t.ansi1).child(`↓${b.local?.behind}`),
-            ),
-          )
-          .when(Boolean(b.pr), (el: El) => {
-            const pr = b.pr as BranchPr;
-            return el.child(
-              h_flex()
-                .id(`pr-${b.id}`)
+    return (
+      v_flex()
+        .id(`branch-${b.id}`)
+        .flex_none()
+        .px(8)
+        .py(6)
+        .gap(3)
+        .rounded(8)
+        .cursor_pointer()
+        .when(b.current, (el: El) => el.bg(t.selected))
+        .hover((s: El) => s.bg(t.hover))
+        // No PR and no web page (a local-only branch): a click copies its name instead.
+        .on_click(() => void (link ? openUrl(link) : copyText(b.name)))
+        .on_mouse_down("right", (_e: unknown, cx: Cx) => {
+          cx.stop_propagation();
+          void copyText(b.name);
+        })
+        .tooltip(
+          link
+            ? `Open ${b.pr ? `#${b.pr.number}` : "on the web"} · right-click copies the name`
+            : "Click copies the name",
+        )
+        .child(
+          h_flex()
+            .gap(7)
+            .items_center()
+            .child(
+              svg(chromeIcon("git-branch"))
+                .size(13)
                 .flex_none()
-                .gap(4)
-                .px(6)
-                .h(20)
-                .items_center()
-                .rounded(5)
-                .bg(t.surface)
-                .text_size(11.5)
-                .text_color(pr.draft ? t.dim : t.accent)
-                .tooltip(`${pr.draft ? "Draft: " : ""}${pr.title}`)
-                .on_click((_e: unknown, cx: Cx) => {
-                  cx.stop_propagation();
-                  void openUrl(pr.url);
-                })
-                .child(svg(asset(pr.provider === "forgejo" ? "forgejo" : "pull-request")).size(11))
-                .child(`#${pr.number}`),
-            );
-          })
-          .when(Boolean(b.web), (el: El) =>
-            el.child(
-              iconButton(
-                `web-${b.id}`,
-                asset("external"),
-                "Open the branch on the web",
-                (_e, cx) => {
-                  cx.stop_propagation();
-                  void openUrl(b.web as string);
-                },
-                { size: 22, iconSize: 12 },
+                .text_color(b.current ? t.accent : t.dim),
+            )
+            .child(
+              div()
+                .min_w(0)
+                .truncate()
+                .text_size(13)
+                .text_color(b.current ? t.foreground : t.muted)
+                .when(b.current, (el: El) => el.font_medium())
+                .child(b.name),
+            )
+            .child(where)
+            .when(Boolean(b.local?.gone), (el: El) =>
+              el.child(this.pill(t, "upstream gone", t.blocked, "Its upstream branch was deleted")),
+            )
+            .child(div().flex_1())
+            .when((b.local?.ahead ?? 0) > 0, (el: El) =>
+              el.child(
+                div().flex_none().text_size(11.5).text_color(t.ansi2).child(`↑${b.local?.ahead}`),
+              ),
+            )
+            .when((b.local?.behind ?? 0) > 0, (el: El) =>
+              el.child(
+                div().flex_none().text_size(11.5).text_color(t.ansi1).child(`↓${b.local?.behind}`),
+              ),
+            )
+            .when(Boolean(b.pr), (el: El) => {
+              const pr = b.pr as BranchPr;
+              return el.child(
+                h_flex()
+                  .id(`pr-${b.id}`)
+                  .flex_none()
+                  .gap(4)
+                  .px(6)
+                  .h(20)
+                  .items_center()
+                  .rounded(5)
+                  .bg(t.surface)
+                  .text_size(11.5)
+                  .text_color(pr.draft ? t.dim : t.accent)
+                  .cursor_pointer()
+                  .hover((s: El) => s.bg(t.hover))
+                  .on_mouse_down("left", stopPress)
+                  .tooltip(`${pr.draft ? "Draft: " : ""}${pr.title}`)
+                  .on_click((_e: unknown, cx: Cx) => {
+                    cx.stop_propagation();
+                    void openUrl(pr.url);
+                  })
+                  .child(
+                    svg(asset(pr.provider === "forgejo" ? "forgejo" : "pull-request")).size(11),
+                  )
+                  .child(`#${pr.number}`),
+              );
+            })
+            .when(Boolean(b.web), (el: El) =>
+              el.child(
+                iconButton(
+                  `web-${b.id}`,
+                  asset("external"),
+                  "Open the branch on the web",
+                  (_e, cx) => {
+                    cx.stop_propagation();
+                    void openUrl(b.web as string);
+                  },
+                  { size: 22, iconSize: 12 },
+                ),
               ),
             ),
+        )
+        .when(Boolean(b.subject), (el: El) =>
+          el.child(
+            div()
+              .pl(20)
+              .min_w(0)
+              .truncate()
+              .text_size(11.5)
+              .text_color(t.dim)
+              .child([b.subject, b.date ? ago(b.date) : ""].filter(Boolean).join(" · ")),
           ),
-      )
-      .when(Boolean(b.subject), (el: El) =>
-        el.child(
-          div()
-            .pl(20)
-            .min_w(0)
-            .truncate()
-            .text_size(11.5)
-            .text_color(t.dim)
-            .child([b.subject, b.date ? ago(b.date) : ""].filter(Boolean).join(" · ")),
-        ),
-      );
+        )
+    );
   }
 }

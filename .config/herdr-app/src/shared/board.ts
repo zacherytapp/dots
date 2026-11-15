@@ -18,13 +18,24 @@ import { actionTabName } from "./issue-actions.ts";
 import {
   backgroundSessions,
   copyText,
+  isPending,
   mainWindowAgent,
   namedTabs,
   openUrl,
   runIssueAction,
+  trackPending,
 } from "./launch.ts";
 import { ListView } from "./list-view.ts";
-import { alpha, asset, chromeIcon, countChip, iconButton, stopPress, type Theme } from "./ui.ts";
+import {
+  alpha,
+  asset,
+  chromeIcon,
+  countChip,
+  iconButton,
+  statusMark,
+  stopPress,
+  type Theme,
+} from "./ui.ts";
 import { ago } from "./util.ts";
 
 /** Wide enough for side-by-side columns. */
@@ -235,7 +246,7 @@ export class BoardView extends ListView<BoardItem> {
               .text_color(t.accent)
               .cursor_pointer()
               .hover((s: El) => s.underline())
-              .tooltip(item.url)
+              .tooltip(`${item.url} · right-click copies it`)
               .on_click(() => void openUrl(item.url))
               .on_mouse_down("right", (_e: unknown, cx: Cx) => {
                 cx.stop_propagation();
@@ -263,6 +274,7 @@ export class BoardView extends ListView<BoardItem> {
           .text_size(13.5)
           .text_color(t.foreground)
           .cursor_pointer()
+          .hover((s: El) => s.underline())
           .on_click(() => void openUrl(item.url))
           .child(item.title),
       )
@@ -479,6 +491,7 @@ function actionRow(
         const name = actionTabName(a, item);
         const tab = tabs.has(name);
         const open = tab || sessions.has(name);
+        const starting = isPending(name);
         return h_flex()
           .id(`action-${i}-${item.id}`)
           .flex_none()
@@ -494,16 +507,19 @@ function actionRow(
           .cursor_pointer()
           .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
           .on_mouse_down("left", stopPress)
-          .on_click(() => void runIssueAction(a, item))
+          .on_click((_e: unknown, cx: Cx) => trackPending(name, cx, () => runIssueAction(a, item)))
           .tooltip(
-            tab
-              ? `Show the "${name}" tab`
-              : open
-                ? `"${name}" is running in the background: open it from Agents`
-                : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
+            starting
+              ? `Starting "${name}"…`
+              : tab
+                ? `Show the "${name}" tab`
+                : open
+                  ? `"${name}" is running in the background: open it from Agents`
+                  : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
           )
+          .when(starting, (el: El) => el.child(statusMark("working")))
           .child(a.label)
-          .when(Boolean(open), (el: El) => el.child(div().size(5).rounded(3).bg(t.working)));
+          .when(open && !starting, (el: El) => el.child(div().size(5).rounded(3).bg(t.working)));
       }),
     );
 }

@@ -22,9 +22,24 @@ import {
   type PullGroup,
   type PullItem,
 } from "../../shared/github-model.ts";
-import { backgroundSessions, copyText, findTab, openUrl, startWork } from "../../shared/launch.ts";
+import {
+  backgroundSessions,
+  copyText,
+  isPending,
+  namedTabs,
+  openUrl,
+  startWork,
+  trackPending,
+} from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope } from "../../shared/list-view.ts";
-import { asset, chromeIcon, iconButton, type Theme } from "../../shared/ui.ts";
+import {
+  asset,
+  chromeIcon,
+  iconButton,
+  statusMark,
+  stopPress,
+  type Theme,
+} from "../../shared/ui.ts";
 import { ago, matches } from "../../shared/util.ts";
 
 const GROUPS: { id: PullGroup; label: string }[] = [
@@ -100,15 +115,36 @@ export default class Pulls extends ListView<PullItem> {
     };
   }
 
+  private found: { items: PullItem[]; query: string; out: PullItem[] } | null = null;
+  private grouped: { items: PullItem[]; groups: { label: string; rows: PullItem[] }[] } | null =
+    null;
+
   visible(items: PullItem[], query: string): PullItem[] {
-    return items
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items
       .filter((p) => matches(query, `#${p.number}`, p.title, p.slug, p.author, p.head))
       .sort((a, b) => b.updated - a.updated);
+    this.found = { items, query, out };
+    return out;
+  }
+
+  /** The non-empty groups, rebuilt only when the rows change. */
+  groups(items: PullItem[]): { label: string; rows: PullItem[] }[] {
+    if (this.grouped?.items === items) return this.grouped.groups;
+    const groups = GROUPS.map((g) => ({
+      label: g.label,
+      rows: items.filter((p) => p.group === g.id),
+    })).filter((g) => g.rows.length);
+    this.grouped = { items, groups };
+    return groups;
   }
 
   body(t: Theme, items: PullItem[], cx: Cx): El {
     const program = useAgentProgram(cx);
     const all = this.scope() === "all";
+    // One look per render, not one per row.
+    const tabs = namedTabs();
+    const background = backgroundSessions();
     return v_flex()
       .id("pulls")
       .flex_1()
@@ -118,22 +154,18 @@ export default class Pulls extends ListView<PullItem> {
       .gap(6)
       .overflow_y_scrollbar()
       .children(
-        GROUPS.flatMap((g) => {
-          const mine = items.filter((p) => p.group === g.id);
-          if (!mine.length) return [];
-          return [
-            h_flex()
-              .h(26)
-              .pt(4)
-              .gap(7)
-              .items_center()
-              .text_size(12.5)
-              .text_color(t.muted)
-              .child(g.label)
-              .child(div().text_size(11).text_color(t.dim).child(String(mine.length))),
-            ...mine.map((p) => this.row(t, p, program, all)),
-          ];
-        }),
+        this.groups(items).flatMap((g) => [
+          h_flex()
+            .h(26)
+            .pt(4)
+            .gap(7)
+            .items_center()
+            .text_size(12.5)
+            .text_color(t.muted)
+            .child(g.label)
+            .child(div().text_size(11).text_color(t.dim).child(String(g.rows.length))),
+          ...g.rows.map((p) => this.row(t, p, program, all, tabs, background)),
+        ]),
       );
   }
 
@@ -148,9 +180,21 @@ export default class Pulls extends ListView<PullItem> {
       .child(text);
   }
 
-  row(t: Theme, p: PullItem, program: Program | null, all: boolean): El {
-    const tab = findTab(p.tabName);
-    const started = Boolean(tab) || backgroundSessions().has(p.tabName);
+  row(
+    t: Theme,
+    p: PullItem,
+    program: Program | null,
+    all: boolean,
+    tabs: Set<string>,
+    background: Set<string>,
+  ): El {
+    const tab = tabs.has(p.tabName);
+    const starting = isPending(p.tabName);
+    const started = tab || background.has(p.tabName);
+    const start = (action: PullAction, cx: Cx) =>
+      trackPending(p.tabName, cx, () =>
+        startWork({ name: p.tabName, task: pullTask(p, action), repo: p.slug }),
+      );
     const shown = tab
       ? `Show the ${p.tabName} tab`
       : `${p.tabName} is running in the background: open it from Agents`;
@@ -195,7 +239,8 @@ export default class Pulls extends ListView<PullItem> {
               .text_size(12)
               .text_color(t.accent)
               .cursor_pointer()
-              .tooltip(p.url)
+              .hover((s: El) => s.underline())
+              .tooltip(`${p.url} · right-click copies it`)
               .on_click(() => void openUrl(p.url))
               .on_mouse_down("right", (_e: unknown, cx: Cx) => {
                 cx.stop_propagation();
@@ -211,6 +256,7 @@ export default class Pulls extends ListView<PullItem> {
               .truncate()
               .text_size(13.5)
               .cursor_pointer()
+              .hover((s: El) => s.underline())
               .on_click(() => void openUrl(p.url))
               .tooltip(p.title)
               .child(p.title),
@@ -275,7 +321,7 @@ export default class Pulls extends ListView<PullItem> {
             agentButton(
               `agent-${p.id}`,
               started ? shown : `Start ${agentName} to review #${p.number}`,
-              () => void startWork({ name: p.tabName, task: pullTask(p, "review"), repo: p.slug }),
+              (_e, cx) => start("review", cx),
               program,
               t,
             ),
@@ -295,15 +341,15 @@ export default class Pulls extends ListView<PullItem> {
                 .border(1)
                 .border_color(t.border)
                 .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
+                .on_mouse_down("left", stopPress)
                 .tooltip(started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`)
-                .on_click(
-                  () => void startWork({ name: p.tabName, task: pullTask(p, a.id), repo: p.slug }),
-                )
+                .on_click((_e: unknown, cx: Cx) => start(a.id, cx))
                 .child(a.label),
             ),
           )
           .child(div().flex_1())
-          .when(started, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)))
+          .when(starting, (el: El) => el.child(statusMark("working")))
+          .when(started && !starting, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)))
           .child(
             iconButton(
               `open-${p.id}`,

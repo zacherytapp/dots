@@ -8,10 +8,10 @@ import { h_flex, v_flex } from "gpui-base";
 import { home, run, spaces, type Program, type SpaceInfo } from "herdr";
 import { agentButton, useAgentProgram } from "../../shared/board.ts";
 import { loadConfig } from "../../shared/config.ts";
-import { copyText, findTab } from "../../shared/launch.ts";
+import { copyText, findTab, isPending, namedTabs, trackPending } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope } from "../../shared/list-view.ts";
 import { repoOf, spaceFolders } from "../../shared/repo.ts";
-import type { Theme } from "../../shared/ui.ts";
+import { statusMark, type Theme } from "../../shared/ui.ts";
 import { ago, baseName, matches, tildify } from "../../shared/util.ts";
 import { collect } from "./collect.ts";
 import { dayOf, within, type Day, type Session } from "./parse.ts";
@@ -85,16 +85,41 @@ export default class Sessions extends ListView<Session> {
     };
   }
 
+  private found: { items: Session[]; query: string; out: Session[] } | null = null;
+  private grouped: {
+    items: Session[];
+    today: string;
+    days: { day: Day; rows: Session[] }[];
+  } | null = null;
+
   visible(items: Session[], query: string): Session[] {
-    return items.filter((s) =>
+    if (this.found?.items === items && this.found.query === query) return this.found.out;
+    const out = items.filter((s) =>
       matches(query, s.title, s.cwd, s.branch, s.machine ?? "this computer", s.id),
     );
+    this.found = { items, query, out };
+    return out;
+  }
+
+  /** Day groups, rebuilt only when the rows or the calendar day change. */
+  groups(items: Session[]): { day: Day; rows: Session[] }[] {
+    const today = new Date().toDateString();
+    if (this.grouped?.items === items && this.grouped.today === today) return this.grouped.days;
+    const now = Date.now();
+    const days = DAYS.map((day) => ({
+      day,
+      rows: items.filter((s) => dayOf(s.updated, now) === day),
+    })).filter((g) => g.rows.length);
+    this.grouped = { items, today, days };
+    return days;
   }
 
   body(t: Theme, items: Session[], cx: Cx): El {
     const program = useAgentProgram(cx);
     const all = this.scope() === "all";
-    const now = Date.now();
+    // One look per render, not one per row.
+    const tabs = namedTabs();
+    const here = home();
     return v_flex()
       .id("sessions")
       .flex_1()
@@ -114,29 +139,35 @@ export default class Sessions extends ListView<Session> {
         ),
       )
       .children(
-        DAYS.flatMap((day) => {
-          const mine = items.filter((s) => dayOf(s.updated, now) === day);
-          if (!mine.length) return [];
-          return [
-            h_flex()
-              .h(26)
-              .pt(6)
-              .px(6)
-              .gap(7)
-              .items_center()
-              .text_size(12)
-              .text_color(t.muted)
-              .child(day)
-              .child(div().text_size(11).text_color(t.dim).child(String(mine.length))),
-            ...mine.map((s) => this.row(t, s, program, all)),
-          ];
-        }),
+        this.groups(items).flatMap(({ day, rows }) => [
+          h_flex()
+            .h(26)
+            .pt(6)
+            .px(6)
+            .gap(7)
+            .items_center()
+            .text_size(12)
+            .text_color(t.muted)
+            .child(day)
+            .child(div().text_size(11).text_color(t.dim).child(String(rows.length))),
+          ...rows.map((s) => this.row(t, s, program, all, tabs, here)),
+        ]),
       );
   }
 
-  row(t: Theme, s: Session, program: Program | null, all: boolean): El {
-    const open = findTab(tabNameOf(s));
-    const folder = s.cwd === home() ? "~" : baseName(s.cwd);
+  row(
+    t: Theme,
+    s: Session,
+    program: Program | null,
+    all: boolean,
+    tabs: Set<string>,
+    here: string,
+  ): El {
+    const open = tabs.has(tabNameOf(s));
+    const key = `resume-${s.machine ?? ""}-${s.id}`;
+    const starting = isPending(key);
+    const go = (cx: Cx) => trackPending(key, cx, () => resume(s));
+    const folder = s.cwd === here ? "~" : baseName(s.cwd);
     const where = [all || s.machine ? folder : null, s.branch, s.machine, ago(s.updated)]
       .filter(Boolean)
       .join(" · ");
@@ -152,7 +183,7 @@ export default class Sessions extends ListView<Session> {
       .cursor_pointer()
       .hover((st: El) => st.bg(t.hover))
       .tooltip(`${tildify(s.cwd, home())}\n${s.id}`)
-      .on_click(() => void resume(s))
+      .on_click((_e: unknown, cx: Cx) => go(cx))
       .on_mouse_down("right", (_e: unknown, cx: Cx) => {
         cx.stop_propagation();
         void copyText(s.id);
@@ -161,7 +192,7 @@ export default class Sessions extends ListView<Session> {
         agentButton(
           `resume-${s.machine ?? ""}-${s.id}`,
           open ? `Show the ${tabNameOf(s)} tab` : `Resume with ${agentName}`,
-          () => void resume(s),
+          (_e, cx) => go(cx),
           program,
           t,
         ),
@@ -174,6 +205,7 @@ export default class Sessions extends ListView<Session> {
           .child(div().truncate().text_size(13).text_color(t.foreground).child(s.title))
           .child(div().truncate().text_size(11.5).text_color(t.dim).child(where)),
       )
-      .when(Boolean(open), (el: El) => el.child(div().size(6).rounded(3).bg(t.working)));
+      .when(starting, (el: El) => el.child(statusMark("working")))
+      .when(open && !starting, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)));
   }
 }

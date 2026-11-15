@@ -4,11 +4,12 @@
 // What belongs to which card is decided in work-model.
 
 import type { BoardItem, PullChecks } from "./board-model.ts";
-import type { Forgejo } from "./forgejo.ts";
+import { commitStatus, type Forgejo } from "./forgejo.ts";
 import { graphql } from "./github.ts";
 import { rollupChecks } from "./github-model.ts";
 import { checksOf, type ForgejoPull } from "./forgejo-model.ts";
 import type { Remote } from "./remote.ts";
+import { mapLimit } from "./util.ts";
 import { attachWork, type RepoWork } from "./work-model.ts";
 
 export interface WorkTarget {
@@ -203,14 +204,10 @@ async function forgejoChecks(
     }
   }
   const found = new Map<string, PullChecks>();
-  await Promise.all(
-    [...wanted].slice(0, 30).map(async ([key, { slug, sha }]) => {
-      const s = await fj
-        .get<{ state?: string }>(`/repos/${slug}/commits/${sha}/status`)
-        .catch(() => null);
-      if (s) found.set(key, checksOf(s.state));
-    }),
-  );
+  await mapLimit([...wanted].slice(0, 30), 6, async ([key, { slug, sha }]) => {
+    const state = await commitStatus(fj, slug, sha);
+    if (state !== undefined) found.set(key, checksOf(state));
+  });
   for (const item of items) {
     for (const p of item.pulls ?? []) {
       const checks = found.get(`${item.repo?.toLowerCase()}#${p.number}`);

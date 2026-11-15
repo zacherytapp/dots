@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PaneInfo, Program, SpaceInfo } from "herdr";
-import { jobStatus, matchJob, parseJobs, touchesState, type Job } from "./jobs-model.ts";
+import {
+  jobStatus,
+  jobsKey,
+  matchJob,
+  parseJobs,
+  skipAfterFailures,
+  touchesState,
+  type Job,
+} from "./jobs-model.ts";
 import { buildModel, liveStatus, titleMark } from "./model.ts";
 
 const claude: Program = {
@@ -352,4 +360,20 @@ test("only a job's state.json (or a full refresh) triggers a read", () => {
     false,
   );
   assert.equal(touchesState([`${root}/`], root), true);
+});
+
+test("skipAfterFailures backs off and caps", () => {
+  assert.equal(skipAfterFailures(0), 0);
+  assert.equal(skipAfterFailures(1), 1);
+  assert.equal(skipAfterFailures(2), 3);
+  assert.equal(skipAfterFailures(20), 11);
+});
+
+test("jobsKey changes only with visible job fields", () => {
+  const j = parseJobs(
+    '\x1ea\n{"state":"working","name":"n","cwd":"/x","updatedAt":"2026-01-01T00:00:00Z"}',
+    null,
+  );
+  assert.equal(jobsKey(j), jobsKey(structuredClone(j)));
+  assert.notEqual(jobsKey(j), jobsKey([{ ...j[0], state: "blocked" }]));
 });

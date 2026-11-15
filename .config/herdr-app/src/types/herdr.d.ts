@@ -1,4 +1,4 @@
-// Vendored from ~/.config/herdr-app/herdr.d.ts (Herdr 0.1.13) by `pnpm build:herdr --sync-types`.
+// Vendored from ~/.config/herdr-app/herdr.d.ts (Herdr 0.1.15) by `pnpm build:herdr --sync-types`.
 // Wrapped as an ambient module so the repo type-checks without the app installed.
 declare module "herdr" {
   export interface ExecResult {
@@ -7,13 +7,14 @@ declare module "herdr" {
     stderr: string;
   }
 
-  /** Runs a program with the user's real environment (HOME, PATH, auth). 30 s limit, 8 MiB output.
+  /** Runs a program with the user's real environment (HOME, PATH, auth). 8 MiB output.
+   *  `timeout`: milliseconds, defaults to 30,000, capped at 600,000 (10 minutes).
    *  `on`: on that machine (a space's `machine`) through herdr-core, its home by default.
    *  Rejects when it can't start (not installed, no such folder, the machine is unreachable). */
   export function exec(
     command: string,
     args?: string[],
-    options?: { cwd?: string; on?: string | null },
+    options?: { cwd?: string; on?: string | null; timeout?: number },
   ): Promise<ExecResult>;
 
   /** Runs `hc` (herdr-core) with the given arguments. Add "--json" for machine output. */
@@ -37,7 +38,7 @@ declare module "herdr" {
   /** The agents people can start from a menu (entries with `run` in programs.json), most picked
    *  first, and whether each is installed: asked of the shell agents start in (on another machine,
    *  `on`, its login/interactive shell when supported), at most once a minute per machine.
-   *  Start one with its `run` as `argv`. */
+   *  Rejects if the check fails; failed checks are not cached. Start one with its `run` as `argv`. */
   export function knownAgents(options?: {
     on?: string | null;
   }): Promise<(Program & { run: string[]; installed: boolean })[]>;
@@ -64,7 +65,8 @@ declare module "herdr" {
    *   tab.close {id?}, tab.rename {id?, name}, tab.move {id, index}, tab.select {index | id},
    *   tab.next, tab.prev.
    * Panes: pane.split {direction: "right" | "down", pane?}, pane.close {pane?}, pane.zoom {pane?},
-   *   pane.focus {pane | terminal}, pane.go {direction}, pane.swap {direction}. Pane menus get target { pane, terminal }.
+   *   pane.focus {pane | terminal}, pane.go {direction}, pane.swap {pane?, direction | target}.
+   *   Pane menus get target { pane, terminal }.
    * Terminals: terminal.open {argv?, folder?, place?: "tab" | "right" | "down"}, terminal.kill {terminal},
    *   terminal.keep {terminal, place?} (a running one without a pane, e.g. a sub-agent, gets one),
    *   terminal.park {terminal} (its pane goes, it keeps running; the menu's "Send back"),
@@ -225,7 +227,9 @@ declare module "herdr" {
 
   /** Every core terminal as `hc ls --json` describes it (address, argv, name, template, parent,
    *  labels, state, ...), with `status` as a plain word, the agent's report in `report`, and
-   *  `program` (see Program). Live. */
+   *  `program` (see Program). Parent addresses use the same machine names as `address`;
+   *  parents on this computer use bare terminal IDs. Parents that cannot be mapped
+   *  stay as the core reported them. Live. */
   export function terminals(): any[];
 
   /** Actual terminal/pane focus. `space` and `tab` are the current window context.
@@ -233,6 +237,9 @@ declare module "herdr" {
    *  `terminal` and `cwd` describe it; `pane` and `shown` are null, not its source pane.
    *  Implicit pane split/close/zoom/go/swap and terminal.show fail in that case, as do
    *  terminal.open/keep with place right/down. An explicit pane id targets a model pane.
+   *  A terminal in a window (openOverlay with a layout) that has the keyboard is reported
+   *  the same way (`pane` and `shown` null); implicit pane commands still act on the
+   *  focused pane under the window.
    *  pane.focus {terminal} prefers the first visible layout terminal block, then a model pane.
    *  `shown`: terminal.show replacement, if any. `agent`: the agent an agent block shows.
    *  `terminal` is null for mod panes. Live. */

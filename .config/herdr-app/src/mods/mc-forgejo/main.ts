@@ -28,9 +28,9 @@ export default class ForgejoIssues extends BoardView {
   }
 
   async fetch(scope: Scope, space: SpaceInfo | null): Promise<Loaded<BoardItem>> {
-    const fj = await forgejo();
+    const [fj, all] = await Promise.all([forgejo(), loadConfig()]);
     if (!fj) return { setup: SETUP };
-    const config = (await loadConfig()).forgejo;
+    const config = all.forgejo;
     const since = encodeURIComponent(
       new Date(Date.now() - config.closedDays * 86400000).toISOString(),
     );

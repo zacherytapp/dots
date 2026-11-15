@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PaneInfo, Program, TabInfo } from "herdr";
-import { tabLabel } from "./label.ts";
+import { clip, tabLabel } from "./label.ts";
 
 const claude: Program = {
   key: "claude",
@@ -78,4 +78,20 @@ test("the agent pane leads a split tab and the tooltip lists panes", () => {
   );
   assert.equal(l.name, "Fix");
   assert.match(l.tooltip, /2 panes/);
+});
+
+test("compact pills keep a few characters; a bare program shows its folder", () => {
+  assert.equal(clip("claude agents"), "claude…");
+  assert.equal(clip("dots"), "dots");
+  assert.equal(clip("Herdr sidebar", 8), "Herdr s…");
+  const agent = tabLabel(
+    tab(),
+    [pane({ title: "◐ Herdr sidebar", program: claude })],
+    "/home/zakk",
+  );
+  assert.equal(agent.short, "Herdr s…");
+  const shell = tabLabel(tab(), [pane({ title: "zakk@host:~/projects/dots" })], "/home/zakk");
+  assert.equal(shell.short, "dots");
+  const named = tabLabel(tab({ named: true, name: "deploy" }), [pane({})], "/home/zakk");
+  assert.equal(named.short, "deploy");
 });

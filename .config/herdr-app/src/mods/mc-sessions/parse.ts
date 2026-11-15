@@ -43,6 +43,8 @@ export function splitFiles(stdout: string): Map<string, string> {
   return out;
 }
 
+const TITLE_TYPE = /"type":\s*"(custom-title|agent-name|ai-title|last-prompt|continued-in)"/;
+
 const isNoise = (s: string) =>
   /^<(command|local-command|system-reminder|bash-|task-notification)/.test(s.trim());
 
@@ -55,15 +57,21 @@ export function parseTail(entry: FileEntry, machine: string | null, text: string
   let branch = "";
   let last = 0;
   let continued = false;
-  // The first line is usually cut short by `tail -c`; JSON.parse skips it.
-  for (const line of text.split("\n")) {
-    if (!line.startsWith("{")) continue;
-    let row: Record<string, unknown>;
+  // The first line is usually cut short by `tail -c`; JSON.parse skips it. Title records are
+  // found by a cheap text test so the (many, large) message lines are not all parsed: only the
+  // newest line with a folder, branch or time is, which is all the rest is read for.
+  const lines = text.split("\n").filter((l) => l.startsWith("{"));
+  const parse = (line: string): Record<string, unknown> | null => {
     try {
-      row = JSON.parse(line) as Record<string, unknown>;
+      return JSON.parse(line) as Record<string, unknown>;
     } catch {
-      continue;
+      return null;
     }
+  };
+  for (const line of lines) {
+    if (!TITLE_TYPE.test(line)) continue;
+    const row = parse(line);
+    if (!row) continue;
     const type = row.type;
     if (type === "custom-title" && typeof row.customTitle === "string") custom = row.customTitle;
     else if (type === "agent-name" && typeof row.agentName === "string") agentName = row.agentName;
@@ -75,13 +83,20 @@ export function parseTail(entry: FileEntry, machine: string | null, text: string
     )
       prompt = row.lastPrompt;
     else if (type === "continued-in") continued = true;
-    if (typeof row.cwd === "string" && row.cwd) cwd = row.cwd;
-    if (typeof row.gitBranch === "string" && row.gitBranch && row.gitBranch !== "HEAD")
-      branch = row.gitBranch;
-    if (typeof row.timestamp === "string") {
+  }
+  let got = 0;
+  for (let i = lines.length - 1; i >= 0 && got < 3; i--) {
+    const row = parse(lines[i]);
+    if (!row) continue;
+    if (!cwd && typeof row.cwd === "string" && row.cwd) ((cwd = row.cwd), got++);
+    if (!branch && typeof row.gitBranch === "string" && row.gitBranch && row.gitBranch !== "HEAD")
+      ((branch = row.gitBranch), got++);
+    if (!last && typeof row.timestamp === "string") {
       const t = Date.parse(row.timestamp);
-      if (Number.isFinite(t) && t > last) last = t;
+      if (Number.isFinite(t)) ((last = t), got++);
     }
+    // A tail with no branch at all would otherwise parse every line: stop after a few.
+    if (lines.length - i >= 40) break;
   }
   const id =
     entry.path

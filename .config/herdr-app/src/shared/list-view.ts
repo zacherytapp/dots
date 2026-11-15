@@ -4,11 +4,11 @@
 
 import { div, svg, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex, InputState } from "gpui-base";
-import { run, setShared, shared, theme, type SpaceInfo } from "herdr";
+import { layout, run, setShared, shared, theme, type SpaceInfo } from "herdr";
 import { editConfigArgs, saveToken } from "./config.ts";
 import { openUrl } from "./launch.ts";
 import { activeSpace } from "./repo.ts";
-import { KEYS } from "./sources.ts";
+import { KEYS, NODES } from "./sources.ts";
 import {
   emptyState,
   iconButton,
@@ -19,7 +19,7 @@ import {
   asset,
   type Theme,
 } from "./ui.ts";
-import { ago } from "./util.ts";
+import { ago, findNode } from "./util.ts";
 
 export type Scope = "space" | "all";
 
@@ -57,6 +57,9 @@ interface Snapshot<T> {
   at: number;
 }
 
+/** A scope looked at this recently is shown from memory when switched back to, not asked again. */
+const FRESH_MS = 30000;
+
 const SCOPES: { value: Scope; label: string }[] = [
   { value: "space", label: "This space" },
   { value: "all", label: "All spaces" },
@@ -65,7 +68,10 @@ const SCOPES: { value: Scope; label: string }[] = [
 export class ListView<T> extends View {
   declare snap: Snapshot<T>;
   declare cache: Map<string, Snapshot<T>>;
+  /** Loading with nothing to show yet for this scope (the panel says "Loading…"). */
   declare loading: boolean;
+  /** Any load in flight, a quiet refresh too: the refresh button spins. */
+  declare busy: boolean;
   declare error: string | null;
   declare search: InputState;
   declare width: number;
@@ -73,6 +79,10 @@ export class ListView<T> extends View {
   declare loadedKey: string;
   declare tokenInput: InputState;
   declare saving: boolean;
+  /** When the last load started (ms), so a shown panel looks again once `interval()` has passed. */
+  declare tried: number;
+  /** The last search result, reused while the rows and the query are the same. */
+  declare memo: { items: T[]; query: string; shown: T[] } | null;
 
   // ---- for subclasses -------------------------------------------------------------------
   /** The source id (`issues`, `pulls`, ...): names the shared scope key. */
@@ -117,6 +127,7 @@ export class ListView<T> extends View {
     this.snap = { items: [], caption: "", note: "", setup: null, token: null, warning: "", at: 0 };
     this.cache = new Map();
     this.loading = false;
+    this.busy = false;
     this.error = null;
     this.width = 0;
     this.seq = 0;
@@ -127,12 +138,31 @@ export class ListView<T> extends View {
     this.tokenInput = InputState.new({ placeholder: "Paste an access token" });
     this.tokenInput.set_masked(true);
     this.tokenInput.on("submit", (_e, cx) => this.saveToken(cx));
-    this.reload(cx);
-    // The shown space or the scope changed: load what it shows now.
-    cx.timer.every(1500, (cx) => {
-      if (this.key() !== this.loadedKey) this.reload(cx);
+    this.tried = 0;
+    this.memo = null;
+    // Render starts the first load and notices a new space or scope (it runs on every change of
+    // either). This only looks again while nothing else redraws a shown panel; a hidden one waits
+    // until it is shown, then refreshes if it is stale.
+    cx.timer.every(Math.min(this.interval(), 60000), (cx) => {
+      if (this.shown() && this.due()) this.reload(cx, true);
     });
-    cx.timer.every(this.interval(), (cx) => this.reload(cx, true));
+  }
+
+  /**
+   * Whether this copy is on screen: the panel is open and its stack shows this source. Copies stay
+   * alive while hidden (another source, panel closed), so they skip loading and drawing then.
+   * True when it isn't in the panel at all.
+   */
+  shown(): boolean {
+    const root = layout();
+    const body = findNode(root, NODES.body);
+    if (!body?.children?.some((c) => c.id === this.source())) return true;
+    return !findNode(root, NODES.panel)?.hidden && body.active === this.source();
+  }
+
+  /** Time to look again: never loaded, or `interval()` since the last try. */
+  due(): boolean {
+    return !this.busy && Date.now() - this.tried >= this.interval();
   }
 
   /** Saves the pasted token for the service the panel asked about, then loads again. */
@@ -230,12 +260,39 @@ export class ListView<T> extends View {
 
   setScope(scope: Scope, cx: Cx): void {
     setShared(KEYS.scope(this.source()), scope);
-    this.reload(cx);
+    this.switchTo(cx, this.key());
+    cx.notify();
   }
 
+  /** Loads again now and redraws (from a handler or a task, never from render). */
   reload(cx: Cx, quiet = false): void {
-    const key = this.key();
+    this.load(cx, quiet);
+    cx.notify();
+  }
+
+  /**
+   * Shows another scope (a space switch, This space / All spaces): what it had last time at once,
+   * then asks again unless that was moments ago. No redraw, so render may call it.
+   */
+  switchTo(cx: Cx, key: string): void {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < FRESH_MS) {
+      // A load still running for the scope left behind must not land here.
+      this.seq++;
+      this.snap = hit;
+      this.loadedKey = key;
+      this.tried = hit.at;
+      this.error = null;
+      this.loading = this.busy = false;
+      return;
+    }
+    this.load(cx, Boolean(hit), key);
+  }
+
+  /** Starts a load without asking for a redraw, so render may call it: render draws the result. */
+  load(cx: Cx, quiet = false, key = this.key()): void {
     const seq = ++this.seq;
+    this.tried = Date.now();
     if (key !== this.loadedKey) {
       // Show what this scope had last time while it loads again.
       this.snap = this.cache.get(key) ?? {
@@ -250,8 +307,8 @@ export class ListView<T> extends View {
       this.error = null;
     }
     this.loadedKey = key;
-    if (!quiet) this.loading = true;
-    cx.notify();
+    this.loading = !quiet;
+    this.busy = true;
     cx.spawn(async (cx) => {
       try {
         const r = await this.fetch(this.scope(), activeSpace());
@@ -276,6 +333,7 @@ export class ListView<T> extends View {
       } finally {
         if (seq === this.seq) {
           this.loading = false;
+          this.busy = false;
           cx.notify();
         }
       }
@@ -291,9 +349,13 @@ export class ListView<T> extends View {
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton("refresh", asset("refresh"), "Refresh", (_e, cx) => this.reload(cx), {
-          active: this.loading,
-        }),
+        iconButton(
+          "refresh",
+          asset("refresh"),
+          this.busy ? "Loading…" : "Refresh",
+          (_e, cx) => this.reload(cx),
+          { active: this.busy, spin: this.busy },
+        ),
       )
       .when(this.hasSettings(), (el: El) =>
         el.child(
@@ -325,9 +387,22 @@ export class ListView<T> extends View {
 
   footer(t: Theme, shown: number): El {
     const total = this.snap.items.length;
-    const count =
-      shown === total ? `${total} ${this.noun()}` : `${shown} of ${total} ${this.noun()}`;
-    const when = this.loading ? "Loading…" : this.snap.at ? `Updated ${ago(this.snap.at)}` : "";
+    // Nothing loaded and the body says why (set up, a token, no remote, an error): a count of 0
+    // would read as a load that worked and found nothing.
+    const explained =
+      total === 0 && Boolean(this.snap.setup || this.snap.token || this.snap.note || this.error);
+    const count = explained
+      ? ""
+      : shown === total
+        ? `${total} ${this.noun()}`
+        : `${shown} of ${total} ${this.noun()}`;
+    const when = this.loading
+      ? "Loading…"
+      : this.busy
+        ? "Refreshing…"
+        : this.snap.at
+          ? `Updated ${ago(this.snap.at)}`
+          : "";
     return h_flex()
       .flex_none()
       .h(30)
@@ -349,9 +424,37 @@ export class ListView<T> extends View {
       );
   }
 
+  /** `visible()` for the current rows and query, worked out again only when either changed. */
+  shownItems(): T[] {
+    const query = this.search.value();
+    const m = this.memo;
+    if (m && m.items === this.snap.items && m.query === query) return m.shown;
+    const shown = this.visible(this.snap.items, query);
+    this.memo = { items: this.snap.items, query, shown };
+    return shown;
+  }
+
   render(cx: Cx): El {
     const t = theme();
-    const items = this.visible(this.snap.items, this.search.value());
+    const root = v_flex()
+      .id("root")
+      .size_full()
+      .min_h(0)
+      .bg(t.background)
+      .text_size(13)
+      .text_color(t.foreground)
+      .on_size_change((size: { width: number }, cx: Cx) => {
+        if (Math.abs(size.width - this.width) >= 1) {
+          this.width = size.width;
+          cx.notify();
+        }
+      });
+    // Hidden: draw nothing and load nothing. Showing it changes the layout, which renders again.
+    if (!this.shown()) return root;
+    const key = this.key();
+    if (key !== this.loadedKey) this.switchTo(cx, key);
+    else if (this.due()) this.load(cx, true, key);
+    const items = this.shownItems();
     let content: El;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
@@ -384,23 +487,8 @@ export class ListView<T> extends View {
             .child(this.body(t, items, cx))
         : this.body(t, items, cx);
     }
-    const sub =
-      this.snap.items.length && !this.snap.setup
-        ? this.subbar(t, this.visible(this.snap.items, this.search.value()))
-        : null;
-    return v_flex()
-      .id("root")
-      .size_full()
-      .min_h(0)
-      .bg(t.background)
-      .text_size(13)
-      .text_color(t.foreground)
-      .on_size_change((size: { width: number }, cx: Cx) => {
-        if (Math.abs(size.width - this.width) >= 1) {
-          this.width = size.width;
-          cx.notify();
-        }
-      })
+    const sub = this.snap.items.length && !this.snap.setup ? this.subbar(t, items) : null;
+    return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el: El) => el.child(sub as El))
       .child(v_flex().flex_1().min_h(0).pt(10).child(content))

@@ -1,5 +1,6 @@
 // Starting work: an agent in the right space for a card, resuming a session, opening links.
 
+import type { Cx } from "gpui-kit";
 import {
   exec,
   focused,
@@ -28,6 +29,38 @@ import {
   runsInBackground,
 } from "./issue-actions.ts";
 import { activeSpace, repoOf, spaceFolder, spacesForSlug } from "./repo.ts";
+
+/**
+ * Work being started right now, by name: a start can take seconds (login shells, `claude agents`,
+ * resolving which space holds a repo), so its button shows a spinner meanwhile. Module scope, so
+ * every copy of a mod sees it; the copy that started it redraws when it ends.
+ */
+const pending = new Set<string>();
+
+export function isPending(name: string): boolean {
+  return pending.has(name);
+}
+
+/** Runs `task` with `name` marked pending (a second click meanwhile does nothing), redrawing around it. */
+export function trackPending(name: string, cx: Cx, task: () => Promise<void>): void {
+  if (pending.has(name)) return;
+  pending.add(name);
+  cx.notify();
+  cx.spawn(async (cx) => {
+    try {
+      await task();
+    } catch (e) {
+      notify({
+        title: `Couldn't start ${name}`,
+        body: String((e as Error)?.message ?? e).slice(-300),
+        level: "error",
+      });
+    } finally {
+      pending.delete(name);
+      cx.notify();
+    }
+  });
+}
 
 /** The tab already named `name`, in any space. */
 export function findTab(name: string): { space: SpaceInfo; tab: string } | null {

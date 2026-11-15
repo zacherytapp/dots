@@ -10,6 +10,7 @@ import {
   agents,
   home,
   layout,
+  nextCommand,
   notify,
   panes,
   playSound,
@@ -25,7 +26,9 @@ import {
 import { KEYS, NODES } from "../../shared/sources.ts";
 import { findTab, publishSessions } from "../../shared/launch.ts";
 import { spaceFolders } from "../../shared/repo.ts";
+import { countBySpace, publishSpaceAgents } from "../../shared/space-agents.ts";
 import {
+  alpha,
   asset,
   chromeIcon,
   iconButton,
@@ -33,22 +36,26 @@ import {
   searchBox,
   sectionHeader,
   statusMark,
+  stopPress,
   type Theme,
 } from "../../shared/ui.ts";
-import { compactNumber, duration, findNode, parseJson } from "../../shared/util.ts";
-import { readContexts, type Reading } from "./context.ts";
+import { compactNumber, duration, findNode, parseJson, stepIn } from "../../shared/util.ts";
+import { readContexts } from "./context.ts";
 import { jobMachines, readJobsOn } from "./jobs.ts";
-import { touchesState, type Job } from "./jobs-model.ts";
+import { jobsKey, skipAfterFailures, touchesState, type Job } from "./jobs-model.ts";
 import {
   buildModel,
   RANK,
   titleMark,
+  trackFinished,
   type Group,
+  type Input,
   type Mode,
+  type Model,
   type Row,
   type TerminalRecord,
 } from "./model.ts";
-import { shortModel } from "./usage.ts";
+import { contextKey, sameReadings, shortModel, type Reading } from "./usage.ts";
 
 const narrow = (): boolean => (findNode(layout(), NODES.sidebar)?.size?.px ?? Infinity) < 160;
 
@@ -95,10 +102,24 @@ export default class Agents extends View {
   /** Machines being read now, and those that changed meanwhile and need another read. */
   declare jobsBusy: Set<string>;
   declare jobsAgain: Set<string>;
+  /** Machines whose last read failed: consecutive failures, and polls still to skip. */
+  declare jobsFails: Map<string, { fails: number; wait: number }>;
+  /** What the last context read was made from (see contextKey), and when. */
+  declare contextSeen: { key: string; at: number };
   /** The panes' state signals as last drawn (see liveKey). */
   declare drawnKey: string;
+  /** The agent order last handed to Herdr. */
+  declare orderKey: string | null;
   /** Each row's last status, to notice one starting to wait for you; null until the first look. */
   declare lastStatus: Map<string, string> | null;
+  /** Agents in a pane that finished while nobody looked (see trackFinished). */
+  declare finished: Set<string>;
+  /** The agent the keyboard last went to, for when focus is somewhere else (a peek, a mod). */
+  declare cursor: string | null;
+  /** Rows waiting for you, in list order, also those folded or hidden by the search. */
+  declare urgent: Row[];
+  /** Rows the keys step through: as drawn, without folded groups, but not narrowed by the search. */
+  declare navRows: Row[];
 
   init(_props: unknown, cx: Cx): void {
     this.search = InputState.new({ placeholder: "Find an agent" });
@@ -113,15 +134,36 @@ export default class Agents extends View {
     this.jobsBy = new Map();
     this.jobsBusy = new Set();
     this.jobsAgain = new Set();
+    this.jobsFails = new Map();
+    this.contextSeen = { key: "", at: 0 };
     this.lastStatus = null;
+    this.finished = new Set();
     this.drawnKey = "";
+    this.orderKey = null;
+    this.cursor = null;
+    this.urgent = [];
+    this.navRows = [];
+    // keys.json: mc-agents.next / mc-agents.prev / mc-agents.needs-you
+    cx.spawn(async (cx) => {
+      for (;;) {
+        const c = await nextCommand();
+        try {
+          if (c === "next") this.step(1);
+          else if (c === "prev") this.step(-1);
+          else if (c === "needs-you") this.nextNeedingYou();
+        } catch {
+          // one failed command must not stop the bindings
+        }
+        cx.notify();
+      }
+    });
     cx.timer.every(1000, (cx) => {
       if (this.liveKey() !== this.drawnKey) cx.notify();
     });
-    this.readJobs(null, cx);
+    this.readJobs(null, cx, true);
     this.readRemoteJobs(cx);
     this.watchJobs(cx);
-    cx.timer.every(LOCAL_JOBS_MS, (cx) => this.readJobs(null, cx));
+    cx.timer.every(LOCAL_JOBS_MS, (cx) => this.readJobs(null, cx, true));
     cx.timer.every(REMOTE_JOBS_MS, (cx) => this.readRemoteJobs(cx));
     cx.timer.every(15000, (cx) => this.readContext(cx));
     cx.timer.after(1500, (cx) => this.readContext(cx));
@@ -132,10 +174,8 @@ export default class Agents extends View {
    * mark. A title change alone may not redraw a mod, so a 1 s look compares this to what was drawn
    * and redraws only when an agent would change state (and then notifies at once if it waits).
    */
-  liveKey(): string {
-    return panes()
-      .map((p) => `${p.terminal}:${p.status ?? titleMark(p.title) ?? ""}`)
-      .join("|");
+  liveKey(paneList = panes()): string {
+    return paneList.map((p) => `${p.terminal}:${p.status ?? titleMark(p.title) ?? ""}`).join("|");
   }
 
   mode(): Mode {
@@ -148,14 +188,23 @@ export default class Agents extends View {
 
   readContext(cx: Cx): void {
     if (this.reading || !this.open()) return;
-    this.reading = true;
     const rows = this.rows.filter((r) => r.depth === 0);
+    // Nothing new in any session's job record and nobody working: the files haven't grown.
+    const key = contextKey(rows);
+    const now = Date.now();
+    const working = rows.some((r) => r.status === "working");
+    if (key === this.contextSeen.key && !working && now - this.contextSeen.at < 120000) return;
+    this.contextSeen = { key, at: now };
+    this.reading = true;
     cx.spawn(async (cx) => {
       try {
-        this.readings = await readContexts(rows);
+        const next = await readContexts(rows);
+        if (!sameReadings(next, this.readings)) {
+          this.readings = next;
+          cx.notify();
+        }
       } finally {
         this.reading = false;
-        cx.notify();
       }
     });
   }
@@ -181,16 +230,28 @@ export default class Agents extends View {
     for (const key of [...this.jobsBy.keys()])
       if (key && !live.includes(key)) {
         this.jobsBy.delete(key);
+        this.jobsFails.delete(key);
         this.publishJobs(cx);
       }
-    for (const m of live) this.readJobs(m, cx);
+    for (const m of live) {
+      // An unreachable machine is tried less and less often.
+      const f = this.jobsFails.get(m);
+      if (f && f.wait > 0) {
+        f.wait--;
+        continue;
+      }
+      this.readJobs(m, cx, true);
+    }
   }
 
-  /** Reads one machine's jobs; a read asked for mid-read runs again right after it. */
-  readJobs(machine: string | null, cx: Cx): void {
+  /**
+   * Reads one machine's jobs. A read asked for by a timer while one is running is dropped (a slow
+   * machine never stacks requests); one asked for by a change on disk runs again right after.
+   */
+  readJobs(machine: string | null, cx: Cx, timer = false): void {
     const key = machine ?? "";
     if (this.jobsBusy.has(key)) {
-      this.jobsAgain.add(key);
+      if (!timer) this.jobsAgain.add(key);
       return;
     }
     this.jobsBusy.add(key);
@@ -198,8 +259,21 @@ export default class Agents extends View {
       try {
         do {
           this.jobsAgain.delete(key);
-          this.jobsBy.set(key, await readJobsOn(machine));
-          this.publishJobs(cx);
+          const jobs = await readJobsOn(machine);
+          const was = this.jobsFails.get(key);
+          const wasLoaded = this.jobsBy.has(key);
+          if (jobs) {
+            this.jobsBy.set(key, jobs);
+            this.jobsFails.delete(key);
+          } else if (machine) {
+            // Keep the jobs last seen; mark the machine so the list can say it is away.
+            const fails = (was?.fails ?? 0) + 1;
+            this.jobsFails.set(key, { fails, wait: skipAfterFailures(fails) });
+            if (!this.jobsBy.has(key)) this.jobsBy.set(key, []);
+          }
+          const flipped =
+            Boolean(was) !== Boolean(this.jobsFails.get(key)) || (machine !== null && !wasLoaded);
+          if (!this.publishJobs(cx) && flipped) cx.notify();
         } while (this.jobsAgain.has(key));
       } finally {
         this.jobsBusy.delete(key);
@@ -207,15 +281,27 @@ export default class Agents extends View {
     });
   }
 
+  /** Machines not read yet (loading) and those that can't be reached, for the list to show. */
+  machineNotes(): { loading: string[]; away: string[] } {
+    const live = jobMachines();
+    return {
+      loading: live.filter((m) => !this.jobsBy.has(m)),
+      away: live.filter((m) => this.jobsFails.has(m)),
+    };
+  }
+
   /** Redraws only when a job's state, detail or time changed. */
-  publishJobs(cx: Cx): void {
+  publishJobs(cx: Cx): boolean {
     const jobs = [...this.jobsBy.values()].flat();
-    const key = (j: Job) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`;
-    if (jobs.map(key).join("\n") === this.jobs.map(key).join("\n")) return;
+    if (jobsKey(jobs) === jobsKey(this.jobs)) {
+      // A machine just finishing its first read still changes what the list shows.
+      return false;
+    }
     this.jobs = jobs;
     // The issue and pull request buttons light up while their session exists.
     publishSessions(jobs.map((j) => j.name));
     cx.notify();
+    return true;
   }
 
   /**
@@ -267,9 +353,44 @@ export default class Agents extends View {
   }
 
   focus(r: Row): void {
+    this.cursor = r.address;
     if (r.native && r.pane) run("pane.focus", { pane: r.pane });
     else if (r.job) attachJob(r.job);
     else run("terminal.peek", { terminal: r.address });
+  }
+
+  /** The agent being looked at: the focused pane in the shown tab, else where the keys last went. */
+  current(): string | null {
+    const tab = spaces()
+      .find((s) => s.active)
+      ?.tabs.find((t) => t.active)?.id;
+    return panes().find((p) => p.tab === tab && p.focused)?.terminal ?? this.cursor;
+  }
+
+  /**
+   * Shows the next (or previous) agent in a pane, in the order this list draws them. Background
+   * jobs without a tab are skipped: stepping past one shouldn't open a tab for it.
+   */
+  step(step: 1 | -1): void {
+    const list = this.navRows.filter((r) => r.depth === 0 && r.native && r.pane);
+    const here = this.current();
+    const next = stepIn(
+      list,
+      list.findIndex((r) => r.address === here),
+      step,
+    );
+    if (next) this.focus(next);
+  }
+
+  /** Shows the next agent waiting for you after the current one (a background job opens in a tab). */
+  nextNeedingYou(): void {
+    const here = this.current();
+    const next = stepIn(
+      this.urgent,
+      this.urgent.findIndex((r) => r.address === here),
+      1,
+    );
+    if (next) this.focus(next);
   }
 
   row(t: Theme, r: Row): El {
@@ -351,6 +472,7 @@ export default class Agents extends View {
                 .rounded(4)
                 .text_size(11)
                 .text_color(t.dim)
+                .cursor_pointer()
                 .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
                 .on_click((_e: unknown, cx: Cx) => {
                   cx.stop_propagation();
@@ -455,9 +577,32 @@ export default class Agents extends View {
       )
       .child(div().text_color(t.dim).child(String(g.count)))
       .child(div().flex_1())
-      .when(!open, (el: El) =>
-        el.child(svg(chromeIcon("chevron-right")).size(11).text_color(t.dim)),
+      .child(
+        svg(chromeIcon(open ? "chevron-down" : "chevron-right"))
+          .size(11)
+          .text_color(t.dim),
       );
+  }
+
+  /** A line per machine still being read (spinner) or unreachable, so it isn't silently empty. */
+  machineNotes_(t: Theme): El[] {
+    const { loading, away } = this.machineNotes();
+    const line = (key: string, mark: El | null, text: string) =>
+      h_flex()
+        .id(`note-${key}`)
+        .flex_none()
+        .px(8)
+        .py(4)
+        .gap(8)
+        .items_center()
+        .text_size(11.5)
+        .text_color(t.dim)
+        .child(mark ?? div().w(12).flex_none())
+        .child(div().flex_1().min_w(0).truncate().child(text));
+    return [
+      ...loading.map((m) => line(`l-${m}`, statusMark("working"), `Reading ${m}…`)),
+      ...away.map((m) => line(`a-${m}`, null, `${m} is unreachable; showing what was last seen`)),
+    ];
   }
 
   compact(t: Theme, rows: Row[]): El {
@@ -478,8 +623,10 @@ export default class Agents extends View {
               .px(8)
               .gap(4)
               .items_center()
+              .cursor_pointer()
               .hover((s: El) => s.bg(t.hover))
               .on_click(() => this.focus(r))
+              .tooltip(`${r.title} · ${r.status}`)
               .child(
                 div()
                   .flex_1()
@@ -493,40 +640,100 @@ export default class Agents extends View {
       );
   }
 
+  /** An agent you can see: focused, or in the shown tab. */
+  seen(
+    spaceList: ReturnType<typeof spaces>,
+    paneList: ReturnType<typeof panes>,
+  ): (r: Row) => boolean {
+    const tab = spaceList.find((s) => s.active)?.tabs.find((t) => t.active)?.id;
+    const shown = new Set(paneList.filter((p) => p.tab === tab).map((p) => p.pane));
+    return (r) => r.focused || (r.pane !== null && shown.has(r.pane));
+  }
+
+  /**
+   * The agents list as drawn, and every agent regardless of the search (what the Spaces rows,
+   * the finished marks and the notifications go by). Agents that just finished unseen show as done.
+   */
+  models(input: Omit<Input, "finished">): { model: Model; full: Model } {
+    const seen = this.seen(input.spaces, input.panes);
+    const build = (finished: Set<string>) => {
+      const model = buildModel({ ...input, finished });
+      const full = input.query ? buildModel({ ...input, finished, query: "" }) : model;
+      return { model, full };
+    };
+    let built = build(this.finished);
+    const next = trackFinished(built.full.all, this.lastStatus, this.finished, seen);
+    if (next.size !== this.finished.size || [...next].some((a) => !this.finished.has(a))) {
+      this.finished = next;
+      built = build(next);
+    }
+    return built;
+  }
+
+  /** Tells mc-spaces how many agents in each space work, wait for you or finished. */
+  publishSpaces(rows: Row[], spaceList: ReturnType<typeof spaces>): void {
+    const places = spaceList.map((s) => ({
+      id: s.id,
+      machine: s.machine ?? null,
+      folders: spaceFolders(s),
+    }));
+    publishSpaceAgents(countBySpace(rows, places));
+  }
+
   render(): El {
     const t = theme();
     const open = this.open();
     const mode = this.mode();
-    this.drawnKey = this.liveKey();
-    const model = buildModel({
+    const spaceList = spaces();
+    const paneList = panes();
+    this.drawnKey = this.liveKey(paneList);
+    const { model, full } = this.models({
       agents: agents(),
       terminals: terminals() as TerminalRecord[],
-      spaces: spaces(),
-      panes: panes(),
+      spaces: spaceList,
+      panes: paneList,
       mode,
       query: this.search.value(),
       folded: this.folded,
       jobs: this.jobs,
     });
-    this.alert(model.all);
-    setAgentOrder(model.order);
+    this.alert(full.all);
+    this.publishSpaces(full.all, spaceList);
+    const order = model.order.join("\n");
+    if (order !== this.orderKey) {
+      this.orderKey = order;
+      setAgentOrder(model.order);
+    }
     const rows = model.groups.flatMap((g) => g.rows);
     this.rows = rows;
     this.track(rows.filter((r) => r.depth === 0));
     if (narrow()) return this.compact(t, rows);
 
-    const urgent = model.needsYou;
+    this.urgent = full.needsYou;
+    this.navRows = full.groups.flatMap((g) => g.rows);
+    const urgent = full.needsYou.length;
     const needsYou = div()
+      .id("needs-you")
       .flex_none()
       .px(6)
       .h(18)
       .flex()
       .items_center()
       .rounded(5)
-      .bg(`${t.blocked}26`)
+      .bg(alpha(t.blocked, "26"))
       .text_size(10.5)
       .font_semibold()
       .text_color(t.blocked)
+      .cursor_pointer()
+      .hover((s: El) => s.bg(alpha(t.blocked, "40")))
+      .on_mouse_down("left", stopPress)
+      .on_click((_e: unknown, cx: Cx) => {
+        cx.stop_propagation();
+        this.nextNeedingYou();
+      })
+      .tooltip(
+        urgent === 1 ? "Show the agent waiting for you" : "Show the next agent waiting for you",
+      )
       .child(`${urgent} need${urgent === 1 ? "s" : ""} you`);
     const toggle = (m: Mode, icon: string, label: string) =>
       iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared("mc.agents.mode", m), {
@@ -579,6 +786,7 @@ export default class Agents extends View {
               .pb(10)
               .gap(1)
               .overflow_y_scrollbar()
+              .children(this.machineNotes_(t))
               .when(model.total === 0, (e: El) =>
                 e.child(
                   div()

@@ -76,6 +76,16 @@ export function matches(query: string, ...hay: (string | null | undefined)[]): b
   return words.every((w) => text.includes(w));
 }
 
+/**
+ * The item `step` places away from the one at `current` in `list`, wrapping at either end. With
+ * no current one (-1), the first going forward and the last going back. Null for an empty list.
+ */
+export function stepIn<T>(list: T[], current: number, step: 1 | -1): T | null {
+  if (!list.length) return null;
+  if (current < 0 || current >= list.length) return list[step === 1 ? 0 : list.length - 1];
+  return list[(current + step + list.length) % list.length];
+}
+
 /** Claude Code's project folder name for a working directory. */
 export function claudeProjectDir(cwd: string): string {
   return cwd.replace(/[^A-Za-z0-9]/g, "-");
@@ -89,4 +99,22 @@ export function parseJson<T>(text: string | null | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+/** `fn` over every item with at most `limit` running at once, results in input order. */
+export async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length) }, worker));
+  return out;
 }

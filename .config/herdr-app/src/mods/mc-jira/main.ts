@@ -39,6 +39,8 @@ export default class JiraIssues extends BoardView {
   async fetch(scope: Scope, space: SpaceInfo | null): Promise<Loaded<BoardItem>> {
     const config = (await loadConfig()).jira;
     if (!config.site) return { setup: SETUP };
+    // The Forgejo client (config + token read) is needed after the search: start it now.
+    const fjLoad = forgejo().catch(() => null);
     if (config.auth === "basic" && !config.email)
       throw new Error("Jira Cloud needs jira.email with the API token.");
     const base = site(config.site);
@@ -54,7 +56,7 @@ export default class JiraIssues extends BoardView {
           ? `${base}/secure/ViewProfile.jspa`
           : "https://id.atlassian.com/manage-profile/security/api-tokens",
     });
-    const token = await readSecret(config, "jira");
+    const [token] = await Promise.all([readSecret(config, "jira"), fjLoad]);
     if (!token) return { token: ask(false) };
 
     let jql = config.jql;
@@ -93,7 +95,7 @@ export default class JiraIssues extends BoardView {
     }
     const body = (await r.json()) as { issues?: JiraIssue[] };
     const items = (body.issues ?? []).map((i) => issueItem(i, base, config.projects, repo));
-    const fj = await forgejo().catch(() => null);
+    const fj = await fjLoad;
     const found = await withWork(items, await jiraTargets(items, remote, fj), fj);
     return { ...found, caption };
   }

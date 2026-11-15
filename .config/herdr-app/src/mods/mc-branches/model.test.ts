@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { kindOf, mergeBranches, parseLocal, parseLsRemote, parseRemoteRefs } from "./model.ts";
+import {
+  kindOf,
+  mergeBranches,
+  parseLocal,
+  parseLsRemote,
+  parseRemoteRefs,
+  splitLsRemotes,
+  splitSections,
+} from "./model.ts";
 
 const local = parseLocal(
   [
@@ -54,4 +62,24 @@ test("ls-remote heads, and branches merged across local and remote with PRs", ()
   assert.equal(rows[2].subject, "From someone else");
   assert.equal(rows[2].web, "https://github.com/z/r/tree/remote-only");
   assert.equal(rows[3].web, null);
+});
+
+test("the local look splits into heads, current branch and tracking refs", () => {
+  const [a, b, c] = splitSections("x\ty\n\x1e\nmain\n\x1e\nz\n");
+  assert.equal(a, "x\ty\n");
+  assert.equal(b, "main\n");
+  assert.equal(c, "z\n");
+  assert.deepEqual(splitSections(""), ["", "", ""]);
+});
+
+test("batched ls-remote output maps each remote, failed ones to null", () => {
+  const out = [
+    "\x1eorigin\t0\nabc\trefs/heads/main\ndef\trefs/heads/dev\n",
+    "\x1eupstream\t128\n",
+    "",
+  ].join("");
+  const m = splitLsRemotes(out, ["origin", "upstream", "gone"]);
+  assert.equal(m.get("origin")?.get("dev"), "def");
+  assert.equal(m.get("upstream"), null);
+  assert.equal(m.get("gone"), null);
 });

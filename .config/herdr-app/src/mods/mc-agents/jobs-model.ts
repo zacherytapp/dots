@@ -106,3 +106,16 @@ export function matchJob(
   const open = near.filter((j) => j.cwd === cwd && !CLOSED.has(j.state));
   return open.length === 1 ? open[0] : null;
 }
+
+/**
+ * Polls to skip after `fails` reads in a row failed, so an unreachable machine is tried less and
+ * less often (every 2nd, 4th, 8th... tick, at most every 12th) instead of every tick.
+ */
+export function skipAfterFailures(fails: number): number {
+  return fails <= 0 ? 0 : Math.min(2 ** fails - 1, 11);
+}
+
+/** Stable text for a job list: equal text means nothing visible changed. */
+export function jobsKey(jobs: Job[]): string {
+  return jobs.map((j) => `${j.machine}/${j.id}/${j.state}/${j.detail}/${j.updated}`).join("\n");
+}

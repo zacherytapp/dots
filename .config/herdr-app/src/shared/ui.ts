@@ -18,6 +18,22 @@ export const sourceIcon = (s: Source): string => (s.own ? asset(s.icon) : s.icon
 /** Keeps a press on a control from dragging the window or reaching the row under it. */
 export const stopPress = (_e: unknown, cx: Cx): void => cx.stop_propagation();
 
+/** Space avatar colors, the same ones Herdr's own spaces list uses (shared key `space.colors`). */
+export const SPACE_MARKS: Record<string, string> = {
+  ansi6: "#22a99a",
+  ansi3: "#e3814f",
+  ansi4: "#5b8def",
+  ansi5: "#8b7cf6",
+  ansi2: "#3fae6a",
+  ansi1: "#d9649a",
+};
+
+/** A space's avatar fill from its stored color: a hex color, a palette name, else a theme color. */
+export function spaceFill(t: Theme, color: string): string {
+  if (color.startsWith("#")) return color;
+  return SPACE_MARKS[color] ?? t[color] ?? t.accent;
+}
+
 /** `#rrggbb` plus an alpha byte, for tinted fills. */
 export const alpha = (color: string | undefined, a: string): string =>
   color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}${a}` : (color ?? "#00000000");
@@ -34,7 +50,7 @@ export function iconButton(
   icon: string,
   tooltip: string,
   onClick: (e: unknown, cx: Cx) => void,
-  opts: { active?: boolean; size?: number; iconSize?: number } = {},
+  opts: { active?: boolean; size?: number; iconSize?: number; spin?: boolean } = {},
 ): El {
   const t = theme();
   const size = opts.size ?? 26;
@@ -53,7 +69,11 @@ export function iconButton(
     .on_mouse_down("left", stopPress)
     .on_click(onClick)
     .tooltip(tooltip)
-    .child(svg(icon).size(opts.iconSize ?? 15));
+    .child(
+      svg(icon)
+        .size(opts.iconSize ?? 15)
+        .when(Boolean(opts.spin), (el: El) => el.spin(900)),
+    );
 }
 
 export function textButton(
@@ -165,6 +185,7 @@ export function countChip(
     .cursor_pointer()
     .when(on, (el: El) => el.bg(t.selected).text_color(t.accent))
     .when(!on, (el: El) => el.text_color(t.muted).hover((s: El) => s.text_color(t.foreground)))
+    .on_mouse_down("left", stopPress)
     .on_click((_e: unknown, cx: Cx) => onClick(cx))
     .child(label)
     .child(
