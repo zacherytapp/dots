@@ -1,7 +1,6 @@
 ---
 name: test-prune
 description: Aggressively prunes, consolidates, and speeds up unit, integration, and e2e tests in a file, package, or whole project, deleting low-value tests and cutting live-service calls while keeping real coverage. Use when the user wants fewer or faster tests, a slow or flaky suite cleaned up, or test bloat removed.
-disable-model-invocation: true
 ---
 
 # test-prune

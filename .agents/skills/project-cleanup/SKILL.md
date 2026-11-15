@@ -1,7 +1,6 @@
 ---
 name: project-cleanup
 description: Inventories a repository's local and remote branches, worktrees, stashes, and project or machine temp files, confirms with tests which branches fully landed on the default branch, then deletes those branches and their leftovers. Use when the user wants merged branches, stale worktrees, or branch and project temp files cleaned up after work lands on main.
-disable-model-invocation: true
 ---
 
 # Project Cleanup
