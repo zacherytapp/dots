@@ -48,5 +48,6 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `sf-review-code` — review Salesforce code
 - `sf-review-issue` — review Salesforce issues/specs
 - `sf-scratch-org-cleanup` — prune scratch orgs
+- `test-prune` — prune, consolidate, and speed up test suites with scout and refactorer subagents
 - `to-spec` — synthesize a large spec from the spec template
 - `to-tickets` — split a spec into few, large, blocking-aware tickets
