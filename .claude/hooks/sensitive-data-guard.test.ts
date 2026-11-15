@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { evaluate, redactDeep } from "./sensitive-data-guard.ts";
+import { evaluate, onOversize, redactDeep } from "./sensitive-data-guard.ts";
 import {
   DETECTORS,
+  EMAIL_BULK_THRESHOLD,
   findAll,
   isIban,
   luhn,
@@ -17,7 +18,8 @@ function withLuhn(partial: string): string {
   throw new Error("unreachable");
 }
 const F = {
-  aws: j("AKIA", "IOSFODNN7", "EXAMPLE"),
+  aws: j("AKIA", "Q7RT2WX9", "ZP4M3N5K"),
+  awsDocs: j("AKIA", "IOSFODNN7", "EXAMPLE"),
   github: j("ghp_", "a1B2c3D4".repeat(4), "e5F6"),
   sfToken: j("00D", "5e000000AbCdE", "!", "AQ", "x9Y8.w7V6".repeat(10)),
   sfRefresh: j("5Aep8", "61", "Zx".repeat(40)),
@@ -115,16 +117,18 @@ describe("claude-guardrails detectors", () => {
   });
 });
 
+const emails = (n: number, sep = "\n") =>
+  Array.from({ length: n }, (_, i) => `user${i}@acme.io`).join(sep);
+
 describe("bulk PII", () => {
-  test("ten or more distinct emails is a medium finding", () => {
-    const emails = Array.from({ length: 12 }, (_, i) => `user${i}@acme.io`).join("\n");
-    const f = scanSensitive(emails);
+  test(`${EMAIL_BULK_THRESHOLD} or more distinct emails is a medium finding`, () => {
+    const f = scanSensitive(emails(EMAIL_BULK_THRESHOLD + 2));
     assert.equal(f.length, 1);
     assert.equal(f[0]!.id, "pii.email-bulk");
     assert.equal(f[0]!.severity, "medium");
   });
-  test("nine emails is fine", () => {
-    assert.deepEqual(ids(Array.from({ length: 9 }, (_, i) => `u${i}@acme.io`).join(" ")), []);
+  test("a few dozen emails (a git log page) is fine", () => {
+    assert.deepEqual(ids(emails(EMAIL_BULK_THRESHOLD - 1, " ")), []);
   });
 });
 
@@ -142,13 +146,13 @@ describe("redaction", () => {
       stdout: `x ${F.github}`,
       stderr: "",
       interrupted: false,
-      n: [1, F.ssn],
+      n: [1, `ssn ${F.ssn}`],
     });
     assert.deepEqual(r.value, {
       stdout: "x [REDACTED:secret.github-token]",
       stderr: "",
       interrupted: false,
-      n: [1, "[REDACTED:pii.ssn]"],
+      n: [1, "ssn [REDACTED:pii.ssn]"],
     });
     assert.equal(r.count, 2);
   });
@@ -192,7 +196,7 @@ describe("PreToolUse", () => {
     assert.equal(out.hookSpecificOutput!.permissionDecision, "ask");
   });
   test("MCP args with a card number ask", () => {
-    const out = pre("mcp__crm__create", { body: { note: `paid with ${F.card}` } })!;
+    const out = pre("mcp__crm__create", { body: { note: `paid with card ${F.card}` } })!;
     assert.equal(out.hookSpecificOutput!.permissionDecision, "ask");
   });
   test("env var references are fine", () => {
@@ -239,21 +243,188 @@ describe("PostToolUse", () => {
     assert.match(out.systemMessage, /sensitive data/);
   });
   test("medium output warns without rewriting", () => {
-    const rows = Array.from({ length: 15 }, (_, i) => `003${i} | lead${i}@acme.io`).join("\n");
+    const rows = Array.from({ length: 60 }, (_, i) => `003${i} | lead${i}@acme.io`).join("\n");
     const out = post("mcp__salesforce__run_soql_query", {
       content: [{ type: "text", text: rows }],
     })!;
     assert.equal(out.hookSpecificOutput.updatedToolOutput, undefined);
-    assert.match(out.hookSpecificOutput.additionalContext, /Email addresses/);
+    assert.match(out.hookSpecificOutput.additionalContext, /email addresses/i);
   });
   test("Write echoes are skipped", () => {
     assert.equal(post("Write", { content: F.aws }), null);
   });
-  test("reading the guard's own sources is skipped", () => {
+  test("reading the guard's own sources is skipped, by real path", () => {
+    const dir = import.meta.dirname;
     assert.equal(
-      post("Read", { file: { content: F.aws } }, { file_path: "/x/sensitive-patterns.ts" }),
+      post("Read", { file: { content: F.aws } }, { file_path: `${dir}/lib/sensitive-patterns.ts` }),
       null,
     );
+    assert.equal(
+      evaluate({
+        hook_event_name: "PostToolUse",
+        tool_name: "Read",
+        cwd: dir,
+        tool_input: { file_path: "secret-guard.test.ts" },
+        tool_response: { file: { content: F.aws } },
+      }),
+      null,
+    );
+  });
+  test("a file named like a guard in another repo is still scanned", () => {
+    for (const file_path of ["/x/sensitive-patterns.ts", "/other/repo/secret-guard.ts"]) {
+      const out = post("Read", { file: { content: `k ${F.aws}` } }, { file_path })!;
+      assert.ok(out?.hookSpecificOutput.updatedToolOutput, file_path);
+    }
+  });
+});
+
+describe("bulk email context", () => {
+  const post = (tool_name: string, tool_input: Record<string, unknown>, stdout: string) =>
+    evaluate({
+      hook_event_name: "PostToolUse",
+      tool_name,
+      tool_input,
+      tool_response: { stdout, stderr: "" },
+    }) as Record<string, any> | null;
+  const many = emails(80);
+
+  test("git history and people files are expected to list addresses", () => {
+    for (const command of [
+      "git log --format='%an <%ae>' -n 200",
+      "git --no-pager shortlog -sne",
+      "cd repo && git -C sub blame README.md",
+      "git show HEAD~3",
+    ])
+      assert.equal(post("Bash", { command }, many), null, command);
+    for (const file_path of ["/r/CODEOWNERS", "/r/.github/AUTHORS.md", "/r/package.json"])
+      assert.equal(post("Read", { file_path }, many), null, file_path);
+  });
+
+  test("other bulk email output still warns, briefly and without credential advice", () => {
+    const out = post("Bash", { command: "cat customers.csv" }, many)!;
+    const ctx: string = out.hookSpecificOutput.additionalContext;
+    assert.match(ctx, /email addresses/i);
+    assert.doesNotMatch(ctx, /rotate/);
+    assert.ok(ctx.length < 250, `${ctx.length} chars`);
+  });
+
+  test("git log output with a real credential is still flagged", () => {
+    const out = post("Bash", { command: "git log -p" }, `${many}\n+key ${F.github}`)!;
+    assert.match(out.hookSpecificOutput.updatedToolOutput.stdout, /REDACTED:secret\.github-token/);
+  });
+});
+
+describe("review fixes", () => {
+  test("redaction replaces the captured value, not an earlier copy of its text", () => {
+    const pw = j("Zq8v", "Lm2x", "R7tw");
+    const url = `redis://${pw}:${pw}@cache.internal:6379`;
+    assert.equal(
+      redact(url).text,
+      `redis://${pw}:[REDACTED:secret.url-password]@cache.internal:6379`,
+    );
+    const scheme = j("postgres://postgres:", "S3cr", "etPa55", "@db.internal:5432/app");
+    assert.equal(
+      redact(scheme).text,
+      "postgres://postgres:[REDACTED:secret.url-password]@db.internal:5432/app",
+    );
+  });
+
+  test("every group-capture detector reports exact offsets", () => {
+    for (const d of DETECTORS) if (d.group) assert.ok(d.re.hasIndices, d.id);
+  });
+
+  test("local dev database URLs and stock passwords pass; remote ones are caught", () => {
+    const strong = j("S3cr", "etPa55");
+    for (const url of [
+      "postgres://postgres:postgres@localhost:5432/app",
+      `postgres://app:${strong}@localhost:5432/app`,
+      `mysql://app:${strong}@127.0.0.1/app`,
+      `amqp://svc:${strong}@rabbit.local`,
+      `redis://u:${strong}@api.test`,
+      `https://u:${strong}@example.com/x`,
+      "mysql://root:root@prod-db.acme.io/app",
+      "mongodb://admin:changeme@mongo:27017",
+    ])
+      assert.deepEqual(ids(url), [], url);
+    assert.ok(ids(`postgres://app:${strong}@db.acme.io/app`).includes("secret.url-password"));
+    assert.ok(ids(`postgres://app:${strong}@db:5432/app`).includes("secret.url-password"));
+  });
+
+  test("AWS documentation keys pass; other key ids are high", () => {
+    assert.deepEqual(ids(`aws_access_key_id = ${F.awsDocs}`), []);
+    assert.ok(ids(`aws_access_key_id = ${F.aws}`).includes("secret.aws-access-key"));
+  });
+
+  test("SSN and card shapes need a nearby label to be high", () => {
+    const sev = (text: string, id: string) =>
+      scanSensitive(text).find((f) => f.id === id)?.severity;
+    assert.equal(sev(`order ref ${F.ssn}`, "pii.ssn"), "medium");
+    assert.equal(sev(`SSN: ${F.ssn}`, "pii.ssn"), "high");
+    assert.equal(sev(`"socialSecurityNumber": "${F.ssn}"`, "pii.ssn"), "high");
+    assert.equal(sev(`id ${F.card}`, "pii.credit-card"), "medium");
+    assert.equal(sev(`"cardNumber": "${F.card}"`, "pii.credit-card"), "high");
+    assert.equal(sev(`Visa ${F.card}`, "pii.credit-card"), "high");
+    assert.equal(redact(`ids ${F.ssn} ${F.card}`).count, 0);
+    assert.equal(redact(`cc ${F.card}`).count, 1);
+  });
+
+  test("code and elided values are not credential assignments", () => {
+    for (const text of [
+      "  TOKEN = generateToken();",
+      "export SESSION_SECRET=makeSecret(32)",
+      `"accessToken": "${j("00D5g", "...")}"`,
+      `password: "${j("Tr0ub", "…")}"`,
+      "accessToken = refreshAccessTokenFor(user)",
+    ])
+      assert.deepEqual(ids(text), [], text);
+    assert.ok(
+      ids(`export API_TOKEN=${j("q8Z", "w2Lm9", "Xv4Rt")}`).includes("secret.env-assignment"),
+    );
+  });
+
+  test("pathological inputs scan in linear time", () => {
+    for (const seed of ["a.", "123-45-", j("s", "k-"), "1-", "eyJa.", j("xo", "xb-"), "a@", "1 "]) {
+      const text = seed.repeat(Math.ceil(200_000 / seed.length));
+      const t = performance.now();
+      scanSensitive(text);
+      redact(text);
+      const ms = performance.now() - t;
+      assert.ok(ms < 500, `${JSON.stringify(seed)}: ${ms.toFixed(0)} ms`);
+    }
+  });
+});
+
+describe("harness deliveries", () => {
+  const prompt = (p: string) =>
+    evaluate({ hook_event_name: "UserPromptSubmit", prompt: p }) as Record<string, any> | null;
+
+  test("a subagent report quoting a credential warns instead of blocking", () => {
+    for (const wrapper of [
+      '<agent-message from="reviewer">',
+      "\n  <task-notification>",
+      '<cross-session-message from="s2">',
+    ]) {
+      const out = prompt(`${wrapper}\nFixture: ${F.github}\n`)!;
+      assert.equal(out.decision, undefined, wrapper);
+      assert.match(out.systemMessage, /not blocked/);
+      assert.match(out.hookSpecificOutput.additionalContext, /GitHub token/);
+      assert.ok(!JSON.stringify(out).includes(F.github));
+    }
+  });
+
+  test("a user prompt that merely mentions the wrapper still blocks", () => {
+    assert.equal(prompt(`what is <agent-message>? also ${F.github}`)!.decision, "block");
+  });
+});
+
+describe("oversize payloads", () => {
+  test("PostToolUse gets an unscanned notice, other events nothing", () => {
+    const out = onOversize({ hookEventName: "PostToolUse", toolName: "Bash", bytes: 6 * 2 ** 20 })!;
+    assert.match(
+      String(out.systemMessage),
+      /Bash output too large to scan for secrets \(6\.0 MB\)/,
+    );
+    assert.equal(onOversize({ hookEventName: "UserPromptSubmit", toolName: "", bytes: 1 }), null);
   });
 });
 

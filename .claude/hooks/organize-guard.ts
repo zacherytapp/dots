@@ -8,7 +8,9 @@
  *  - directly in a project root, with a doc/script/scratch-looking name, the
  *    write is denied and Claude is told to use docs/, scripts/, or tmp/;
  *  - in /tmp or /var/tmp while the session runs inside a project, the write
- *    is denied and Claude is told to use <project>/tmp/ instead.
+ *    is denied and Claude is told to use <project>/tmp/ instead. The harness's
+ *    session scratchpad (/tmp/claude-<uid>/.../scratchpad/, $CLAUDE_SCRATCHPAD)
+ *    is exempt.
  *
  * Overwriting existing files is never blocked. Writes into <project>/tmp/
  * make sure tmp/ is git-ignored locally (.git/info/exclude, never .gitignore).
@@ -39,6 +41,8 @@ export interface GuardOptions {
   bases: string[];
   excluded: string[];
   systemTmp: string[];
+  /** Extra session scratchpads (besides <tmp>/claude-<uid>/.../scratchpad) that are fine. */
+  scratchpads?: string[];
 }
 
 const HOME = homedir();
@@ -46,7 +50,11 @@ export const DEFAULT_OPTIONS: GuardOptions = {
   bases: [join(HOME, "projects"), join(HOME, "Projects")],
   excluded: [join(HOME, "projects", "dots"), join(HOME, "Projects", "dots")],
   systemTmp: [...new Set(["/tmp", "/var/tmp", tmpdir()])],
+  scratchpads: process.env.CLAUDE_SCRATCHPAD ? [process.env.CLAUDE_SCRATCHPAD] : [],
 };
+
+/** The harness's per-session scratchpad: <tmp>/claude-<uid>/<project>/<session>/scratchpad/. */
+const SCRATCHPAD = /^claude-[^/]+\/(?:[^/]+\/)*scratchpad(?:\/|$)/;
 
 /**
  * Conventional root docs, as the bare name or name.<ext> (README.md, README.zh-CN.md).
@@ -100,8 +108,20 @@ const ROOT_ALLOW = [
   "build.*",
   "requirements*.txt",
   "constraints*.txt",
-  "robots.txt",
   "cmakelists.txt",
+  "*.setup.*", // vitest.setup.ts, jest.setup.js
+  "gulpfile.*",
+  "gruntfile.*",
+  "sw.js",
+  "cname",
+  "robots.txt",
+  "humans.txt",
+  "ads.txt",
+  "security.txt",
+  "favicon.*",
+  "install.sh",
+  "setup.sh",
+  "bootstrap.sh",
 ];
 
 const DOC_EXT = new Set([".md", ".markdown", ".mdx", ".rst", ".adoc", ".txt", ".org"]);
@@ -222,6 +242,30 @@ function git(cwd: string, ...args: string[]): { ok: boolean; status: number; out
   }
 }
 
+/** Nearest directory at or above `dir` holding a `.git` entry (a directory, or a worktree's file). */
+function gitToplevel(dir: string): string | null {
+  for (let candidate = dir; ; candidate = dirname(candidate)) {
+    if (existsSync(join(candidate, ".git"))) return candidate;
+    if (dirname(candidate) === candidate) return null;
+  }
+}
+
+/** The git directory holding info/exclude for the work tree at `top` (the common dir for worktrees). */
+function commonGitDir(top: string): string | null {
+  try {
+    let dir = join(top, ".git");
+    if (statSync(dir).isFile()) {
+      const pointer = /^gitdir:\s*(.+?)\s*$/m.exec(readFileSync(dir, "utf8"));
+      if (!pointer) return null;
+      dir = resolve(top, pointer[1]);
+    }
+    const common = join(dir, "commondir");
+    return existsSync(common) ? resolve(dir, readFileSync(common, "utf8").trim()) : dir;
+  } catch {
+    return null;
+  }
+}
+
 /** Project containing `path`, or null if it's outside the managed project dirs. */
 export function projectRoot(path: string, opts: GuardOptions): string | null {
   const bases = opts.bases.filter(existsSync).map((b) => canonicalPath(b));
@@ -229,7 +273,7 @@ export function projectRoot(path: string, opts: GuardOptions): string | null {
   if (!base) return null;
   if (opts.excluded.some((e) => isWithin(path, canonicalPath(e)))) return null;
 
-  const top = git(nearestExistingDir(path), "rev-parse", "--show-toplevel").out;
+  const top = gitToplevel(nearestExistingDir(path));
   if (top) {
     const topPath = canonicalPath(top);
     if (isWithin(topPath, base) && topPath !== base) return topPath;
@@ -272,14 +316,34 @@ function needsGuard(name: string): boolean {
   return DOC_EXT.has(ext) || SCRIPT_EXT.has(ext) || TMP_EXT.has(ext);
 }
 
-/** Add /tmp/ to .git/info/exclude unless tmp/ is already ignored. */
+const TMP_IGNORE_LINES = new Set(["tmp", "tmp/", "/tmp", "/tmp/", "tmp/*", "/tmp/*", "/tmp/**"]);
+
+function readLines(file: string): string[] {
+  try {
+    return readFileSync(file, "utf8")
+      .split("\n")
+      .map((line) => line.trim());
+  } catch {
+    return [];
+  }
+}
+
+/** Add /tmp/ to the repo's info/exclude unless tmp/ is already ignored. */
 export function ensureTmpIgnored(root: string): void {
+  const top = gitToplevel(root);
+  if (!top) return; // not a git repo
+  const gitDir = commonGitDir(top);
+  if (!gitDir) return;
+  const exclude = join(gitDir, "info", "exclude");
+  // Cheap path: a plain tmp/ rule at the top level that no .gitignore negation could undo.
+  if (top === root) {
+    const gitignore = readLines(join(root, ".gitignore"));
+    const ruled = [...readLines(exclude), ...gitignore].some((l) => TMP_IGNORE_LINES.has(l));
+    if (ruled && !gitignore.some((l) => l.startsWith("!") && l.includes("tmp"))) return;
+  }
   // check-ignore: 0 = ignored, 1 = not ignored, 128 = not a git repo
   if (git(root, "check-ignore", "-q", "tmp/x").status !== 1) return;
-  const gitDir = git(root, "rev-parse", "--absolute-git-dir").out;
-  if (!gitDir) return;
   try {
-    const exclude = join(gitDir, "info", "exclude");
     mkdirSync(dirname(exclude), { recursive: true });
     const existing = existsSync(exclude) ? readFileSync(exclude, "utf8") : "";
     const lead = existing === "" || existing.endsWith("\n") ? "" : "\n";
@@ -301,6 +365,10 @@ export function denialReason(
   const cwd = typeof event.cwd === "string" && event.cwd !== "" ? event.cwd : process.cwd();
   const target = canonicalPath(input.file_path, cwd);
   if (existsSync(target)) return null; // overwriting an existing file is always fine
+
+  // The harness tells Claude to use its session scratchpad, so that is never redirected.
+  if (opts.scratchpads?.some((s) => isWithin(target, canonicalPath(s)))) return null;
+  if (opts.systemTmp.some((t) => SCRATCHPAD.test(relative(canonicalPath(t), target)))) return null;
 
   // 1. Temp files go in the project's tmp/, not the system temp dir.
   if (opts.systemTmp.some((t) => isWithin(target, canonicalPath(t)))) {

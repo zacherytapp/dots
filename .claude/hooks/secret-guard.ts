@@ -12,23 +12,29 @@
  *    are "heuristic": they still block prompts, but bash-guard asks rather
  *    than denies on commit. A 64-hex value labeled as a digest (`sha256:`,
  *    `checksum = "`, `"integrity": "`) is skipped, generalizing upstream's
- *    Cargo.lock exemption.
+ *    Cargo.lock exemption. One with no key wording nearby (private key,
+ *    secret, wallet, seed…) only warns in a prompt: it is usually a hash.
  *  - Known documentation keys (`...EXAMPLE`) and sops `ENC[...]` values pass.
  *  - Matches are redacted in the message so the block notice does not repeat
  *    the secret.
+ *  - `[allow-sensitive]` in the prompt sends it anyway, as in
+ *    sensitive-data-guard. Subagent hand-backs and harness notifications
+ *    (`<agent-message …>`, `<task-notification>`, `<cross-session-message …>`)
+ *    are never blocked, only flagged: blocking one loses the report.
  *
  * A blocked prompt never reaches the model, but Claude Code still records it in
  * the session transcript on disk, so a real leak still needs rotating.
  *
  * `findSecrets` is shared with bash-guard.ts, which scans staged diffs on
- * `git commit`. Any internal error allows the prompt: this hook fails open.
+ * `git commit`. Disable with CLAUDE_DISABLED_HOOKS=secret-guard. Any internal
+ * error allows the prompt: this hook fails open.
  *
  * Runs on Node's built-in TypeScript type stripping (erasable syntax only).
  */
 
 import { findMnemonic, SECRET_PATTERNS } from "./lib/guardrails-patterns.ts";
 import type { GuardrailsPattern } from "./lib/guardrails-patterns.ts";
-import { isRecord, readStdin } from "./lib/hook-io.ts";
+import { isHarnessDelivery, runHook } from "./lib/hook-io.ts";
 
 export type Confidence = "high" | "heuristic";
 
@@ -41,8 +47,10 @@ interface SecretRule {
   commit: boolean;
   /** Capture group holding the secret value (default: the whole match). */
   group?: number;
-  /** Skip a match given the text and its offset (e.g. a labeled digest). */
-  exempt?: (text: string, start: number) => boolean;
+  /** Skip a match given the text and its span (e.g. a labeled digest). */
+  exempt?: (text: string, start: number, end: number) => boolean;
+  /** A match that should only warn in a prompt, not block it (e.g. an unlabeled 64-hex value). */
+  warnOnly?: (text: string, start: number, end: number) => boolean;
 }
 
 export interface SecretFinding {
@@ -50,6 +58,8 @@ export interface SecretFinding {
   name: string;
   confidence: Confidence;
   redacted: string;
+  /** Every match for this rule was warn-only: a prompt is let through with a warning. */
+  warnOnly?: boolean;
 }
 
 const LOCAL_RULES: SecretRule[] = [
@@ -193,7 +203,8 @@ const LOCAL_RULES: SecretRule[] = [
     confidence: "heuristic",
     commit: true,
     group: 1,
-    re: /^[ \t]*(?:export[ \t]+)?[A-Z0-9_]*(?:API_KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Z0-9_]*=["']?([^"'\s#]{16,})/gm,
+    // The lookahead skips code such as `TOKEN=generateToken();`.
+    re: /^[ \t]*(?:export[ \t]+)?[A-Z0-9_]*(?:API_KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Z0-9_]*=["']?(?![^"'\s#]*[();])([^"'\s#]{16,})/gm,
   },
 ];
 
@@ -211,14 +222,39 @@ const DIGEST_LABEL = /(?:sha-?(?:256|3-256|512)|checksum|digest|integrity|hash)\
 const isLabeledDigest = (text: string, start: number) =>
   DIGEST_LABEL.test(text.slice(Math.max(0, start - 24), start));
 
+/** Words that make a nearby 64-hex value read as key material rather than a hash. */
+const KEY_CONTEXT =
+  /(?:priv(?:ate)?[\s_-]*key|privkey|private|secret|wallet|seed|mnemonic|signing[\s_-]*key|keystore)/i;
+
+/**
+ * A 64-hex value with no key wording on its line, within 48 characters before or 32 after:
+ * sha256sum output, `commit <sha>` in SHA-256 repos, `0x…` transaction hashes.
+ */
+function unlabeledHex(text: string, start: number, end: number): boolean {
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+  const lineEnd = text.indexOf("\n", end);
+  const before = text.slice(Math.max(lineStart, start - 48), start);
+  const after = text.slice(end, Math.min(lineEnd < 0 ? text.length : lineEnd, end + 32));
+  return !KEY_CONTEXT.test(before) && !KEY_CONTEXT.test(after);
+}
+
+/** `apiKey = loadApiKeyFromVault(...)`: the "value" is a function name. */
+const isCallAfter = (text: string, _start: number, end: number) => text.charAt(end) === "(";
+
 function guardrailsRule(pattern: GuardrailsPattern): SecretRule {
+  const hex = pattern.id === "guardrails.hex-private-key";
   return {
     id: pattern.id,
     name: pattern.label,
     confidence: HEURISTIC_GUARDRAILS.has(pattern.id) ? "heuristic" : "high",
     commit: true,
     re: pattern.re,
-    exempt: pattern.id === "guardrails.hex-private-key" ? isLabeledDigest : undefined,
+    exempt: hex
+      ? isLabeledDigest
+      : pattern.id === "guardrails.secret-like-variable-assignment"
+        ? isCallAfter
+        : undefined,
+    warnOnly: hex ? unlabeledHex : undefined,
   };
 }
 
@@ -234,7 +270,7 @@ export const SECRET_RULES: SecretRule[] = [
 
 /** Values that are clearly references or placeholders, not real secrets. */
 const PLACEHOLDER =
-  /example|your|placeholder|changeme|change_me|dummy|sample|redacted|xxxx|\*\*\*|\.\.\.|<[^>]*>|\$\{|\$\(|^\$|^ENC\[|process\.env|os\.environ|getenv|secrets\.|vault:|op:\/\//i;
+  /example|your|placeholder|changeme|change_me|dummy|sample|redacted|xxxx|\*\*\*|\.\.\.|…|<[^>]*>|\$\{|\$\(|^\$|^ENC\[|process\.env|os\.environ|getenv|secrets\.|vault:|op:\/\//i;
 
 function redact(value: string): string {
   return value.length <= 8 ? "[redacted]" : `${value.slice(0, 4)}...(${value.length} chars)`;
@@ -252,20 +288,28 @@ export function findSecrets(text: string, scope: "prompt" | "commit" = "prompt")
   for (const rule of SECRET_RULES) {
     if (scope === "commit" && !rule.commit) continue;
     const spans: [number, number][] = [];
+    let finding: SecretFinding | undefined;
     for (const match of text.matchAll(rule.re)) {
       const value = (rule.group && match[rule.group]) || match[0];
       if (PLACEHOLDER.test(value) || /^(.)\1+$/.test(value)) continue;
       const start = match.index;
       const end = start + match[0].length;
       if (claimed.some(([s, e]) => start < e && s < end)) continue;
-      if (rule.exempt?.(text, start)) continue;
-      if (spans.length === 0)
-        findings.push({
+      if (rule.exempt?.(text, start, end)) continue;
+      const warnOnly = rule.warnOnly?.(text, start, end) ?? false;
+      if (!finding) {
+        finding = {
           id: rule.id,
           name: rule.name,
           confidence: rule.confidence,
           redacted: redact(value),
-        });
+        };
+        if (warnOnly) finding.warnOnly = true;
+        findings.push(finding);
+      } else if (!warnOnly && finding.warnOnly) {
+        delete finding.warnOnly;
+        finding.redacted = redact(value);
+      }
       spans.push([start, end]);
     }
     claimed.push(...spans);
@@ -287,11 +331,31 @@ export function formatFindings(findings: SecretFinding[]): string {
   return findings.map((f) => `  - ${f.name} (${f.redacted})`).join("\n");
 }
 
+/** Same opt-out as sensitive-data-guard: the user vouches for the prompt. */
+const ALLOW_MARKER = /\[allow-sensitive\]/i;
+
 /** Hook output for a UserPromptSubmit event, or null to let the prompt through. */
 export function evaluatePrompt(event: Record<string, unknown>): Record<string, unknown> | null {
-  if (typeof event.prompt !== "string") return null;
+  if (typeof event.prompt !== "string" || ALLOW_MARKER.test(event.prompt)) return null;
   const findings = findSecrets(event.prompt);
   if (findings.length === 0) return null;
+  // A subagent report or harness notification: blocking it drops the report without a trace.
+  const delivery = isHarnessDelivery(event.prompt);
+  if (delivery || findings.every((f) => f.warnOnly)) {
+    const what = delivery ? "agent/harness message" : "prompt";
+    const why = delivery
+      ? "It was delivered anyway because it came from a subagent or the harness, not the user " +
+        "(reports often quote test fixtures). Don't repeat the values; if one looks live, tell the user."
+      : "It was sent anyway: an unlabeled 64-hex value is usually a hash (sha256sum, commit, tx id). " +
+        "If it is actually a private key, tell the user to rotate it.";
+    return {
+      systemMessage: `secret-guard: ${what} may contain a credential (${findings.map((f) => f.name).join(", ")}), not blocked`,
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext: `secret-guard: the ${what} may contain credentials:\n${formatFindings(findings)}\n${why}`,
+      },
+    };
+  }
   return {
     decision: "block",
     reason: [
@@ -304,15 +368,4 @@ export function evaluatePrompt(event: Record<string, unknown>): Record<string, u
   };
 }
 
-async function main(): Promise<void> {
-  try {
-    const event: unknown = JSON.parse(await readStdin());
-    if (!isRecord(event)) return;
-    const output = evaluatePrompt(event);
-    if (output) process.stdout.write(JSON.stringify(output));
-  } catch {
-    // fail open
-  }
-}
-
-if (import.meta.main) await main();
+if (import.meta.main) await runHook("secret-guard", "minimal", evaluatePrompt);

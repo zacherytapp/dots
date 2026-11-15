@@ -10,11 +10,13 @@
  * Denied (Claude is told why and asked to leave it to the user):
  *  - piping or substituting a download into a shell or interpreter;
  *  - recursive rm of /, a system dir, $HOME, an ancestor of $HOME, or the
- *    working directory or one of its parents;
+ *    working directory or one of its parents, and emptying (`rm -rf *`) one
+ *    of those or a git repository's top level;
  *  - starting a coding agent with its permission checks or hooks disabled;
- *  - commands that mention known request-capture or exfiltration hosts;
+ *  - sending traffic to known request-capture or exfiltration hosts (the host
+ *    in a pipeline with curl/wget/nc/ssh/an interpreter, not in grep or echo);
  *  - shell reads of private keys and credential files (ssh, gpg, age, cloud
- *    and package-manager credentials, .env files);
+ *    and package-manager credentials, .env files); `ssh -i <key>` is fine;
  *  - `git commit` whose staged diff contains a vendor-format credential.
  *
  * Asked (the user confirms in the permission prompt):
@@ -31,6 +33,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { findSecrets, formatFindings } from "./secret-guard.ts";
@@ -53,11 +56,24 @@ export interface Verdict {
 // Shell text helpers (a small recognizer, not a parser)
 // ---------------------------------------------------------------------------
 
-/** Split on unquoted ; & | ( ) and newlines, plus the bodies of `...` substitutions. */
-export function segments(command: string): string[] {
-  const out: string[] = [];
+/**
+ * Split on unquoted ; & && || ( ) and newlines into pipelines, and each pipeline on | into
+ * segments. Redirections (2>&1, &>file) are not separators.
+ */
+function splitPipelines(command: string): string[][] {
+  const out: string[][] = [];
+  let pipeline: string[] = [];
   let token = "";
   let quote = "";
+  const endSegment = () => {
+    if (token.trim()) pipeline.push(token.trim());
+    token = "";
+  };
+  const endPipeline = () => {
+    endSegment();
+    if (pipeline.length > 0) out.push(pipeline);
+    pipeline = [];
+  };
   for (let i = 0; i < command.length; i++) {
     const ch = command[i];
     if (quote) {
@@ -71,41 +87,198 @@ export function segments(command: string): string[] {
       token += ch;
     } else if (ch === "\\" && i + 1 < command.length) {
       token += ch + command[++i];
-    } else if (ch === ";" || ch === "&" || ch === "|" || ch === "\n" || ch === "(" || ch === ")") {
-      out.push(token);
-      token = "";
+    } else if (ch === "|") {
+      if (command[i + 1] === "|") {
+        i++;
+        endPipeline();
+      } else {
+        if (command[i + 1] === "&") i++; // |&
+        endSegment();
+      }
+    } else if (ch === "&" && (command[i - 1] === ">" || command[i - 1] === "<")) {
+      token += ch; // 2>&1
+    } else if (ch === "&" && command[i + 1] === ">" && command[i - 1] !== "&") {
+      token += ch; // &>file
+    } else if (ch === ";" || ch === "&" || ch === "\n" || ch === "(" || ch === ")") {
+      endPipeline();
     } else {
       token += ch;
     }
   }
-  out.push(token);
+  endPipeline();
+  return out;
+}
+
+/** Split on unquoted ; & | ( ) and newlines, plus the bodies of `...` substitutions. */
+export function segments(command: string): string[] {
+  const out = splitPipelines(command).flat();
   // $(...) bodies are already split out by the parens above; backtick bodies are not.
   for (const [, inner] of command.matchAll(/`([^`]*)`/g)) out.push(...segments(inner));
-  return out.map((s) => s.trim()).filter(Boolean);
+  return out;
 }
 
-/** Whitespace-split words with surrounding quotes removed. */
+/** Bodies of $(...) inside double quotes, which `segments` leaves in place. */
+function quotedSubstitutions(segment: string): string[] {
+  const out: string[] = [];
+  let quote = "";
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    if (quote === "'") {
+      if (ch === "'") quote = "";
+    } else if (ch === "\\") {
+      i++;
+    } else if (ch === "'" && !quote) {
+      quote = ch;
+    } else if (ch === '"') {
+      quote = quote ? "" : ch;
+    } else if (quote === '"' && ch === "$" && segment[i + 1] === "(") {
+      let depth = 1;
+      let j = i + 2;
+      for (; j < segment.length && depth > 0; j++) {
+        if (segment[j] === "(") depth++;
+        else if (segment[j] === ")") depth--;
+      }
+      out.push(segment.slice(i + 2, depth === 0 ? j - 1 : j));
+      i = j - 1;
+    }
+  }
+  return out;
+}
+
+const SHELL_NAME = /^(?:ba|z|da|k|fi|c|tc|a|mk)?sh$/;
+
+/** The program text a segment runs inline: `sh -c '<script>'` or `eval <words>`. */
+function inlineScript(segment: string): string | null {
+  const argv = commandWords(segment);
+  if (argv.length < 2) return null;
+  const cmd = baseName(argv[0]);
+  if (cmd === "eval") return argv.slice(1).join(" ");
+  if (!SHELL_NAME.test(cmd)) return null;
+  let sawC = false;
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "-o" || arg === "+o") i++;
+    else if (/^-[a-zA-Z]*c[a-zA-Z]*$/.test(arg)) sawC = true;
+    else if (!arg.startsWith("-") && !arg.startsWith("+")) return sawC ? arg : null;
+  }
+  return null;
+}
+
+/**
+ * Every pipeline to check: the top level plus the bodies of backtick and quoted $(...)
+ * substitutions and of `sh -c` / `eval` scripts.
+ */
+export function pipelines(command: string, depth = 0): string[][] {
+  const out = splitPipelines(command);
+  if (depth > 4) return out;
+  const nested = [...command.matchAll(/`([^`]*)`/g)].map((m) => m[1]);
+  for (const segment of out.flat()) {
+    nested.push(...quotedSubstitutions(segment));
+    const script = inlineScript(segment);
+    if (script !== null) nested.push(script);
+  }
+  for (const inner of nested) out.push(...pipelines(inner, depth + 1));
+  return out;
+}
+
+/** Shell words with quotes removed; adjacent quoted and unquoted parts join (`"$HOME"/x`). */
 function words(segment: string): string[] {
-  return (segment.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((w) =>
-    w.replace(/^(["'])(.*)\1$/, "$2"),
-  );
+  const out: string[] = [];
+  let word = "";
+  let inWord = false;
+  let quote = "";
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    if (quote) {
+      if (ch === quote) quote = "";
+      else if (ch === "\\" && quote === '"' && /["\\$`]/.test(segment[i + 1] ?? ""))
+        word += segment[++i];
+      else word += ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      inWord = true;
+    } else if (ch === "\\" && i + 1 < segment.length) {
+      if (segment[++i] === "\n") continue; // line continuation
+      word += segment[i];
+      inWord = true;
+    } else if (/\s/.test(ch)) {
+      if (inWord) out.push(word);
+      word = "";
+      inWord = false;
+    } else {
+      word += ch;
+      inWord = true;
+    }
+  }
+  if (inWord) out.push(word);
+  return out;
 }
 
-/** Words after leading VAR=value assignments and sudo/env/command/exec/nice/time wrappers. */
+const WRAPPERS = new Set([
+  "sudo",
+  "doas",
+  "env",
+  "command",
+  "exec",
+  "nice",
+  "nohup",
+  "time",
+  "builtin",
+]);
+/** Reserved words that can precede a command in the same segment (`then rm -rf ~`). */
+const RESERVED = new Set(["if", "then", "else", "elif", "while", "until", "do", "!", "{"]);
+
+/** Words after leading VAR=value assignments, reserved words and sudo/env/exec/... wrappers. */
 function commandWords(segment: string): string[] {
   const all = words(segment);
   let i = 0;
   while (i < all.length) {
     const w = all[i];
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w)) i++;
-    else if (
-      ["sudo", "doas", "env", "command", "exec", "nice", "nohup", "time", "builtin"].includes(w)
-    ) {
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w) || RESERVED.has(w)) i++;
+    else if (WRAPPERS.has(w)) {
       i++;
       while (i < all.length && all[i].startsWith("-")) i++;
     } else break;
   }
   return all.slice(i);
+}
+
+/** Options of package runners, xargs and timeout that take a separate value. */
+const RUNNER_OPTION_VALUES = new Set([
+  "-p",
+  "--package",
+  "-I",
+  "-L",
+  "-n",
+  "-P",
+  "-d",
+  "-E",
+  "-s",
+  "-a",
+  "-k",
+  "--signal",
+  "--kill-after",
+]);
+
+/** `commandWords` past package runners (npx, pnpm dlx, bunx, ...), xargs and timeout. */
+function programWords(segment: string): string[] {
+  let argv = commandWords(segment);
+  for (let round = 0; round < 4 && argv.length > 0; round++) {
+    const cmd = baseName(argv[0]);
+    let i = 0;
+    if (["npx", "pnpx", "bunx", "uvx", "xargs", "timeout"].includes(cmd)) i = 1;
+    else if (
+      (["npm", "pnpm", "yarn"].includes(cmd) && ["exec", "dlx", "x"].includes(argv[1])) ||
+      (cmd === "bun" && argv[1] === "x")
+    )
+      i = 2;
+    if (i === 0) break;
+    while (i < argv.length && argv[i].startsWith("-"))
+      i += RUNNER_OPTION_VALUES.has(argv[i]) ? 2 : 1;
+    if (cmd === "timeout") i++; // the duration
+    argv = argv.slice(i);
+  }
+  return argv;
 }
 
 function baseName(word: string): string {
@@ -243,18 +416,121 @@ const PIPE_TO_SHELL = [
   new RegExp(String.raw`\b(?:eval|source|\.)\s+["']?(?:\$\(|<\()\s*(?:${DOWNLOADERS})\b`),
 ];
 
-const AGENT_BYPASS =
-  /\b(?:claude|codex|gemini|opencode|pi)\b[^\n;&|]*(?:--dangerously-skip-permissions|--allow-dangerously-skip-permissions|--permission-mode[=\s]+["']?bypassPermissions|--dangerously-bypass-approvals-and-sandbox|--yolo\b|disableAllHooks)/;
+/** Coding agents, as the program name (npm package names included, `@version` stripped). */
+const AGENTS = new Set([
+  "claude",
+  "claude-code",
+  "codex",
+  "gemini",
+  "gemini-cli",
+  "opencode",
+  "opencode-ai",
+  "pi",
+  "pi-coding-agent",
+]);
+const BYPASS_FLAGS =
+  /--dangerously-skip-permissions|--allow-dangerously-skip-permissions|--permission-mode[=\s]+["']?bypassPermissions|--dangerously-bypass-approvals-and-sandbox|--yolo\b|disableAllHooks/;
+
+/** A coding agent in command position, started with a bypass flag. */
+function agentBypass(segment: string): boolean {
+  const argv = programWords(segment);
+  if (argv.length < 2) return false;
+  const name = baseName(argv[0]).replace(/(?<=.)@[^/]*$/, "");
+  return AGENTS.has(name) && BYPASS_FLAGS.test(argv.slice(1).join(" "));
+}
 
 const EXFIL_HOSTS =
   /\b(?:webhook\.site|requestbin\.(?:com|net)|pipedream\.net|(?:[a-z0-9-]+\.)?ngrok(?:-free)?\.(?:io|app|dev)|interact\.sh|oast\.(?:fun|me|pro|live|site|online)|oastify\.com|burpcollaborator\.net|canarytokens\.(?:com|org)|hookbin\.com|beeceptor\.com|requestcatcher\.com|transfer\.sh|0x0\.st|termbin\.com|ptpb\.pw)\b/i;
+
+/** Programs that open network connections to hosts named in their arguments. */
+const NETWORK_COMMANDS = new Set([
+  "curl",
+  "wget",
+  "wget2",
+  "aria2c",
+  "http",
+  "https",
+  "httpie",
+  "xh",
+  "xhs",
+  "nc",
+  "ncat",
+  "netcat",
+  "socat",
+  "telnet",
+  "websocat",
+  "openssl",
+  "ssh",
+  "scp",
+  "sftp",
+  "rsync",
+  "ftp",
+  "lftp",
+]);
+/** Interpreters: a host in their arguments is a one-liner or script that may fetch it. */
+const INTERPRETER = /^(?:python[0-9.]*|node|nodejs|deno|bun|perl|ruby|php|pwsh|powershell)$/;
+const GIT_NETWORK = new Set(["clone", "fetch", "pull", "push", "ls-remote", "remote", "submodule"]);
+
+function networkCapable(segment: string): boolean {
+  const argv = programWords(segment);
+  if (argv.length === 0) return false;
+  const cmd = baseName(argv[0]);
+  if (NETWORK_COMMANDS.has(cmd) || INTERPRETER.test(cmd)) return true;
+  // `sh -c '<script>'` is judged by its script; a bare shell runs whatever it is fed.
+  if (SHELL_NAME.test(cmd)) return inlineScript(segment) === null;
+  if (cmd === "git") return GIT_NETWORK.has(gitArgs(segment)?.[0] ?? "");
+  return false;
+}
+
+/** `URL=https://...`, `export URL=...` or `for u in ...`: a value a later command may use. */
+function bindsValue(segment: string): boolean {
+  const all = words(segment);
+  if (all[0] === "for") return true;
+  const rest = ["export", "declare", "typeset", "local", "readonly"].includes(all[0] ?? "")
+    ? all.slice(1)
+    : all;
+  return rest.length > 0 && rest.every((w) => w.startsWith("-") || /^[A-Za-z_]\w*=/.test(w));
+}
+
+/**
+ * An exfiltration host the command sends traffic to: one named in a pipeline with a
+ * network-capable command, bound to a variable in a command that has one, or inside a heredoc
+ * fed to one. Mentions in grep, git log, echo and the like are left alone.
+ */
+function exfilHost(command: string, groups: string[][]): string | null {
+  const network = groups.map((pipeline) => pipeline.some(networkCapable));
+  if (!network.includes(true)) return null;
+  for (const [n, pipeline] of groups.entries()) {
+    for (const segment of pipeline) {
+      const host = EXFIL_HOSTS.exec(segment)?.[0];
+      if (host && (network[n] || bindsValue(segment))) return host;
+    }
+  }
+  const heredocFed = groups.flat().some((s) => /<</.test(s) && networkCapable(s));
+  return heredocFed ? (EXFIL_HOSTS.exec(command)?.[0] ?? null) : null;
+}
+
+const SSH_KEY_LABEL = "an SSH private key";
+const SSH_CLIENTS = new Set(["ssh", "scp", "sftp", "sshfs", "autossh", "mosh", "ssh-copy-id"]);
+/** `-i <key>` or `-o IdentityFile=<key>`: ssh uses the key to authenticate, it doesn't leak it. */
+const SSH_KEY_ARG =
+  /(?<=^|[\s"'=])(?:-i\s*|-o\s*["']?IdentityFile[=\s]+)["']?[^\s"';|&]*\.ssh\/id_[A-Za-z0-9_-]+/g;
+/** A quoted ssh command line: `rsync -e "ssh -i ..."`, `GIT_SSH_COMMAND='ssh -i ...'`. */
+const SSH_COMMAND_STRING = /(["'])(?:[^\s"']*\/)?ssh\s[^"']*\1/g;
+
+/** The segment minus key paths that ssh is only told to authenticate with. */
+function withoutSshIdentities(segment: string, cmd: string): string {
+  const text = segment.replace(SSH_COMMAND_STRING, (s) => s.replace(SSH_KEY_ARG, ""));
+  return SSH_CLIENTS.has(cmd) ? text.replace(SSH_KEY_ARG, "") : text;
+}
 
 /** Credential files, with the commands that legitimately take them as an argument. */
 const SECRET_PATHS: { re: RegExp; label: string; users: string[] }[] = [
   {
     re: /\.ssh\/id_[A-Za-z0-9_-]+(?!\.pub)(?![A-Za-z0-9_.-])/,
-    label: "an SSH private key",
-    users: ["ssh", "ssh-add", "ssh-keygen", "scp", "sftp"],
+    label: SSH_KEY_LABEL,
+    // ssh/scp/sftp pass as `-i <key>` (stripped above); `scp <key> host:` copies the key itself.
+    users: ["ssh-add", "ssh-keygen"],
   },
   { re: /\.gnupg\/(?:private-keys|secring)/, label: "the GnuPG private keyring", users: [] },
   { re: /\bgpg-secret\.asc\b/, label: "an exported GnuPG secret key", users: [] },
@@ -341,18 +617,20 @@ function rmViolation(segment: string, cwd: string): string | null {
       continue;
     }
     if (!endOfOpts && arg.startsWith("-")) continue;
+    if (arg === "") continue;
     if (/[*?[]/.test(arg)) {
       const parent = expandPath(dirname(arg), cwd);
       const last = arg.slice(arg.lastIndexOf("/") + 1);
-      // A bare wildcard (`*`, `.*`) deletes the directory's contents: judge the directory.
-      // A partial glob (`*.o`, `build*`) only deletes matching entries, so it is dangerous
-      // when the directory holds something protected: a system dir, $HOME or an ancestor
-      // of it, or a strict ancestor of the working directory.
-      const protectedHit = /^\.?[*?]+$/.test(last)
-        ? SYSTEM_DIRS.includes(parent) || isWithin(HOME, parent) || isWithin(cwd, parent)
-        : SYSTEM_DIRS.includes(parent) ||
-          isWithin(HOME, parent) ||
-          (isWithin(cwd, parent) && parent !== cwd);
+      // Any glob is dangerous when the directory holds something protected: a system dir,
+      // $HOME or an ancestor of it, or a strict ancestor of the working directory. A bare
+      // wildcard (`*`, `.*`) empties the directory, so it is also refused at the top of a git
+      // repository; emptying an ordinary directory (`cd tmp && rm -rf *`) is left to the
+      // rm permission prompt.
+      const protectedHit =
+        SYSTEM_DIRS.includes(parent) ||
+        isWithin(HOME, parent) ||
+        (isWithin(cwd, parent) && parent !== cwd) ||
+        (/^\.?[*?]+$/.test(last) && existsSync(join(parent, ".git")));
       if (protectedHit) return `rm -r ${arg} (globs in ${parent})`;
       continue;
     }
@@ -374,7 +652,7 @@ function secretPathViolation(segment: string): string | null {
   // inside a list-only command still reads the file.
   const listOnly = LIST_ONLY.has(cmd) && !/\$\(|`|</.test(segment);
   for (const { re, label, users } of SECRET_PATHS) {
-    if (!re.test(segment)) continue;
+    if (!re.test(label === SSH_KEY_LABEL ? withoutSshIdentities(segment, cmd) : segment)) continue;
     if (listOnly || users.includes(cmd)) continue;
     if (cmd === "git" && label !== "stored git credentials") continue;
     return label;
@@ -539,6 +817,8 @@ function commitScan(segment: string, cwd: string): Verdict | null {
 /** The strongest verdict for a Bash command, or null to stay out of the way. */
 export function evaluateCommand(rawCommand: string, cwd: string): Verdict | null {
   const command = scrubInert(rawCommand);
+  const groups = pipelines(command);
+  const all = groups.flat();
   const denies: string[] = [];
   const asks: string[] = [];
 
@@ -547,24 +827,27 @@ export function evaluateCommand(rawCommand: string, cwd: string): Verdict | null
       "Piping or substituting a download straight into a shell or interpreter. Download to a file, show it to the user, and let them run it.",
     );
   }
-  if (AGENT_BYPASS.test(command)) {
+  if (all.some(agentBypass)) {
     denies.push(
       "Starting a coding agent with permission checks or hooks disabled is not allowed from inside a session.",
     );
   }
-  const host = command.match(EXFIL_HOSTS);
+  const host = exfilHost(command, groups);
   if (host) {
     denies.push(
-      `The command contacts ${host[0]}, a request-capture service commonly used for data exfiltration.`,
+      `The command contacts ${host}, a request-capture service commonly used for data exfiltration.`,
     );
   }
 
   let commitVerdict: Verdict | null = null;
   let dir = cwd;
-  for (const segment of segments(command)) {
+  for (const segment of all) {
     const argv = commandWords(segment);
-    if (argv[0] === "cd" && argv[1] && argv[1] !== "-") {
-      dir = expandPath(argv[1], dir); // follow `cd sub && git commit`
+    if (argv[0] === "cd" || argv[0] === "pushd") {
+      // Follow `cd sub && git commit`; a bare `cd` goes home, `cd -` is unknown.
+      const to = argv.slice(1).find((a) => a === "-" || !a.startsWith("-"));
+      if (to === undefined && argv[0] === "cd") dir = HOME;
+      else if (to !== undefined && to !== "-") dir = expandPath(to, dir);
       continue;
     }
     const rm = rmViolation(segment, dir);

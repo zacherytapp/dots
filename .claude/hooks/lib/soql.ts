@@ -60,46 +60,64 @@ function splitTopLevel(list: string): string[] {
   return parts.map((p) => p.trim()).filter(Boolean);
 }
 
-/** Index of the FROM that closes the SELECT starting at `from`, skipping nested parens. */
-function findFrom(text: string, from: number): number {
+/**
+ * Each SELECT paired with the FROM that closes it at the same paren depth, in
+ * one pass. A SELECT whose enclosing paren closes first has no FROM.
+ */
+function selectSpans(text: string): { listStart: number; fromIdx: number }[] {
+  const spans: { listStart: number; fromIdx: number }[] = [];
+  const pending: { listStart: number; depth: number }[] = [];
   let depth = 0;
-  const re = /\(|\)|\bFROM\b/gi;
-  re.lastIndex = from;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) {
-    if (m[0] === "(") depth++;
-    else if (m[0] === ")") {
+  for (const m of text.matchAll(/\(|\)|\bSELECT\b|\bFROM\b/gi)) {
+    const tok = m[0];
+    if (tok === "(") depth++;
+    else if (tok === ")") {
       depth--;
-      if (depth < 0) return -1;
-    } else if (depth === 0) return m.index;
+      while (pending.length > 0 && pending.at(-1)!.depth > depth) pending.pop();
+    } else if (tok.length === 6) pending.push({ listStart: m.index + 6, depth });
+    else
+      while (pending.length > 0 && pending.at(-1)!.depth === depth)
+        spans.push({ listStart: pending.pop()!.listStart, fromIdx: m.index });
   }
-  return -1;
+  return spans.sort((a, b) => a.listStart - b.listStart);
 }
+
+const MAX_TAIL = 4000;
 
 /**
  * Text after FROM up to the end of this statement: an unmatched ")" or "]",
- * a double quote or ";", or a single quote that closes a shell argument
- * rather than opening a SOQL string literal.
+ * a double quote or ";", the next SELECT at the same depth, or a single
+ * quote that closes a shell argument rather than opening a SOQL string
+ * literal. Capped at MAX_TAIL characters.
  */
 function clauseTail(text: string, from: number): string {
   let depth = 0;
-  for (let i = from; i < text.length; i++) {
+  const end = Math.min(text.length, from + MAX_TAIL);
+  for (let i = from; i < end; i++) {
     const ch = text[i];
     if (ch === "(") depth++;
     else if (ch === ")" || ch === "]") {
       if (depth === 0) return text.slice(from, i);
       depth--;
     } else if (ch === '"' || ch === ";") return text.slice(from, i);
+    else if (
+      depth === 0 &&
+      (ch === "S" || ch === "s") &&
+      /^SELECT\b/i.test(text.slice(i, i + 7)) &&
+      !/\w/.test(text[i - 1] ?? "")
+    )
+      return text.slice(from, i);
     else if (ch === "'") {
       // SOQL literal: follows an operator, comma, paren or LIKE/IN/INCLUDES.
-      if (!/(?:[=<>(,]|\b(?:LIKE|IN|INCLUDES|EXCLUDES))\s*$/i.test(text.slice(from, i)))
+      const before = text.slice(Math.max(from, i - 64), i);
+      if (!/(?:[=<>(,]|\b(?:LIKE|IN|INCLUDES|EXCLUDES))\s*$/i.test(before))
         return text.slice(from, i);
       const close = text.indexOf("'", i + 1);
-      if (close < 0) return text.slice(from);
+      if (close < 0) return text.slice(from, end);
       i = close;
     }
   }
-  return text.slice(from);
+  return text.slice(from, end);
 }
 
 function fieldName(expr: string): string[] {
@@ -126,16 +144,13 @@ function fieldName(expr: string): string[] {
 export function extractQueries(text: string): SoqlQuery[] {
   const out: SoqlQuery[] = [];
   for (const variant of decodeVariants(text)) {
-    const re = /\bSELECT\b/gi;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(variant))) {
-      const listStart = m.index + m[0].length;
-      const fromIdx = findFrom(variant, listStart);
-      if (fromIdx < 0) continue;
-      const objMatch = /^FROM\s+([A-Za-z_][\w]*)/i.exec(variant.slice(fromIdx));
+    const objRe = /FROM\s+([A-Za-z_][\w]*)/iy;
+    for (const { listStart, fromIdx } of selectSpans(variant)) {
+      if (fromIdx - listStart > 20000) continue;
+      objRe.lastIndex = fromIdx;
+      const objMatch = objRe.exec(variant);
       if (!objMatch) continue;
       const list = variant.slice(listStart, fromIdx);
-      if (list.length > 20000) continue;
       const tail = clauseTail(variant, fromIdx + objMatch[0].length);
       const fields: string[] = [];
       const fieldsFunctions: string[] = [];
@@ -155,7 +170,10 @@ export function extractQueries(text: string): SoqlQuery[] {
         hasLimit: /\bLIMIT\s+\d/i.test(tail),
         hasWhere: /\bWHERE\b/i.test(tail),
         userMode: /\bWITH\s+(?:USER_MODE|SECURITY_ENFORCED)\b/i.test(tail),
-        text: `SELECT${list}${objMatch[0]}${tail}`.replace(/\s+/g, " ").trim().slice(0, 300),
+        text: `SELECT${list.slice(0, 600)}${objMatch[0]}${tail.slice(0, 600)}`
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 300),
       });
     }
     if (out.length > 0) break;

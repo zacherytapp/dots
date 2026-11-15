@@ -181,3 +181,83 @@ describe("soql-guard hook", () => {
     assert.equal(out.hookSpecificOutput.permissionDecision, "ask");
   });
 });
+
+describe("MCP scope", () => {
+  const mcp = (tool: string, input: Record<string, unknown>) =>
+    evaluate({ hook_event_name: "PreToolUse", tool_name: tool, tool_input: input }) as Record<
+      string,
+      any
+    > | null;
+  test("SQL in an issue body on a non-Salesforce server is ignored", () =>
+    assert.equal(
+      mcp("mcp__forgejo__create_issue", {
+        title: "login bug",
+        body: "SELECT password FROM users WHERE id=1",
+      }),
+      null,
+    ));
+  test("query arguments on any server are still checked", () =>
+    assert.equal(
+      mcp("mcp__warehouse__run", { query: "SELECT Id, SSN__c FROM Contact LIMIT 1" })!
+        .hookSpecificOutput.permissionDecision,
+      "ask",
+    ));
+  test("every argument of a Salesforce server is checked", () => {
+    for (const tool of ["mcp__sfdc__exec", "mcp__sf__run", "mcp__acme__soql_tool"])
+      assert.equal(
+        mcp(tool, { statement: "SELECT Id, SSN__c FROM Contact LIMIT 1" })!.hookSpecificOutput
+          .permissionDecision,
+        "ask",
+        tool,
+      );
+  });
+  test("strings over 64 KB are skipped", () =>
+    assert.equal(
+      mcp("mcp__salesforce__run_soql_query", {
+        query: "SELECT Id, SSN__c FROM Contact " + "x".repeat(70 * 1024),
+      }),
+      null,
+    ));
+});
+
+describe("extractQueries performance", () => {
+  const timed = (text: string) => {
+    const t = performance.now();
+    const qs = extractQueries(text);
+    return { qs, ms: performance.now() - t };
+  };
+  test("1.5 MB of repeated statements is linear", () => {
+    const { qs, ms } = timed("select x from y ".repeat(100_000));
+    assert.equal(qs.length, 100_000);
+    assert.ok(ms < 1000, `${ms.toFixed(0)} ms`);
+  });
+  test("deeply nested unterminated subqueries", () => {
+    const { qs, ms } = timed("SELECT (".repeat(20_000));
+    assert.equal(qs.length, 0);
+    assert.ok(ms < 500, `${ms.toFixed(0)} ms`);
+  });
+  test("deeply nested complete subqueries", () => {
+    const n = 5000;
+    const { qs, ms } = timed("SELECT a, (".repeat(n) + "SELECT b FROM c" + ") FROM d".repeat(n));
+    assert.ok(qs.length > 0);
+    assert.ok(ms < 1000, `${ms.toFixed(0)} ms`);
+  });
+  test("many quoted literals in one WHERE clause", () => {
+    const { qs, ms } = timed(
+      "SELECT Id FROM Account WHERE " + "Name = 'a' OR ".repeat(50_000) + "Name = 'b' LIMIT 5",
+    );
+    assert.equal(qs.length, 1);
+    assert.ok(ms < 500, `${ms.toFixed(0)} ms`);
+  });
+  test("a semi-join keeps the outer LIMIT", () => {
+    const outer = extractQueries(
+      "SELECT Id FROM Account WHERE Id IN (SELECT AccountId FROM Contact) LIMIT 5",
+    ).find((q) => q.object === "Account")!;
+    assert.ok(outer.hasLimit && outer.hasWhere);
+  });
+  test("sequential statements keep their own clauses", () => {
+    const [a, b] = extractQueries("SELECT Id FROM A LIMIT 1 SELECT Email FROM B WHERE X = 1");
+    assert.ok(a!.hasLimit && !a!.hasWhere);
+    assert.ok(b!.hasWhere && !b!.hasLimit);
+  });
+});

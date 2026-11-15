@@ -184,3 +184,100 @@ describe("evaluatePrompt", () => {
     assert.equal(evaluatePrompt({}), null);
   });
 });
+
+type Out = { decision?: string; systemMessage?: string; hookSpecificOutput?: any } | null;
+const prompt = (p: string) => evaluatePrompt({ prompt: p }) as Out;
+
+describe("unlabeled 64-hex values", () => {
+  test("hashes warn instead of blocking", () => {
+    for (const text of [
+      `${hex(64)}  dist/app.tar.gz`,
+      `commit ${hex(64)}`,
+      `tx 0x${hex(64)} failed`,
+    ]) {
+      const out = prompt(text);
+      assert.equal(out?.decision, undefined, text);
+      assert.match(String(out?.systemMessage), /not blocked/, text);
+      assert.match(out?.hookSpecificOutput.additionalContext, /Hex private key/);
+    }
+  });
+
+  test("key wording nearby still blocks", () => {
+    for (const text of [
+      `private key: 0x${hex(64)}`,
+      `ETH_PRIVKEY=${hex(64)}`,
+      `wallet ${hex(64)}`,
+      `${hex(64)} is the signing key`,
+    ])
+      assert.equal(prompt(text)?.decision, "block", text);
+  });
+
+  test("one labeled value among hashes blocks", () => {
+    assert.equal(
+      prompt(`${hex(64)} a.txt\nsecret=${hex(64).split("").reverse().join("")}`)?.decision,
+      "block",
+    );
+  });
+
+  test("a hash next to a real credential still blocks", () => {
+    assert.equal(prompt(`commit ${hex(64)} leaked ${"gh"}p_${noise(36)}`)?.decision, "block");
+  });
+
+  test("commits keep asking (heuristic) for any 64-hex value", () => {
+    const [hit] = findSecrets(`commit ${hex(64)}`, "commit");
+    assert.equal(hit?.confidence, "heuristic");
+  });
+});
+
+describe("[allow-sensitive]", () => {
+  test("sends the prompt anyway", () => {
+    assert.equal(prompt(`[allow-sensitive] deploy with AKIA${upper(16)}`), null);
+  });
+});
+
+describe("harness deliveries", () => {
+  const key = `AKIA${upper(16)}`;
+  test("a subagent report quoting a credential is delivered with a warning", () => {
+    for (const wrapper of [
+      '<agent-message from="reviewer">',
+      "  \n<task-notification>",
+      '<cross-session-message from="other">',
+    ]) {
+      const out = prompt(`${wrapper}\nThe fixture uses ${key}.\n`);
+      assert.equal(out?.decision, undefined, wrapper);
+      assert.equal(out?.hookSpecificOutput.suppressOriginalPrompt, undefined);
+      assert.match(String(out?.systemMessage), /agent\/harness message/);
+      assert.match(out?.hookSpecificOutput.additionalContext, /AWS access key ID/);
+      assert.ok(!JSON.stringify(out).includes(key));
+    }
+  });
+
+  test("a user prompt that only mentions the wrapper still blocks", () => {
+    assert.equal(prompt(`why did <agent-message> drop? key ${key}`)?.decision, "block");
+  });
+});
+
+describe("code is not a credential", () => {
+  const benign = [
+    "export API_TOKEN=getTokenFromVault(userId);",
+    "  SESSION_SECRET=generateSecretValue();",
+    "apiKey = loadApiKeyFromVaultFor(region)",
+    `export DATABASE_PASSWORD=${noise(20)}…`,
+  ];
+  for (const text of benign) test(text, () => assert.deepEqual(ids(text), []));
+  test("a real env value is still caught", () => {
+    assert.ok(ids(`export DATABASE_PASSWORD=${noise(20)}`).includes("env-assignment"));
+  });
+});
+
+describe("performance", () => {
+  test("pathological prompts scan in linear time", () => {
+    for (const seed of [`${"s"}k-`, "a.", "123-45-", `${"xo"}xb-`, "0x", "a ", "aa="]) {
+      const text = seed.repeat(Math.ceil(200_000 / seed.length));
+      const t = performance.now();
+      findSecrets(text);
+      const ms = performance.now() - t;
+      assert.ok(ms < 500, `${JSON.stringify(seed)}: ${ms.toFixed(0)} ms`);
+    }
+  });
+});

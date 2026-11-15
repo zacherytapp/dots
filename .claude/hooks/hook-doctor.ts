@@ -231,7 +231,7 @@ export function diagnose(event: HookEvent, opts: DoctorOptions): Problem[] {
   if (!which("git", env))
     add(
       "required",
-      "`git` is not on PATH: bash-guard can't scan commits for secrets and organize-guard can't find project roots.",
+      "`git` is not on PATH: bash-guard can't scan commits for secrets and organize-guard can't check that tmp/ is git-ignored.",
     );
 
   if (findUp(cwd, "sfdx-project.json")) {

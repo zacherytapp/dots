@@ -11,26 +11,40 @@
  *    looks like production (explicit --target-org/-o/-u, or the default
  *    target-org from .sf/config.json); org deletion; bulk deletes;
  *    destructive-changes deploys; `sf project delete source`; mutating
- *    commands aimed at the default Dev Hub; production quick-deploy commands
- *    (`project deploy validate|quick`); --ignore-conflicts on deploy or
- *    retrieve; package version promotion; deploys or pushes with
+ *    commands aimed at the default Dev Hub; `project deploy quick`, and
+ *    `project deploy validate` against production; --ignore-conflicts on
+ *    deploy or retrieve; package version promotion; deploys or pushes with
  *    high-severity Code Analyzer (PMD) violations.
  *  - additionalContext (Claude sees it, command still runs): deprecated
- *    `sfdx force:*` commands with their `sf` replacement, deploys without
- *    --test-level, --ignore-errors, --no-track-source, data import
+ *    `sfdx force:*` commands with their `sf` replacement, production deploys
+ *    without --test-level, --ignore-errors, --no-track-source, data import
  *    without --plan, package versions without --code-coverage, and read-only
  *    commands against production.
+ *
+ * Only `sf`/`sfdx` at command position count: text in quoted arguments,
+ * commit messages and heredocs written to files is ignored.
  *
  * The Code Analyzer gate runs only for `git push` and
  * `sf project deploy start` inside an SFDX project, on changed Apex files,
  * and only when `sf code-analyzer` (v5) or `sf scanner` (v4) is installed.
- * Skip it with CLAUDE_DISABLED_HOOKS=sf-code-analyzer.
+ * Results are cached per HEAD and changed-file contents in
+ * $XDG_RUNTIME_DIR (or the temp dir). Skip it with
+ * CLAUDE_DISABLED_HOOKS=sf-code-analyzer.
  *
  * Disable everything with CLAUDE_DISABLED_HOOKS=sf-cli-guard. Fails open.
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { hookEnabled, isRecord, preToolUse, runHook, str } from "./lib/hook-io.ts";
@@ -80,7 +94,6 @@ export const SFDX_MIGRATION: Record<string, string> = {
   "force:config:set": "sf config set",
 };
 
-const SF_CMD = /(?:^|[\s;&|(`])(sf|sfdx)\s+([a-z][\w:-]*(?:\s+[a-z][\w-]*){0,3})/gi;
 const PROD_ALIAS = /(?:^|[-_.@])(?:prod|production|prd)(?:$|[-_.@])/i;
 
 /** Subcommands that change org state (data, metadata, users, the org itself). */
@@ -92,17 +105,214 @@ interface Finding {
   message: string;
 }
 
-function sfInvocations(command: string): { bin: string; sub: string; seg: string }[] {
-  const out: { bin: string; sub: string; seg: string }[] = [];
-  for (const m of command.matchAll(SF_CMD)) {
-    const start = m.index ?? 0;
-    const rest = command.slice(start);
-    const end = rest.search(/\s(?:&&|\|\||;|\|)\s|\n/);
-    out.push({
-      bin: m[1]!.toLowerCase(),
-      sub: m[2]!.toLowerCase(),
-      seg: end < 0 ? rest : rest.slice(0, end),
-    });
+// --- Shell parsing --------------------------------------------------------------
+// Only words at command position run. `sf …` inside a commit message, an echo
+// argument or a heredoc written to a file is data and must not trigger checks.
+
+/** Programs that run their heredoc body or `-c` argument as shell code. */
+const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh", "fish", "ssh"]);
+/** Prefixes and keywords that hand the next word command position. */
+const WRAPPERS = new Set([
+  "sudo",
+  "doas",
+  "env",
+  "command",
+  "exec",
+  "nice",
+  "nohup",
+  "time",
+  "builtin",
+  "timeout",
+  "xargs",
+  "then",
+  "do",
+  "else",
+  "if",
+  "elif",
+  "while",
+  "until",
+  "!",
+  "{",
+]);
+/** Wrapper flags that take a separate value. */
+const WRAPPER_ARGS: Record<string, string[]> = {
+  sudo: ["-u", "-g", "-C", "-h", "-p", "-D", "-U"],
+  doas: ["-u", "-C"],
+  env: ["-u", "-C", "-S"],
+  nice: ["-n"],
+  timeout: ["-s", "-k"],
+  xargs: ["-I", "-P", "-L", "-n", "-d", "-s", "-E", "-a"],
+};
+
+function baseName(word: string): string {
+  return word.slice(word.lastIndexOf("/") + 1);
+}
+
+/**
+ * Command segments of `src`, split at unquoted `;`, `&`, `|`, newlines and
+ * parens. `$(…)` and backtick bodies become segments of their own (a "_"
+ * stands in for them in the outer segment); quoted text and comments do not.
+ */
+export function shellSegments(src: string): string[] {
+  interface Frame {
+    buf: string;
+    quote: string;
+    close: string;
+    depth: number;
+  }
+  const out: string[] = [];
+  const stack: Frame[] = [{ buf: "", quote: "", close: "", depth: 0 }];
+  const flush = (f: Frame) => {
+    if (f.buf.trim()) out.push(f.buf.trim());
+    f.buf = "";
+  };
+  for (let i = 0; i < src.length; i++) {
+    const f = stack.at(-1)!;
+    const ch = src[i]!;
+    if (f.quote === "'") {
+      f.buf += ch;
+      if (ch === "'") f.quote = "";
+      continue;
+    }
+    if (ch === "\\") {
+      f.buf += ch + (src[i + 1] ?? "");
+      i++;
+      continue;
+    }
+    if (ch === "`" && f.close === "`" && f.quote === "") {
+      flush(f);
+      stack.pop();
+      continue;
+    }
+    if ((ch === "$" && src[i + 1] === "(") || ch === "`") {
+      f.buf += "_";
+      if (ch === "$") i++;
+      stack.push({ buf: "", quote: "", close: ch === "`" ? "`" : ")", depth: 0 });
+      continue;
+    }
+    if (f.quote === '"') {
+      f.buf += ch;
+      if (ch === '"') f.quote = "";
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      f.quote = ch;
+      f.buf += ch;
+    } else if (ch === "#" && (f.buf === "" || /\s$/.test(f.buf))) {
+      const nl = src.indexOf("\n", i);
+      i = (nl < 0 ? src.length : nl) - 1;
+    } else if (ch === ")" && f.close === ")" && f.depth === 0) {
+      flush(f);
+      stack.pop();
+    } else if (ch === "(" || ch === ")") {
+      f.depth += ch === "(" ? 1 : -1;
+      flush(f);
+    } else if (ch === ";" || ch === "&" || ch === "|" || ch === "\n") {
+      flush(f);
+    } else {
+      f.buf += ch;
+    }
+  }
+  for (const f of stack) flush(f); // unterminated: innermost last
+  return out;
+}
+
+/** Words of a segment, quotes kept (`FOO="a b"` stays one word). */
+function rawWords(segment: string): string[] {
+  return segment.match(/(?:[^\s"'\\]|\\.|"(?:[^"\\]|\\.)*"?|'[^']*'?)+/g) ?? [];
+}
+
+function unquote(word: string): string {
+  return word.replace(/"((?:[^"\\]|\\.)*)"?|'([^']*)'?|\\(.)/g, "$1$2$3");
+}
+
+/** Index of the command word, past VAR=value assignments, wrappers and shell keywords. */
+function commandStart(words: string[]): number {
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i]!;
+    if (/^[A-Za-z_]\w*=/.test(w)) {
+      i++;
+      continue;
+    }
+    if (!WRAPPERS.has(w)) break;
+    i++;
+    while (i < words.length && words[i]!.startsWith("-")) {
+      // sudo -u user, env -u VAR, xargs -I {}: the flag takes the next word.
+      if (WRAPPER_ARGS[w]?.includes(words[i]!)) i++;
+      i++;
+    }
+    if (w === "timeout" && /^\d/.test(words[i] ?? "")) i++;
+  }
+  return i;
+}
+
+/** Unquoted words of a segment from its command word on. */
+function commandWords(segment: string): { raw: string[]; words: string[] } {
+  const raw = rawWords(segment);
+  const start = commandStart(raw.map(unquote));
+  return { raw: raw.slice(start), words: raw.slice(start).map(unquote) };
+}
+
+/** Drop heredoc bodies, unless a shell (or ssh) runs them. */
+function stripHeredocs(command: string): string {
+  const lines = command.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length;) {
+    const line = lines[i++]!;
+    out.push(line);
+    for (const op of line.matchAll(/(?<!<)<<(?!<)(-?)\s*(["']?)([A-Za-z_][\w-]*)\2/g)) {
+      const end = lines.findIndex(
+        (l, n) => n >= i && (op[1] ? l.replace(/^\t+/, "") : l) === op[3],
+      );
+      if (end < 0) break; // unterminated: leave everything in place
+      const owner = commandWords(shellSegments(line.slice(0, op.index)).at(-1) ?? "").words[0];
+      if (SHELLS.has(baseName(owner ?? ""))) out.push(...lines.slice(i, end));
+      out.push("");
+      i = end + 1;
+    }
+  }
+  return out.join("\n");
+}
+
+/** Every command segment that runs, including `bash -c '…'` and `eval '…'` bodies. */
+export function commandSegments(command: string, depth = 0): string[] {
+  const out: string[] = [];
+  for (const seg of shellSegments(stripHeredocs(command))) {
+    out.push(seg);
+    if (depth >= 3) continue;
+    const { words } = commandWords(seg);
+    const cmd = baseName(words[0] ?? "");
+    let body: string | undefined;
+    if (cmd === "eval") body = words.slice(1).join(" ");
+    else if (SHELLS.has(cmd) && cmd !== "ssh") {
+      const c = words.findIndex((w, n) => n > 0 && /^-[a-z]*c[a-z]*$/.test(w));
+      if (c > 0) body = words[c + 1];
+    }
+    if (body) out.push(...commandSegments(body, depth + 1));
+  }
+  return out;
+}
+
+interface Invocation {
+  bin: string;
+  sub: string;
+  seg: string;
+}
+
+/** `sf`/`sfdx` invocations at command position, with the segment from `sf` on. */
+function sfInvocations(command: string): Invocation[] {
+  const out: Invocation[] = [];
+  for (const segment of commandSegments(command)) {
+    const { raw, words } = commandWords(segment);
+    const bin = baseName(words[0] ?? "").toLowerCase();
+    if (bin !== "sf" && bin !== "sfdx") continue;
+    const sub: string[] = [];
+    for (const w of words.slice(1, 5)) {
+      if (!(sub.length === 0 ? /^[a-z][\w:-]*$/i : /^[a-z][\w-]*$/i).test(w)) break;
+      sub.push(w);
+    }
+    if (sub.length > 0) out.push({ bin, sub: sub.join(" ").toLowerCase(), seg: raw.join(" ") });
   }
   return out;
 }
@@ -177,7 +387,8 @@ export function checkCommand(command: string, cwd: string, home = homedir()): Fi
         "ask",
         `\`${bin} ${sub}\` changes ${orgNote}, the default Dev Hub. Develop and deploy in scratch orgs or sandboxes.`,
       );
-    if (/^project deploy (?:validate|quick)\b/.test(sub))
+    // validate is check-only: it matters only as the first half of a production quick deploy.
+    if (/^project deploy quick\b/.test(sub) || (prod && /^project deploy validate\b/.test(sub)))
       add(
         "ask",
         `\`sf ${sub}\` is the production quick-deploy workflow. For scratch orgs and sandboxes use \`sf project deploy start --dry-run\`.`,
@@ -210,10 +421,10 @@ export function checkCommand(command: string, cwd: string, home = homedir()): Fi
           "Destructive-changes deploy deletes metadata in the target org. Verify the manifest.",
         );
       const preview = /--dry-run|--validate|--checkonly|--check-only/.test(seg);
-      if (!preview && !/--test-level|\s-l\s/.test(seg))
+      if (prod && !preview && !/--test-level|\s-l\s/.test(seg))
         add(
           "warn",
-          "Deploy without --test-level. Consider --test-level RunLocalTests (required for production), or --dry-run first.",
+          "Production deploy without --test-level. Use --test-level RunLocalTests (or RunSpecifiedTests), or --dry-run first.",
         );
       if (/--ignore-errors/.test(seg))
         add("warn", "--ignore-errors can leave the org partially deployed.");
@@ -325,16 +536,104 @@ export function runCodeAnalyzer(root: string, files: string[]): Violation[] | nu
   }
 }
 
+/** Whether a segment that actually runs is `git push` or `sf project deploy start` (not a preview). */
+export function pushesOrDeploys(command: string): boolean {
+  if (!/\bpush\b|\bdeploy\b/.test(command)) return false;
+  return commandSegments(command).some((segment) => {
+    const { words } = commandWords(segment);
+    if (words.some((w) => /^--(?:dry-run|help)$/.test(w))) return false;
+    const cmd = baseName(words[0] ?? "");
+    if (cmd === "git") {
+      let i = 1;
+      while (words[i]?.startsWith("-")) {
+        if (/^(?:-C|-c|--git-dir|--work-tree|--namespace)$/.test(words[i]!)) i++;
+        i++;
+      }
+      return words[i] === "push";
+    }
+    return (
+      (cmd === "sf" || cmd === "sfdx") &&
+      words.slice(1, 4).join(" ").toLowerCase() === "project deploy start"
+    );
+  });
+}
+
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+function cacheFile(): string {
+  const uid = process.getuid?.() ?? "user";
+  return join(process.env.XDG_RUNTIME_DIR || tmpdir(), `claude-sf-code-analyzer-${uid}.json`);
+}
+
+/** HEAD sha plus the changed files' names and contents. */
+function cacheKey(root: string, files: string[]): string | null {
+  const head = sh("git", ["rev-parse", "HEAD"], root, 5000);
+  if (head.status !== 0) return null;
+  const hash = createHash("sha256").update(`${root}\0${head.stdout.trim()}`);
+  for (const f of [...files].sort()) hash.update(`\0${f}\0`).update(readFileSync(join(root, f)));
+  return hash.digest("hex");
+}
+
+type Cache = Record<string, { at: number; violations: Violation[] }>;
+
+function readCache(): Cache {
+  try {
+    const file = cacheFile();
+    // A shared temp dir: trust only our own file.
+    if (process.getuid && statSync(file).uid !== process.getuid()) return {};
+    const data: unknown = JSON.parse(readFileSync(file, "utf8"));
+    return isRecord(data) ? (data as Cache) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCache(key: string, violations: Violation[]): void {
+  try {
+    const now = Date.now();
+    const entries = Object.entries(readCache())
+      .filter(([k, v]) => k !== key && now - v.at < CACHE_TTL)
+      .slice(-19);
+    const file = cacheFile();
+    const tmp = `${file}.${process.pid}`;
+    writeFileSync(
+      tmp,
+      JSON.stringify(Object.fromEntries([...entries, [key, { at: now, violations }]])),
+      {
+        mode: 0o600,
+      },
+    );
+    renameSync(tmp, file);
+  } catch {
+    // no cache: the next push just runs the analyzer again
+  }
+}
+
+/** Code Analyzer results for `files`, reused while HEAD and the files are unchanged. */
+function cachedCodeAnalyzer(root: string, files: string[]): Violation[] | null {
+  let key: string | null = null;
+  try {
+    key = cacheKey(root, files);
+  } catch {
+    key = null;
+  }
+  const hit = key ? readCache()[key] : undefined;
+  if (hit && Date.now() - hit.at < CACHE_TTL && Array.isArray(hit.violations))
+    return hit.violations;
+  const violations = runCodeAnalyzer(root, files);
+  if (key && violations) writeCache(key, violations);
+  return violations;
+}
+
 function codeAnalyzerGate(command: string, cwd: string): Finding | null {
   if (!hookEnabled("sf-code-analyzer", "standard")) return null;
-  if (!/\bgit\s+(?:-\S+\s+)*push\b|\bsf\s+project\s+deploy\s+start\b/.test(command)) return null;
-  if (/--dry-run|--help/.test(command)) return null;
+  if (!pushesOrDeploys(command)) return null;
   const project = findUp(cwd, "sfdx-project.json");
   if (!project) return null;
   const root = dirname(project);
   const files = changedApex(root);
   if (files.length === 0) return null;
-  const violations = runCodeAnalyzer(root, files)?.filter((v) => v.severity <= 2) ?? [];
+  const violations = cachedCodeAnalyzer(root, files)?.filter((v) => v.severity <= 2) ?? [];
   if (violations.length === 0) return null;
   const lines = violations
     .slice(0, 10)

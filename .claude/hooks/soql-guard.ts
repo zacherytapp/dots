@@ -6,8 +6,10 @@
  *  - Bash commands in a Salesforce context (`sf`/`sfdx`, `force:` commands,
  *    REST `/services/data/…/query?q=…` calls, including URL-encoded SOQL), plus
  *    any `.soql` / `.apex` file the command references (e.g. `--file q.soql`).
- *  - Any MCP tool whose arguments contain a SELECT … FROM statement (Salesforce
- *    DX MCP `run_soql_query` and friends).
+ *  - MCP tools whose server or tool name looks Salesforce-related
+ *    (salesforce, sfdc, sf_, soql: Salesforce DX MCP `run_soql_query` and
+ *    friends), all string arguments; any other MCP tool, only arguments named
+ *    query, soql or q. MCP strings over 64 KB are skipped.
  *
  * High-sensitivity fields (SSN, tax/government IDs, DOB, bank/card numbers,
  * credentials and tokens, health and special-category data, AuthSession /
@@ -52,13 +54,36 @@ function targetOrg(command: string): string {
   return /(?:--target-org|-o|-u|--targetusername)[=\s]+["']?([^\s"']+)/.exec(command)?.[1] ?? "";
 }
 
+/** MCP servers or tools that talk to Salesforce. */
+const SF_TOOL = /salesforce|sfdc|soql|(?:^|_)sf(?:dx)?_/i;
+/** Argument names that carry a query on any MCP tool. */
+const QUERY_KEY = /^(?:query|soql|q)$/i;
+/** Longer MCP strings are documents or data, not a query to run. */
+const MAX_MCP_STRING = 64 * 1024;
+
+/** Strings under query/soql/q keys, at any depth. */
+function queryArgs(value: unknown, out: string[] = [], depth = 0): string[] {
+  if (depth > 12) return out;
+  if (Array.isArray(value)) for (const v of value) queryArgs(v, out, depth + 1);
+  else if (isRecord(value))
+    for (const [k, v] of Object.entries(value)) {
+      if (QUERY_KEY.test(k)) collectStrings(v, out, depth + 1);
+      else queryArgs(v, out, depth + 1);
+    }
+  return out;
+}
+
 export function queriesFor(tool: string, input: Record<string, unknown>, cwd: string): SoqlQuery[] {
   if (tool === "Bash") {
     const command = str(input.command);
     if (!SF_CONTEXT.test(command)) return [];
     return [command, ...readReferencedFiles(command, cwd)].flatMap(extractQueries);
   }
-  if (tool.startsWith("mcp__")) return collectStrings(input).flatMap(extractQueries);
+  if (tool.startsWith("mcp__")) {
+    // Issue bodies, docs and file contents on unrelated servers often quote SQL.
+    const strings = SF_TOOL.test(tool) ? collectStrings(input) : queryArgs(input);
+    return strings.filter((s) => s.length <= MAX_MCP_STRING).flatMap(extractQueries);
+  }
   return [];
 }
 

@@ -14,28 +14,76 @@
  *  - PostToolUse (any tool): findings in tool output add a warning to
  *    Claude's context and a notice to the user; high-severity values are
  *    replaced with [REDACTED:…] via updatedToolOutput, keeping the output's
- *    shape (Claude Code ignores a mismatched shape for built-in tools).
+ *    shape (Claude Code ignores a mismatched shape for built-in tools). Bulk
+ *    email lists from git history and people files (CODEOWNERS, .mailmap…)
+ *    are expected and skipped. Output over 4 MB gets an "unscanned" notice.
+ *  - Subagent hand-backs and harness notifications delivered as prompts
+ *    (`<agent-message …>` etc.) are never blocked, only flagged.
  *  - Stop / SubagentStop: high findings in the final response raise a notice
  *    to the user. Never blocks.
  *
  * Disable with CLAUDE_DISABLED_HOOKS=sensitive-data-guard. Fails open.
  */
 
-import { basename } from "node:path";
-import { collectStrings, isRecord, preToolUse, runHook, str } from "./lib/hook-io.ts";
-import type { HookEvent, HookOutput } from "./lib/hook-io.ts";
-import { describe, redact, scanSensitive, summarize } from "./lib/sensitive-patterns.ts";
+import { basename, dirname, join } from "node:path";
+import {
+  collectStrings,
+  formatMB,
+  isHarnessDelivery,
+  isRecord,
+  preToolUse,
+  realPath,
+  runHook,
+  str,
+} from "./lib/hook-io.ts";
+import type { HookEvent, HookOutput, OversizeEvent } from "./lib/hook-io.ts";
+import { describe, isBulkPii, redact, scanSensitive, summarize } from "./lib/sensitive-patterns.ts";
 import type { Finding } from "./lib/sensitive-patterns.ts";
 
 export const ID = "sensitive-data-guard";
 const ALLOW_MARKER = /\[allow-sensitive\]/i;
 const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
-/** Files that legitimately contain detector source; reading them would always warn. */
-const SELF = /^(?:sensitive-data-guard|sensitive-patterns|secret-guard|soql-guard)(?:\.test)?\.ts$/;
+
+/**
+ * Files that legitimately contain detector source; reading them would always warn. Exact real
+ * paths (stow links resolved), so a file elsewhere named like them is still scanned.
+ */
+const HOOKS_DIR = dirname(realPath(import.meta.filename));
+const SELF = new Set(
+  [
+    "sensitive-data-guard",
+    "secret-guard",
+    "soql-guard",
+    "lib/sensitive-patterns",
+    "lib/guardrails-patterns",
+  ].flatMap((name) => [`${name}.ts`, `${name}.test.ts`].map((f) => join(HOOKS_DIR, f))),
+);
+
+export function isSelf(target: string, cwd?: string): boolean {
+  return target !== "" && SELF.has(realPath(target, cwd || undefined));
+}
 
 const HANDLING =
   "Do not repeat these values in responses, write them to files, commit them, put them in commands, or send them to " +
   "external services. Refer to them by type or masked form, and tell the user if they need to rotate a credential.";
+
+/** Bulk email/phone lists are personal data, not credentials: no rotation advice. */
+const PII_HANDLING =
+  "Don't copy these into files, commits, commands or external services unless the task needs them.";
+
+/** Commands whose output lists commit authors: dozens of addresses are expected. */
+const GIT_AUTHOR_OUTPUT =
+  /(?:^|[;&|(]\s*)git\s+(?:(?:-C|-c)\s+\S+\s+|--?[\w-]+(?:=\S+)?\s+)*(?:log|shortlog|blame|annotate|show|whatchanged)\b/m;
+/** Files that exist to list people. */
+const PEOPLE_FILE =
+  /^(?:CODEOWNERS|AUTHORS|CONTRIBUTORS|MAINTAINERS|OWNERS|\.mailmap|package\.json)(?:\.\w+)?$/i;
+
+/** True when a tool's output is expected to hold many email addresses. */
+export function listsPeople(tool: string, input: Record<string, unknown>): boolean {
+  if (tool === "Bash") return GIT_AUTHOR_OUTPUT.test(str(input.command));
+  if (tool === "Read") return PEOPLE_FILE.test(basename(str(input.file_path)));
+  return false;
+}
 
 const high = (fs: Finding[]) => fs.some((f) => f.severity === "high");
 
@@ -81,6 +129,20 @@ function onPrompt(event: HookEvent): HookOutput | null {
   if (!prompt || ALLOW_MARKER.test(prompt)) return null;
   const findings = scanSensitive(prompt);
   if (findings.length === 0) return null;
+  // Subagent hand-backs and harness notifications arrive as prompts. Blocking one drops the
+  // report silently, and they often quote test fixtures, so they only warn.
+  if (high(findings) && isHarnessDelivery(prompt)) {
+    return {
+      systemMessage: `${ID}: agent/harness message contains sensitive data (${summarize(findings)}), not blocked`,
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext:
+          `${ID}: a subagent or harness message (not the user) contains sensitive data:\n${describe(findings)}\n` +
+          "It was delivered anyway; it may be quoted test fixtures. " +
+          HANDLING,
+      },
+    };
+  }
   if (high(findings)) {
     return {
       decision: "block",
@@ -96,17 +158,19 @@ function onPrompt(event: HookEvent): HookOutput | null {
     systemMessage: `${ID}: prompt may contain personal data (${summarize(findings)})`,
     hookSpecificOutput: {
       hookEventName: "UserPromptSubmit",
-      additionalContext: `${ID}: the user's prompt appears to contain sensitive data:\n${describe(findings)}\n${HANDLING}`,
+      additionalContext: `${ID}: the user's prompt appears to contain sensitive data:\n${describe(findings)}\n${handling(findings)}`,
     },
   };
 }
+
+const handling = (fs: Finding[]) => (fs.every(isBulkPii) ? PII_HANDLING : HANDLING);
 
 function onPreToolUse(event: HookEvent): HookOutput | null {
   const tool = str(event.tool_name);
   const input = isRecord(event.tool_input) ? event.tool_input : {};
   const out = outgoingText(tool, input);
   if (!out || !out.text) return null;
-  if (out.target && SELF.test(basename(out.target))) return null;
+  if (WRITE_TOOLS.has(tool) && isSelf(out.target, str(event.cwd))) return null;
   const findings = scanSensitive(out.text);
   if (findings.length === 0) return null;
   const where = out.target ? ` (${out.target})` : "";
@@ -162,11 +226,22 @@ function onPostToolUse(event: HookEvent): HookOutput | null {
   const input = isRecord(event.tool_input) ? event.tool_input : {};
   const target =
     str(input.file_path) || str(input.path) || str(input.url) || str(input.command).slice(0, 80);
-  if ((tool === "Read" || tool === "Grep" || tool === "Glob") && SELF.test(basename(target)))
+  if ((tool === "Read" || tool === "Grep" || tool === "Glob") && isSelf(target, str(event.cwd)))
     return null;
 
-  const findings = scanSensitive(collectStrings(event.tool_response).join("\n"));
+  let findings = scanSensitive(collectStrings(event.tool_response).join("\n"));
+  if (listsPeople(tool, input)) findings = findings.filter((f) => f.id !== "pii.email-bulk");
   if (findings.length === 0) return null;
+
+  if (findings.every(isBulkPii)) {
+    return {
+      systemMessage: `${ID}: ${tool} output contains bulk personal data (${summarize(findings)})`,
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext: `${ID}: the ${tool} output contains ${findings.map((f) => f.label.toLowerCase()).join(" and ")}. ${PII_HANDLING}`,
+      },
+    };
+  }
 
   const specific: Record<string, unknown> = {
     hookEventName: "PostToolUse",
@@ -216,4 +291,17 @@ export function evaluate(event: HookEvent): HookOutput | null {
   }
 }
 
-if (import.meta.main) await runHook(ID, "minimal", evaluate);
+/** Tool output too large to parse (over 4 MB): say it went unscanned rather than stay silent. */
+export function onOversize(event: OversizeEvent): HookOutput | null {
+  if (event.hookEventName !== "PostToolUse") return null;
+  const what = `${event.toolName || "tool"} output too large to scan for secrets (${formatMB(event.bytes)})`;
+  return {
+    systemMessage: `${ID}: ${what}`,
+    hookSpecificOutput: {
+      hookEventName: "PostToolUse",
+      additionalContext: `${ID}: ${what}; it was not checked or redacted. Treat any credentials or personal data in it with care.`,
+    },
+  };
+}
+
+if (import.meta.main) await runHook(ID, "minimal", evaluate, { oversize: onOversize });

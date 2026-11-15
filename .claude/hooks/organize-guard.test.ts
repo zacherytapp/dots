@@ -137,3 +137,84 @@ describe("review fixes", () => {
     assert.equal(check(join(app, "env.d.ts")), null);
   });
 });
+
+describe("harness scratchpad", () => {
+  const scratch = join(fakeTmp, "claude-1000", "-home-u-projects-app", "0123-abcd", "scratchpad");
+
+  test("allows the session scratchpad from inside a project", () => {
+    assert.equal(check(join(scratch, "notes.md")), null);
+    assert.equal(check(join(scratch, "deep", "run.sh")), null);
+  });
+
+  test("allows $CLAUDE_SCRATCHPAD wherever it is", () => {
+    const custom = join(fakeTmp, "custom-pad");
+    const withPad = { ...opts, scratchpads: [custom] };
+    const event = (file_path: string) => ({
+      tool_name: "Write",
+      tool_input: { file_path },
+      cwd: app,
+    });
+    assert.equal(denialReason(event(join(custom, "x.sh")), withPad), null);
+    assert.match(
+      denialReason(event(join(fakeTmp, "x.sh")), withPad) ?? "",
+      /belong inside the repo/,
+    );
+  });
+
+  test("still redirects other system temp writes", () => {
+    assert.match(check(join(fakeTmp, "claude-1000", "x.sh")) ?? "", /belong inside the repo/);
+    assert.match(check(join(fakeTmp, "scratchpad", "x.sh")) ?? "", /belong inside the repo/);
+    assert.match(check(join(fakeTmp, "claude-1000", "scratchpad-x.sh")) ?? "", /belong inside/);
+  });
+});
+
+describe("root allowlist", () => {
+  for (const name of [
+    "vitest.setup.ts",
+    "jest.setup.js",
+    "gulpfile.js",
+    "Gruntfile.js",
+    "sw.js",
+    "CNAME",
+    "humans.txt",
+    "ads.txt",
+    "security.txt",
+    "favicon.ico",
+    "favicon.svg",
+    "install.sh",
+    "setup.sh",
+    "bootstrap.sh",
+  ]) {
+    test(`allows ${name}`, () => assert.equal(check(join(app, name)), null));
+  }
+  for (const name of ["TODO.md", "PLAN.md", "ARCHITECTURE.md", "install-notes.sh"]) {
+    test(`still denies ${name}`, () => assert.match(check(join(app, name)) ?? "", /loose files/));
+  }
+});
+
+describe("git lookups without spawning", () => {
+  const main = join(home, "projects", "main");
+  const wt = join(home, "projects", "group", "wt");
+  const identity = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"];
+  execFileSync("git", ["init", "-q", main]);
+  execFileSync("git", ["-C", main, ...identity, "commit", "-q", "--allow-empty", "-m", "init"]);
+  execFileSync("git", ["-C", main, "worktree", "add", "-q", "--detach", wt]);
+
+  test("a .git file (worktree) marks the project root", () => {
+    // The worktree is the root, not group/ (the first dir under ~/projects).
+    assert.match(check(join(wt, "notes.md"), wt) ?? "", new RegExp(`project root \\(${wt}\\)`));
+  });
+
+  test("a worktree's tmp/ is ignored through the common info/exclude", () => {
+    assert.equal(check(join(wt, "tmp", "out.log"), wt), null);
+    assert.match(readFileSync(join(main, ".git", "info", "exclude"), "utf8"), /^\/tmp\/$/m);
+    execFileSync("git", ["-C", wt, "check-ignore", "-q", "tmp/out.log"]); // throws if not ignored
+  });
+
+  test("does not append the exclude rule twice", () => {
+    assert.equal(check(join(app, "tmp", "a.log")), null);
+    assert.equal(check(join(app, "tmp", "b.log")), null);
+    const exclude = readFileSync(join(app, ".git", "info", "exclude"), "utf8");
+    assert.equal(exclude.match(/^\/tmp\/$/gm)?.length, 1);
+  });
+});
