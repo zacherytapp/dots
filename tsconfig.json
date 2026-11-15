@@ -15,6 +15,7 @@
     ".claude/hooks/**/*.ts",
     ".agents/scripts/*.ts",
     ".agents/hooks/*.ts",
+    ".agents/skills/*/scripts/*.ts",
     ".local/bin/config/src/**/*.ts",
     ".local/bin/config/test/**/*.ts",
     ".config/herdr-app/src/**/*.ts"

@@ -20,6 +20,7 @@
 ^/\.claude/settings\.local\.json
 ^/\.claude/hooks/.*\.test\.ts
 ^/\.agents/hooks/.*\.test\.ts
+^/\.agents/skills/[^/]*/scripts/.*\.test\.ts
 # Repo-wide dev tooling; must not leak into $HOME as global defaults
 node_modules
 __pycache__

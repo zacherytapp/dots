@@ -37,6 +37,7 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `implement-pr-fixes` — apply PR review feedback
 - `meeting-notes` — draft concise meeting minutes
 - `merge-pr-into-main` — merge a PR and clean up
+- `project-cleanup` — test what landed on main, then delete landed branches, worktrees, and temp files
 - `review-and-commit` — review changes and create scoped commits
 - `review-code` — deep maintainability audit
 - `review-issue` — review issues/specs for readiness
