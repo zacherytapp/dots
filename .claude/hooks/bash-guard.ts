@@ -23,7 +23,10 @@
  *  - force or destructive git push;
  *  - git commands that discard uncommitted work (reset --hard, clean -f,
  *    checkout/restore of paths, stash drop/clear);
- *  - `git commit` whose diff has a heuristic secret match.
+ *  - `git commit` whose diff has a heuristic secret match;
+ *  - rm, rmdir, shred, unlink, chmod and chown. These used to be settings.json
+ *    `ask` rules, but an ask rule prompts even in auto mode; this check is
+ *    skipped there, so auto mode runs unattended.
  *
  * Pattern matching over shell text is best-effort and can be evaded by
  * wrappers, scripts, or obfuscation: the sandbox and permission rules are the
@@ -37,12 +40,13 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { findSecrets, formatFindings } from "./secret-guard.ts";
-import { isRecord, preToolUse, runHook } from "./lib/hook-io.ts";
+import { WARN_ONLY_MODES, isRecord, preToolUse, runHook } from "./lib/hook-io.ts";
 
 const HOME = homedir();
 
 interface HookEvent {
   cwd?: unknown;
+  permission_mode?: unknown;
   tool_input?: unknown;
   tool_name?: unknown;
 }
@@ -871,12 +875,35 @@ export function evaluateCommand(rawCommand: string, cwd: string): Verdict | null
   return null;
 }
 
+/** Routine but irreversible commands the user confirms outside auto mode. */
+const CONFIRM_COMMANDS = new Set(["rm", "rmdir", "shred", "unlink", "chmod", "chown"]);
+
+/** The CONFIRM_COMMANDS a Bash command runs, in order of first use. */
+export function confirmCommands(rawCommand: string): string[] {
+  const found = new Set<string>();
+  for (const segment of pipelines(scrubInert(rawCommand)).flat()) {
+    const cmd = baseName(commandWords(segment)[0] ?? "");
+    if (CONFIRM_COMMANDS.has(cmd)) found.add(cmd);
+  }
+  return [...found];
+}
+
+/**
+ * evaluateCommand, plus an ask for CONFIRM_COMMANDS. Auto mode skips that ask rather than
+ * turn it into a warning on every rm: its classifier already reviews each command.
+ */
 export function evaluate(event: HookEvent): Verdict | null {
   if (event.tool_name !== "Bash") return null;
   const input = isRecord(event.tool_input) ? event.tool_input : {};
   if (typeof input.command !== "string" || input.command.trim() === "") return null;
   const cwd = typeof event.cwd === "string" && event.cwd !== "" ? event.cwd : process.cwd();
-  return evaluateCommand(input.command, resolve(cwd));
+  const verdict = evaluateCommand(input.command, resolve(cwd));
+  if (verdict?.decision === "deny" || WARN_ONLY_MODES.has(String(event.permission_mode)))
+    return verdict;
+  const confirm = confirmCommands(input.command);
+  if (confirm.length === 0) return verdict;
+  const ask = `This runs ${confirm.join(", ")}, which can't be undone. Confirm before it runs.`;
+  return { decision: "ask", reason: verdict ? `${verdict.reason}\n${ask}` : `bash-guard: ${ask}` };
 }
 
 if (import.meta.main)

@@ -331,6 +331,49 @@ describe("evaluate", () => {
       "deny",
     );
   });
+
+  const bash = (command: string) =>
+    evaluate({ tool_name: "Bash", tool_input: { command }, cwd: project });
+
+  test("asks before rm, rmdir, shred, unlink, chmod and chown", () => {
+    for (const command of [
+      "rm file.txt",
+      "rm -rf ./build",
+      "sudo rmdir empty",
+      "make && /usr/bin/shred -u k",
+      "unlink link",
+      "chmod +x run.sh",
+      "chown me f",
+    ]) {
+      const verdict = bash(command);
+      assert.equal(verdict?.decision, "ask", command);
+    }
+    assert.match(bash("rm a; chmod +x b")?.reason ?? "", /runs rm, chmod,/);
+  });
+
+  test("keeps denies and merges other asks", () => {
+    assert.equal(bash("rm -rf ~")?.decision, "deny");
+    const reason = bash("git push --force && rm x")?.reason ?? "";
+    assert.match(reason, /force or destructive git push/);
+    assert.match(reason, /runs rm,/);
+  });
+
+  test("leaves them to the classifier in auto mode", () => {
+    const auto = (command: string) =>
+      evaluate({
+        tool_name: "Bash",
+        tool_input: { command },
+        cwd: project,
+        permission_mode: "auto",
+      });
+    assert.equal(auto("rm file.txt"), null);
+    assert.equal(auto("rm -rf ~")?.decision, "deny"); // runHook turns this into a warning
+  });
+
+  test("ignores the names as arguments or text", () => {
+    for (const command of ["grep -rn rm src", "echo chmod", 'git commit -m "rm old files"', "ls"])
+      assert.equal(bash(command), null, command);
+  });
 });
 
 describe("inert text", () => {
