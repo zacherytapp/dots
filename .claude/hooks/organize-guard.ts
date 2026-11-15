@@ -35,7 +35,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { isRecord, readStdin } from "./lib/hook-io.ts";
+import { isRecord, preToolUse, runHook } from "./lib/hook-io.ts";
 
 export interface GuardOptions {
   bases: string[];
@@ -409,24 +409,8 @@ export function denialReason(
   ].join("\n");
 }
 
-async function main(): Promise<void> {
-  try {
-    const event: unknown = JSON.parse(await readStdin());
-    if (!isRecord(event)) return;
+if (import.meta.main)
+  await runHook("organize-guard", "minimal", (event) => {
     const reason = denialReason(event);
-    if (reason === null) return;
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          permissionDecision: "deny",
-          permissionDecisionReason: reason,
-        },
-      }),
-    );
-  } catch {
-    // fail open
-  }
-}
-
-if (import.meta.main) await main();
+    return reason === null ? null : preToolUse("deny", reason);
+  });

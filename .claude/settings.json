@@ -194,7 +194,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/consent.py 2>/dev/null || true",
+            "command": "NODE_COMPILE_CACHE=$HOME/.cache/claude-hooks node $HOME/.claude/hooks/consent-gate.ts $HOME/.local/state/noctalia/plugins/materialized/community/claude-companion/hooks/consent.py 2>/dev/null || true",
             "timeout": 120
           }
         ]

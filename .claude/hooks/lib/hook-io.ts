@@ -6,7 +6,8 @@
  *   CLAUDE_HOOK_PROFILE   minimal | standard (default) | strict
  *   CLAUDE_DISABLED_HOOKS comma-separated hook ids to turn off
  *
- * Every hook fails open: a parse error or exception allows the action.
+ * Every hook fails open: a parse error or exception allows the action. In auto mode
+ * (`permission_mode: "auto"`) runHook also turns every deny, ask or block into a warning.
  */
 
 import { realpathSync } from "node:fs";
@@ -137,6 +138,78 @@ export function isHarnessDelivery(prompt: string): boolean {
   return HARNESS_DELIVERY.test(prompt);
 }
 
+/**
+ * Permission modes where guards only warn. Auto mode runs unattended and must never be
+ * stopped by a hook; its own classifier still reviews every tool call.
+ */
+export const WARN_ONLY_MODES: ReadonlySet<string> = new Set(["auto"]);
+
+export function warnOnly(event: HookEvent): boolean {
+  return WARN_ONLY_MODES.has(str(event.permission_mode));
+}
+
+/** On these events additionalContext keeps Claude running, so a warning goes to the user only. */
+const STOP_EVENTS = new Set(["Stop", "SubagentStop"]);
+
+const NOTICE_MAX = 200;
+
+/**
+ * Rewrite a blocking output as a warning: drop a deny/ask permission decision,
+ * `decision: "block"` and `continue: false`, and pass their reasons on as context for Claude
+ * plus a one-line notice for the user. Everything else (redacted tool output, existing
+ * context) is kept. Non-blocking output comes back unchanged.
+ */
+export function asWarning(output: HookOutput, eventName = ""): HookOutput {
+  const out: HookOutput = { ...output };
+  const specific = isRecord(out.hookSpecificOutput) ? { ...out.hookSpecificOutput } : null;
+  const reasons: string[] = [];
+  if (specific?.permissionDecision === "deny" || specific?.permissionDecision === "ask") {
+    reasons.push(str(specific.permissionDecisionReason));
+    delete specific.permissionDecision;
+    delete specific.permissionDecisionReason;
+  }
+  if (out.decision === "block") {
+    reasons.push(str(out.reason));
+    delete out.decision;
+    delete out.reason;
+    if (specific) delete specific.suppressOriginalPrompt;
+  }
+  if (out.continue === false) {
+    reasons.push(str(out.stopReason));
+    delete out.continue;
+    delete out.stopReason;
+  }
+  if (reasons.length === 0) return output;
+
+  const reason = reasons.filter(Boolean).join("\n") || "a guard hook flagged this action";
+  const event = eventName || str(specific?.hookEventName);
+  const headline = reason.split("\n", 1)[0]!.trim();
+  const notice = `[auto mode: allowed, warning only] ${
+    headline.length > NOTICE_MAX ? `${headline.slice(0, NOTICE_MAX - 1)}…` : headline
+  }`;
+  out.systemMessage = str(out.systemMessage) ? `${str(out.systemMessage)}\n${notice}` : notice;
+
+  if (event && !STOP_EVENTS.has(event)) {
+    const note =
+      "A guard hook would have blocked this, but auto mode lets it through and only warns. " +
+      `Weigh the warning before going on:\n${reason}`;
+    const context = str(specific?.additionalContext);
+    out.hookSpecificOutput = {
+      ...specific,
+      hookEventName: event,
+      additionalContext: context ? `${context}\n\n${note}` : note,
+    };
+  } else if (specific) {
+    out.hookSpecificOutput = specific;
+  }
+  return out;
+}
+
+/** The output to print for `event`: blocking output becomes a warning in auto mode. */
+export function finalOutput(event: HookEvent, output: HookOutput): HookOutput {
+  return warnOnly(event) ? asWarning(output, str(event.hook_event_name)) : output;
+}
+
 /** Resolve `target` against `cwd` and follow symlinks (stow links), falling back to the plain path. */
 export function realPath(target: string, cwd: string = process.cwd()): string {
   const abs = isAbsolute(target) ? target : join(cwd, target);
@@ -177,7 +250,7 @@ export async function runHook(
     }
     if (!isRecord(event)) return;
     const output = await evaluate(event);
-    if (output) process.stdout.write(JSON.stringify(output));
+    if (output) process.stdout.write(JSON.stringify(finalOutput(event, output)));
   } catch {
     // fail open
   }

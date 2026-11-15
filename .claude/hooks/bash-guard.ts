@@ -37,7 +37,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { findSecrets, formatFindings } from "./secret-guard.ts";
-import { isRecord, readStdin } from "./lib/hook-io.ts";
+import { isRecord, preToolUse, runHook } from "./lib/hook-io.ts";
 
 const HOME = homedir();
 
@@ -879,24 +879,8 @@ export function evaluate(event: HookEvent): Verdict | null {
   return evaluateCommand(input.command, resolve(cwd));
 }
 
-async function main(): Promise<void> {
-  try {
-    const event: unknown = JSON.parse(await readStdin());
-    if (!isRecord(event)) return;
+if (import.meta.main)
+  await runHook("bash-guard", "minimal", (event) => {
     const verdict = evaluate(event);
-    if (!verdict) return;
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          permissionDecision: verdict.decision,
-          permissionDecisionReason: verdict.reason,
-        },
-      }),
-    );
-  } catch {
-    // fail open
-  }
-}
-
-if (import.meta.main) await main();
+    return verdict ? preToolUse(verdict.decision, verdict.reason) : null;
+  });

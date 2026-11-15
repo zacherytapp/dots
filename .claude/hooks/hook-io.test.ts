@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { isHarnessDelivery, isInside, MAX_STDIN, oversizeEvent } from "./lib/hook-io.ts";
+import { gateApplies } from "./consent-gate.ts";
+import {
+  asWarning,
+  finalOutput,
+  isHarnessDelivery,
+  isInside,
+  MAX_STDIN,
+  oversizeEvent,
+  preToolUse,
+} from "./lib/hook-io.ts";
 
 const dir = import.meta.dirname;
 
@@ -88,6 +97,144 @@ describe("runHook end to end", () => {
         CLAUDE_DISABLED_HOOKS: "prompt-injection-guard",
       }),
       "",
+    );
+  });
+});
+
+describe("auto mode only warns", () => {
+  test("a PreToolUse deny or ask becomes context and a notice", () => {
+    for (const decision of ["deny", "ask"] as const) {
+      const out = asWarning(preToolUse(decision, "bash-guard: refusing rm -rf /"), "PreToolUse");
+      assert.deepEqual(out.hookSpecificOutput, {
+        hookEventName: "PreToolUse",
+        additionalContext:
+          "A guard hook would have blocked this, but auto mode lets it through and only warns. " +
+          "Weigh the warning before going on:\nbash-guard: refusing rm -rf /",
+      });
+      assert.equal(
+        out.systemMessage,
+        "[auto mode: allowed, warning only] bash-guard: refusing rm -rf /",
+      );
+    }
+  });
+
+  test("an allow decision and plain warnings pass through untouched", () => {
+    const allow = preToolUse("allow", "fine");
+    assert.equal(asWarning(allow, "PreToolUse"), allow);
+    const redacted = {
+      systemMessage: "sensitive-data-guard: redacted",
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        updatedToolOutput: { stdout: "[REDACTED]" },
+      },
+    };
+    assert.equal(asWarning(redacted, "PostToolUse"), redacted);
+  });
+
+  test("a blocked prompt goes through with the reason as context", () => {
+    const out = asWarning(
+      {
+        decision: "block",
+        reason: "secret-guard: prompt blocked\n- AWS key",
+        hookSpecificOutput: { hookEventName: "UserPromptSubmit", suppressOriginalPrompt: true },
+      },
+      "UserPromptSubmit",
+    );
+    assert.equal(out.decision, undefined);
+    assert.equal(out.reason, undefined);
+    const specific = out.hookSpecificOutput as Record<string, unknown>;
+    assert.equal(specific.suppressOriginalPrompt, undefined);
+    assert.match(String(specific.additionalContext), /AWS key/);
+    assert.equal(
+      out.systemMessage,
+      "[auto mode: allowed, warning only] secret-guard: prompt blocked",
+    );
+  });
+
+  test("a Stop block only notifies the user, so Claude still stops", () => {
+    const out = asWarning(
+      { decision: "block", reason: "sf-stop-check: before finishing:\n- run tests" },
+      "Stop",
+    );
+    assert.deepEqual(out, {
+      systemMessage: "[auto mode: allowed, warning only] sf-stop-check: before finishing:",
+    });
+  });
+
+  test("continue: false is dropped and existing context and notices are kept", () => {
+    const out = asWarning(
+      {
+        continue: false,
+        stopReason: "halt",
+        systemMessage: "earlier note",
+        hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: "existing" },
+      },
+      "PostToolUse",
+    );
+    assert.equal(out.continue, undefined);
+    assert.equal(out.systemMessage, "earlier note\n[auto mode: allowed, warning only] halt");
+    assert.match(
+      String((out.hookSpecificOutput as Record<string, unknown>).additionalContext),
+      /^existing\n\n.*\nhalt$/s,
+    );
+  });
+
+  test("finalOutput softens only in auto mode", () => {
+    const deny = preToolUse("deny", "no");
+    assert.equal(
+      finalOutput({ permission_mode: "default", hook_event_name: "PreToolUse" }, deny),
+      deny,
+    );
+    assert.equal(finalOutput({ permission_mode: "acceptEdits" }, deny), deny);
+    const soft = finalOutput({ permission_mode: "auto", hook_event_name: "PreToolUse" }, deny);
+    assert.equal(
+      (soft.hookSpecificOutput as Record<string, unknown>).permissionDecision,
+      undefined,
+    );
+  });
+
+  test("bash-guard and secret-guard warn instead of blocking end to end", () => {
+    const rm = (mode: string) =>
+      JSON.stringify({
+        hook_event_name: "PreToolUse",
+        permission_mode: mode,
+        tool_name: "Bash",
+        tool_input: { command: "rm -rf /" },
+        cwd: dir,
+      });
+    assert.equal(
+      JSON.parse(runHookFile("bash-guard.ts", rm("default"))).hookSpecificOutput.permissionDecision,
+      "deny",
+    );
+    const auto = JSON.parse(runHookFile("bash-guard.ts", rm("auto")));
+    assert.equal(auto.hookSpecificOutput.permissionDecision, undefined);
+    assert.match(auto.hookSpecificOutput.additionalContext, /bash-guard/);
+
+    const prompt = (mode: string) =>
+      JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        permission_mode: mode,
+        prompt: `deploy with AKIA${"QWERTYUIOPASDFGH"}`,
+      });
+    assert.equal(JSON.parse(runHookFile("secret-guard.ts", prompt("default"))).decision, "block");
+    const sent = JSON.parse(runHookFile("secret-guard.ts", prompt("auto")));
+    assert.equal(sent.decision, undefined);
+    assert.match(sent.systemMessage, /^\[auto mode: allowed, warning only\] secret-guard/);
+  });
+
+  test("the consent gate is skipped in auto mode only", () => {
+    assert.equal(gateApplies(JSON.stringify({ permission_mode: "auto" })), false);
+    assert.equal(gateApplies(JSON.stringify({ permission_mode: "default" })), true);
+    assert.equal(gateApplies("not json"), true);
+    // A command that merely mentions auto mode doesn't switch the gate off.
+    assert.equal(
+      gateApplies(
+        JSON.stringify({
+          permission_mode: "default",
+          tool_input: { command: '"permission_mode":"auto"' },
+        }),
+      ),
+      true,
     );
   });
 });
