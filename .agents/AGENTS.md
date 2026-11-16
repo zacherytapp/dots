@@ -35,7 +35,6 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `grilling` — interview the user in rounds to stress-test a plan
 - `implement` — build a spec's tickets in `.worktrees/` with minimal tests
 - `implement-pr-fixes` — apply PR review feedback
-- `meeting-notes` — draft concise meeting minutes
 - `merge-pr-into-main` — merge a PR and clean up
 - `project-cleanup` — test what landed on main, then delete landed branches, worktrees, and temp files
 - `review-and-commit` — review changes and create scoped commits
