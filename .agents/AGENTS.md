@@ -52,3 +52,4 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `test-prune` — prune, consolidate, and speed up test suites with scout and refactorer subagents
 - `to-spec` — synthesize a large spec from the spec template
 - `to-tickets` — split a spec into few, large, blocking-aware tickets
+- `triage-decisions` — triage open issues, settle their decisions with the user, and consolidate them into agent-ready briefs
