@@ -65,11 +65,26 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(COLOR_PICKER))
 
--- Dictation (hyprwhspr, push-to-talk): hold to record, release to paste into
--- the focused window. Needs external_bindings in ~/.config/hyprwhspr/config.json.
+-- Dictation (hyprwhspr, push-to-talk): hold SUPER+F to record; letting go of F
+-- stops and pastes at the cursor of the focused window. Needs external_bindings
+-- in ~/.config/hyprwhspr/config.json.
+-- Not a release bind: one only fires if SUPER is still down when F comes up, so
+-- letting go of SUPER first left it recording and the take never pasted. A
+-- timer watches F instead, whatever order the keys come up in.
 local whsprFifo = "echo %s > \"$XDG_RUNTIME_DIR/hyprwhspr/recording_control\""
-hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(whsprFifo:format("start")),   { description = "Dictation: start" })
-hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(whsprFifo:format("release")), { release = true, description = "Dictation: stop and paste" })
+local dictationWatch
+hl.bind(mainMod .. " + F", function()
+    hl.exec_cmd(whsprFifo:format("start"))
+    if dictationWatch then
+        dictationWatch:set_enabled(true)
+        return
+    end
+    dictationWatch = hl.timer(function()
+        if hl.is_key_down("f") then return end
+        dictationWatch:set_enabled(false)
+        hl.exec_cmd(whsprFifo:format("release"))
+    end, { timeout = 50, type = "repeat" })
+end, { description = "Dictation: hold to record, let go to paste" })
 
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(noctCall .. "panel-toggle clipboard"))
 
