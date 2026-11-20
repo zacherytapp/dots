@@ -9,7 +9,8 @@
 //   config   ~/.config/hyprwhspr/config.json is app-written and saved sparse
 //            (values equal to hyprwhspr's defaults are dropped), so it's
 //            merged on effective values instead of stowed. It also pins
-//            Ctrl+Shift+V as the paste chord for Herdr (PASTE_CHORDS)
+//            Ctrl+Shift+V as the paste chord for Herdr (PASTE_CHORDS) and
+//            keeps the dictation on the clipboard after pasting it
 //   backend  `hyprwhspr setup auto` builds ~/.local/share/hyprwhspr/venv. It
 //            adds the CUDA pip wheels (cublas, cudnn) when `nvidia-smi -L`
 //            answers and installs CPU-only otherwise; there's no system CUDA 12
@@ -51,7 +52,10 @@ const HYPRWHSPR_DEFAULTS: Config = {
   transcription_backend: "pywhispercpp",
   faster_whisper_model: "base",
   faster_whisper_device: "auto",
+  clipboard_clear_delay: 5,
 };
+
+const KEEP_CLIPBOARD = 365 * 24 * 60 * 60;
 
 /** What the dots keybind and the fully local setup depend on; reset on every run. */
 const REQUIRED: Config = {
@@ -62,6 +66,11 @@ const REQUIRED: Config = {
   external_bindings: true,
   // local transcription; never a cloud backend
   transcription_backend: "faster-whisper",
+  // keep the dictation on the clipboard as well as pasted. hyprwhspr always puts
+  // the old clipboard back this long after a paste (clipboard_behavior is never
+  // read), so a year is effectively never; the restore also skips itself if
+  // anything else was copied in the meantime
+  clipboard_clear_delay: KEEP_CLIPBOARD,
 };
 
 // Paste chords for apps hyprwhspr doesn't know are terminals (it sends Ctrl+V to
@@ -325,7 +334,7 @@ export function verifyDictation(ctx: Context, v: Verifier): void {
   v.section("dictation (hyprwhspr)");
   v.commands("hyprwhspr", "wtype", "ydotool", "wl-copy");
   v.check(
-    "config: push-to-talk on the hyprland bind, local faster-whisper, device auto, paste chords",
+    "config: push-to-talk on the hyprland bind, local faster-whisper, device auto, paste chords, clipboard kept",
     () => {
       return Object.keys(requiredFixes(readConfig(ctx))).length === 0;
     },

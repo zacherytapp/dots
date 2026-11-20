@@ -61,6 +61,7 @@ describe("mergeConfig", () => {
     transcription_backend: "faster-whisper",
     faster_whisper_model: "large-v3-turbo",
     faster_whisper_device: "auto",
+    clipboard_clear_delay: 31536000,
     applications: { "herdr-app": { auto_paste: "ctrl+shift+v" } },
   };
 
@@ -119,6 +120,7 @@ describe("mergeConfig", () => {
       recording_mode: "push_to_talk",
       external_bindings: true,
       transcription_backend: "faster-whisper",
+      clipboard_clear_delay: 31536000,
       applications: { "herdr-app": { auto_paste: "ctrl+shift+v" } },
     });
   });
