@@ -17,6 +17,7 @@
 ^/\.local/bin/config
 ^/\.claude/worktrees
 ^/tmp
+^/\.tmp
 ^/\.claude/settings\.local\.json
 ^/\.claude/hooks/.*\.test\.ts
 ^/\.agents/hooks/.*\.test\.ts

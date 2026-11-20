@@ -35,3 +35,4 @@ __pycache__/
 
 # Agent scratch space (see ~/.claude/rules/file-organization.md)
 /tmp/
+/.tmp/
