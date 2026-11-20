@@ -1,6 +1,6 @@
 ---
 name: triage-decisions
-description: Triages open GitHub, Forgejo, or other tracker issues in bulk, resolves their open decisions with the user in grouped question rounds, then labels, closes, consolidates, and rewrites them into agent-ready briefs. Use when the user wants a backlog triaged, ticket decisions settled, or issues made ready for autonomous agents.
+description: Triages open GitHub, Forgejo, or other tracker issues in bulk to move as many as possible to ready-for-agent, settling their open decisions with the user one question at a time, then classifying, consolidating, and rewriting them into agent-ready briefs. Use when the user wants a backlog triaged, ticket decisions settled, or issues made ready for autonomous agents.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 # Triage Decisions
 
-Move a batch of issues through the triage state machine in one session: gather context, settle every open decision with the user, apply outcomes, then consolidate so each surviving ticket can be completed by an AFK agent.
+The goal is **yield**: the largest possible share of open issues ending at `ready-for-agent`, each with a brief an AFK agent can build from without guessing. Every other outcome needs a named reason. Classification, consolidation, and questions all serve that goal: classify to see what each issue lacks, consolidate so each decision is asked once, and question the user until nothing an agent would guess at is left open.
 
 Every comment or issue posted during triage **must** start with:
 
@@ -20,6 +20,7 @@ Every comment or issue posted during triage **must** start with:
 
 - [AGENT-BRIEF.md](AGENT-BRIEF.md): how to write agent briefs
 - [OUT-OF-SCOPE.md](OUT-OF-SCOPE.md): how the `.out-of-scope/` knowledge base works
+- [NEEDS-INFO.md](NEEDS-INFO.md): the triage-notes template for `needs-info` issues
 
 ## Roles
 
@@ -29,71 +30,71 @@ Five **state** roles: `needs-triage` (maintainer needs to evaluate), `needs-info
 
 Every triaged issue carries exactly one category and one state. If state roles conflict, flag it and ask before changing anything. These are canonical names: list the tracker's labels and map each role to an existing equivalent. Create a missing label only after the user approves the name. `needs-triage` → `needs-info` | `ready-for-agent` | `ready-for-human` | `wontfix`; `needs-info` returns to `needs-triage` once answered. Flag unusual transitions and ask.
 
+Every state other than `ready-for-agent` is a cost against yield and must carry its reason:
+
+- `ready-for-human`: a step only a person can do (credentials, hardware, a manual judgment that can't be written down). Look for a split first: carve the delegable part into its own `ready-for-agent` issue and leave only the human step behind.
+- `needs-info`: a fact only someone outside this session holds, such as the reporter's environment or a third party's answer. A decision the maintainer can make is a question for this session, not `needs-info`.
+- `wontfix`: rejected, already implemented, or absorbed into a canonical issue.
+
 ## Workflow
 
 ### 1. Select the tracker and scope
 
-Use the tracker the user names. Otherwise inspect `git remote -v`: `gh` for GitHub, `gt` for Forgejo (confirm with `curl -fsS https://<host>/api/forgejo/v1/version`). For any other tracker, ask how to reach it (CLI, MCP tool, or API). Confirm authentication before reading. With no issues named, take **all open issues**. Include a PR only when the user names it; treat it as an issue with attached code.
+Use the tracker the user names. Otherwise inspect `git remote -v`: `gh` for GitHub, `gt` for Forgejo (confirm with `curl -fsS https://<host>/api/forgejo/v1/version`). For any other tracker, ask how to reach it (CLI, MCP tool, or API). Confirm authentication before reading. With no issues named, take **all open issues**, including ones already labeled `needs-info` or `ready-for-human`: each is a candidate to promote. Include a PR only when the user names it; treat it as an issue with attached code.
 
 ### 2. Gather context
 
 - **Issues:** body, comments, labels, author, dates, and links for each. Parse prior triage notes and don't re-ask settled questions.
 - **Project:** `README`, `AGENTS.md`/`CLAUDE.md`, the glossary and ADRs under `docs/`, package scripts and task runners, CI config, recent commits, and open PRs (in-flight work).
 - **Per issue:** (a) **redundancy**: search the codebase by domain concept for an existing implementation and note where you looked; (b) **prior rejection**: match against `.out-of-scope/*.md`; (c) **verify**: reproduce a bug from its steps, or for a PR check out the diff and run the relevant tests. Record confirmed (with code path), failed, or insufficient detail.
-- **Across issues:** note likely duplicates, overlaps, and blocking edges.
+- **Across issues:** note duplicates, overlaps, shared decisions, and blocking edges.
+- **Open loops:** for each issue, list every decision an agent would otherwise guess at: behavior, scope, UX, interfaces, data shape, priority, ordering against other issues, and conflicts with the current project. Settle each from code, docs, and prior discussion where you can; what remains is the issue's open loops.
 
 Use subagents for independent issues when the harness supports them and the batch is large.
 
-### 3. Recommend
+### 3. Classify and propose consolidation
 
-Present one table, oldest first: issue, one-line summary, category, recommended state, reasoning, verification result, and the open decisions it carries. Open decisions are anything an agent would otherwise guess at: functionality, scope, UX, interfaces, priority, or conflicts with the current project. Let the user correct recommendations before grilling.
+Present one table, oldest first: issue, one-line summary, category, recommended state, reasoning, verification result, and its open loops. Below it, propose the consolidation:
 
-### 4. Resolve decisions in grouped rounds
+- **Duplicates:** keep the clearest or oldest issue as canonical, fold in any unique details, and close the rest pointing to it.
+- **Related work:** merge issues one agent could build in a single session (same area, shared decisions, too small alone) into one canonical issue.
+- **Oversized:** split an issue beyond one agent session along [to-tickets](../to-tickets/SKILL.md) sizing rules, with explicit blocking edges.
 
-Follow [grilling](../grilling/SKILL.md) for format: numbered questions, each with a recommended answer. Group questions by theme across issues (a shared design choice, one area of the code), tagging each with its issue numbers, so one answer settles every ticket it touches. Answer from code and docs first; ask only what the user must decide. Put questions that depend on unsettled answers in a later round. Continue until every decision is settled, deferred to `needs-info`, or ends in `wontfix`. When decisions are architectural or define domain terms, offer to record them as ADRs or glossary entries.
+Let the user correct the table and the consolidation before questioning. From here on, track open loops against the canonical issues, so a question settles every issue it touches once.
+
+### 4. Close the loops, one question at a time
+
+Ask exactly one question per message and wait for the answer before choosing the next. Use the harness's question tool when it has one. Each question:
+
+- names the issue numbers it settles;
+- gives the context the user needs to decide in a sentence or two;
+- offers concrete options with your recommended answer first, worded so "yes" accepts it.
+
+Pick the next question by **leverage**: the one that moves the most issues to `ready-for-agent`, preferring a decision shared across issues over one local to a single issue, and an issue one answer away from ready over one with many loops left. Ask a question whose answer depends on an unsettled one only after its prerequisite is settled. Answers often reshape the plan: an answer can open new loops, settle others, trigger a merge or split, or show an issue is `wontfix`; update the table accordingly.
+
+Treat the user as able to answer for any reporter. Challenge every `ready-for-human` and `needs-info` with a question that could promote it: a decision that would make it delegable, or a split that isolates the human or outside step. After every few answers, report progress in one line: issues ready for agent so far, issues with loops still open.
+
+This step is done when every open issue is `ready-for-agent` or carries a reason from **Roles** that the user has confirmed, and every brief's **Decisions** section can be filled from recorded answers. When the user wants to stop early, list the open loops left by issue so the next session can resume. When decisions are architectural or define domain terms, offer to record them as ADRs or glossary entries.
 
 ### 5. Apply outcomes
 
-Show the planned label changes, comments, and closures, and confirm before writing. Then:
+Show the planned label changes, comments, merges, splits, and closures, and confirm before writing. Then:
 
-- `needs-info`: post triage notes (template below).
+- Merges and splits: fold absorbed details into the canonical issue, close each absorbed issue with a link, and create split issues with their blocking edges.
+- `needs-info`: post triage notes from [NEEDS-INFO.md](NEEDS-INFO.md).
 - `wontfix`, already implemented: point to where it lives; don't write to `.out-of-scope/`.
 - `wontfix`, rejected bug: polite explanation, then close.
 - `wontfix`, rejected enhancement: write to `.out-of-scope/`, link it in a comment, then close.
-- `ready-for-agent` / `ready-for-human`: apply the labels now; briefs come after consolidation.
+- `ready-for-agent` / `ready-for-human`: apply the labels and write briefs (step 6).
 
-### 6. Consolidate
+### 6. Write briefs
 
-Propose a table of merges and splits, revise until approved, then apply:
+Post an [AGENT-BRIEF.md](AGENT-BRIEF.md) comment on every `ready-for-agent` issue. For `ready-for-human`, use the same structure and state the human step that can't be delegated. When writing a brief exposes a gap, ask about it one question at a time as in step 4 rather than demoting the issue; it goes back to `needs-info` only for a fact outside the session, with the gap named.
 
-- **Duplicates:** keep the clearest or oldest issue as canonical, fold in any unique details, and close the rest pointing to it.
-- **Related work:** merge issues one agent could build in a single session (same area, shared decisions, too small alone) into one canonical issue; close the absorbed ones with a link.
-- **Oversized:** split an issue beyond one agent session along [to-tickets](../to-tickets/SKILL.md) sizing rules, with explicit blocking edges.
+### 7. Report
 
-### 7. Write briefs
-
-Post an [AGENT-BRIEF.md](AGENT-BRIEF.md) comment on every remaining `ready-for-agent` issue. For `ready-for-human`, use the same structure and state why it can't be delegated (judgment calls, external access, manual testing). Any issue that can't get a complete brief goes back to `needs-info` with the gap named.
-
-### 8. Report
-
-List each issue's final state, closures and merges with their canonical issues, labels created, unresolved `needs-info` questions, and the `ready-for-agent` frontier (issues with no open blockers).
-
-## Needs-info template
-
-```markdown
-## Triage Notes
-
-**What we've established so far:**
-
-- point 1
-
-**What we still need from you (@reporter):**
-
-- question 1
-```
-
-Capture every resolved decision under "established so far". Questions must be specific and actionable.
+List each issue's final state, closures and merges with their canonical issues, labels created, the reason behind every issue not `ready-for-agent`, unresolved `needs-info` questions, and the `ready-for-agent` frontier (issues with no open blockers).
 
 ## Quick state override
 
-If the user says "move #42 to ready-for-agent", trust them: confirm the role change, comment, or close, then act without grilling. Ask whether they want a brief written.
+If the user says "move #42 to ready-for-agent", trust them: confirm the role change, comment, or close, then act without questioning. Ask whether they want a brief written.
