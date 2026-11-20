@@ -10,6 +10,14 @@
 #   add_machine <ssh target> <name>       save a machine
 #   open_space <name> <folder> [machine]  focus the workspace/space called name on machine
 #                                         ("" = this computer), or create it in folder
+#
+# sessionizer_main takes no argument (fzf picker), a folder (open it), or one of
+# the modes a GUI picker (herdr-app's sessionizer mod) drives it with:
+#   --list-dirs                  local candidates, one ~/path per line
+#   --list-machines              "⇄ <name>" saved machines, "+ <host>" tailnet hosts
+#   --add-machine <host>         save a tailnet host as a machine
+#   --list-remote <machine>      that machine's candidates, one ~/path per line
+#   --open-remote <machine> <~/path>
 
 projects="${XDG_PROJECTS_DIR:-$HOME/Projects}"
 dots="$projects/dots"
@@ -32,6 +40,17 @@ search_dirs=(
     "$HOME/Documents"
     "$HOME/Downloads"
 )
+
+# The dotfiles as they sit in $HOME: every top-level folder of the dots repo
+# (~/.agents, ~/.claude, ~/.config, ~/.local, ...) is a candidate itself, and so
+# are its children (~/.claude/hooks, ~/.agents/skills, ...).
+dot_roots=()
+for d in "$dots"/.[!.]*/; do
+    d=$(basename "$d")
+    [[ "$d" == .git ]] && continue
+    [[ -d "$HOME/$d" ]] && dot_roots+=("$HOME/$d")
+done
+search_dirs+=("${dot_roots[@]}")
 
 # --- machines -------------------------------------------------------------
 # Saved machines come from the backend; the rest of the tailnet is offered as
@@ -89,51 +108,54 @@ machine_target() {
     machines_tsv | awk -F'\t' -v m="$1" '$1 == m { print $2; exit }'
 }
 
-pick_remote_dir() {
-    local target="$1" dirs
-    dirs=$(printf '%s ' "${remote_dirs[@]}")
-    # Paths are listed relative to the remote $HOME and shown as ~/...; open_remote
-    # expands the ~ back to the remote home.
-    ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" "cd \"\$HOME\" && { for d in $dirs; do [ -d \"\$d\" ] && find \"\$d\" -mindepth 1 -maxdepth 1 -type d ! -name .git; done | sed 's|^|~/|'; echo '~'; }" 2>/dev/null \
-        | sort -u | fzf --prompt='remote dir> ' --height=100%
+# A saved machine's ssh target, or exit with a notification.
+require_target() {
+    local target
+    target=$(machine_target "$1")
+    [[ -z "$target" ]] && { notify "sessionizer" "unknown machine: $1"; exit 1; }
+    echo "$target"
 }
 
-open_remote() {
-    local machine="$1" target dir abs
-    target=$(machine_target "$machine")
-    [[ -z "$target" ]] && { notify "sessionizer" "unknown machine: $machine"; exit 1; }
-    dir=$(pick_remote_dir "$target") || exit 0
-    [[ -z "$dir" ]] && exit 0
+# Candidate folders on a remote, relative to its $HOME and shown as ~/...;
+# open_remote_dir expands the ~ back to the remote home.
+list_remote_dirs() {
+    local target="$1" dirs
+    dirs=$(printf '%s ' "${remote_dirs[@]}")
+    ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" "cd \"\$HOME\" && { for d in $dirs; do [ -d \"\$d\" ] && find \"\$d\" -mindepth 1 -maxdepth 1 -type d ! -name .git; done | sed 's|^|~/|'; echo '~'; }" 2>/dev/null \
+        | sort -u
+}
+
+open_remote_dir() {
+    local machine="$1" dir="$2" target abs
+    target=$(require_target "$machine")
     abs=$(ssh -o BatchMode=yes "$target" 'echo $HOME' 2>/dev/null)
     abs="${dir/#\~/$abs}"
     open_space "$(basename "$abs" | tr . _)" "$abs" "$machine"
 }
 
-# Pick (or take as $1) a directory and open it; machine rows open a remote picker.
-sessionizer_main() {
-    local selected existing_dirs d host name
-    if [[ $# -ge 1 ]]; then
-        selected="$1"
-    else
-        existing_dirs=()
-        for d in "${search_dirs[@]}"; do [[ -d "$d" ]] && existing_dirs+=("$d"); done
-        # find (not fd) so hidden and gitignored dirs like ~/Projects/dots/.config
-        # show up; -xtype d also keeps symlinked dirs.
-        # A .local-only marker next to the script (set on remotes) hides the machine list.
-        selected=$({ [[ -e "$here/.local-only" ]] || machine_entries
-                find "${existing_dirs[@]}" -mindepth 1 -maxdepth 1 -xtype d ! -name .git 2>/dev/null \
-                    | sed "s|^$HOME|~|"; } \
-            | sort -u | fzf --prompt='project / machine> ' --height=100%) || exit 0
-        case "${selected:-}" in
-            "⇄ "*) open_remote "${selected#⇄ }"; exit 0 ;;
-            "+ "*)
-                host="${selected#+ }"
-                add_machine "$(ssh_target_for "$host")" "$host" || { read -rp "add failed - press enter" _; exit 1; }
-                open_remote "$host"; exit 0 ;;
-        esac
-    fi
+open_remote() {
+    local machine="$1" target dir
+    target=$(require_target "$machine")
+    dir=$(list_remote_dirs "$target" | fzf --prompt='remote dir> ' --height=100%) || exit 0
+    [[ -z "$dir" ]] && exit 0
+    open_remote_dir "$machine" "$dir"
+}
 
-    [[ -z "${selected:-}" ]] && exit 0
+# Local candidates, one ~/path per line.
+list_local_dirs() {
+    local d existing_dirs=()
+    for d in "${search_dirs[@]}"; do [[ -d "$d" ]] && existing_dirs+=("$d"); done
+    # find (not fd) so hidden and gitignored dirs like ~/Projects/dots/.config
+    # show up; -xtype d also keeps symlinked dirs.
+    {
+        printf '%s\n' "${dot_roots[@]}"
+        find "${existing_dirs[@]}" -mindepth 1 -maxdepth 1 -xtype d ! -name .git 2>/dev/null
+    } | sed "s|^$HOME|~|" | sort -u
+}
+
+# Opens a local folder (~/... or absolute) as a space.
+open_local() {
+    local selected="$1" name
     selected="${selected/#\~/$HOME}"
     selected="${selected%/}"
 
@@ -147,4 +169,35 @@ sessionizer_main() {
     [[ "$selected" == "$dots"/?* ]] && name="dots_$name"
 
     open_space "$name" "$selected" ""
+}
+
+# Pick (or take as $1) a directory and open it; machine rows open a remote picker.
+sessionizer_main() {
+    local selected host
+    case "${1:-}" in
+        --list-dirs) list_local_dirs; return ;;
+        --list-machines) [[ -e "$here/.local-only" ]] || machine_entries; return ;;
+        --add-machine) add_machine "$(ssh_target_for "$2")" "$2"; return ;;
+        --list-remote) list_remote_dirs "$(require_target "$2")"; return ;;
+        --open-remote) open_remote_dir "$2" "$3"; return ;;
+    esac
+
+    if [[ $# -ge 1 ]]; then
+        selected="$1"
+    else
+        # A .local-only marker next to the script (set on remotes) hides the machine list.
+        selected=$({ [[ -e "$here/.local-only" ]] || machine_entries
+                list_local_dirs; } \
+            | sort -u | fzf --prompt='project / machine> ' --height=100%) || exit 0
+        case "${selected:-}" in
+            "⇄ "*) open_remote "${selected#⇄ }"; exit 0 ;;
+            "+ "*)
+                host="${selected#+ }"
+                add_machine "$(ssh_target_for "$host")" "$host" || { read -rp "add failed - press enter" _; exit 1; }
+                open_remote "$host"; exit 0 ;;
+        esac
+    fi
+
+    [[ -z "${selected:-}" ]] && exit 0
+    open_local "$selected"
 }

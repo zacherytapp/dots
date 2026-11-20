@@ -32,7 +32,8 @@ After adding an SVG to `assets/`, add it to `shared/icon-data.ts`.
 | `mc-jira`          | panel `jira`                   | Jira issues board                                                                                                        |
 | `mc-sessions`      | panel `sessions`               | Previous Claude Code sessions from every machine, resumable                                                              |
 | `tmux-status`      | top bar, right                 | tmux status-right: zoom, cpu / temperature / battery, clock                                                              |
-| others             | `mod.open:<name>` in keys.json | One-shot actions: `cht`, `sessionizer*`, `goto-*`                                                                        |
+| `sessionizer`      | `ctrl-space f` (dialog)        | Command palette over projects, dotfiles (`~/.agents`, `~/.claude`, ...) and machines; see below                          |
+| others             | `mod.open:<name>` in keys.json | One-shot actions: `cht`, `sessionizer-bank`, `sessionizer-ref`, `goto-*`                                                 |
 
 The panel also keeps Herdr's own `files` and `changes` (diff and commit). Each space remembers
 which source it had open. Bind `mc-tabs.panel`, `mc-tabs.expand` or `mc-tabs.source-<id>` in
@@ -54,6 +55,18 @@ background jobs):
 Stepping skips folded groups but not rows hidden by a search, and agents without a pane (background
 jobs nobody opened) so that stepping past one doesn't open a tab. The Agents header's "N needs
 you" badge does what `mc-agents.needs-you` does.
+
+## Sessionizer
+
+`ctrl-space f` opens a dialog with the prompt already focused. It fuzzy-matches (fzf-style:
+space-separated terms, word starts and the folder's own name rank first) over the folders
+`scripts/sessionizer.sh --list-dirs` prints: projects, `~/.config` and `~/.local`, and every
+top-level folder of the dots repo as it sits in `$HOME` (`~/.agents`, `~/.claude`, ...) with its
+children. Saved machines and reachable tailnet hosts join the list when the probe finishes; a
+machine row lists that machine's folders in the same dialog. Enter opens the folder's space, or
+focuses it when it's already open (tagged `open`). Keys: `↑`/`↓`, `ctrl-n`/`p`, `ctrl-j`/`k` or
+`tab` to move, `ctrl-w`/`ctrl-u` to delete, backspace on an empty prompt to go back, `esc` to
+close. The folder lists and opening live in `sessionizer-lib.sh`, shared with herdr's fzf picker.
 
 ## Settings: `../mission-control.json`
 

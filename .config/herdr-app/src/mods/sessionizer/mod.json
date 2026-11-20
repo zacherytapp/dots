@@ -1,5 +1,5 @@
 {
   "place": "none",
   "title": "sessionizer",
-  "overlay": { "kind": "popup", "frame": "none", "width": 1, "height": 1 }
+  "overlay": { "kind": "dialog", "width": 680, "height": 460 }
 }
