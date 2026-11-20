@@ -485,8 +485,10 @@ export const arch: Distro = {
         step("tmux", "tmux plugin manager", installTpm),
         step("herdr", "herdr and its claude integration", installHerdr),
         step("claude", "Claude Code and its statusline", installClaude),
-        step("agents", "plannotator, pi, opencode; check skills, rules and hooks", (c) =>
-          installAgents(c, { opencode: !cachy }),
+        step(
+          "agents",
+          "plannotator, pi, opencode, codex, their plugins and skills; check the links",
+          (c) => installAgents(c, { opencode: !cachy }),
         ),
         step("nvim", "neovim plugins at lazy-lock.json", syncNeovimPlugins),
         step(

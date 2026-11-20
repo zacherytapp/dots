@@ -22,7 +22,10 @@ const skillNames = fs
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
   .sort();
-const installed = new Set(skillNames);
+// Skills the machine installer adds from upstream (plugins or `npx skills`, see
+// installAgentSkills in .local/bin/config/src/steps/agents.ts) that local skills may name
+const upstream = ["grill-with-docs", "grilling", "domain-modeling", "research", "claude-handoff"];
+const installed = new Set([...skillNames, ...upstream]);
 // Skills only the user can start (Claude Code hides them from the model's Skill tool)
 const manualOnly = new Set<string>();
 const installedHooks = new Set(

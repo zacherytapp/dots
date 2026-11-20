@@ -2,17 +2,19 @@
 //
 //   claude       Claude Code (native installer) and the pinned ClaudeCodeStatusLine clone
 //   herdr        herdr, plus its Claude Code integration (~/.claude/hooks/herdr-agent-state.sh)
-//   agents       plannotator (binary only: its skills are vendored in .agents/skills),
-//                pi and the pi packages in .pi/agent/settings.json, opencode, then a check
-//                that the stowed skills, rules and TypeScript hooks are linked and that
-//                hook-doctor finds everything the hooks need
+//   agents       plannotator (binary), pi and the pi packages in .pi/agent/settings.json,
+//                opencode, codex, then Matt Pocock's and plannotator's skills for each
+//                harness (see installAgentSkills), then a check that the stowed skills,
+//                rules and TypeScript hooks are linked and that hook-doctor finds
+//                everything the hooks need
 //
 // ~/.claude/settings.json is a link into the repo once stowed, so nothing here
 // may rewrite it; claudeStatusline only adds statusLine to a file that lacks it.
 
 import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { note, warn } from "../lib/log.ts";
+import { fetchText } from "../lib/net.ts";
 import type { Context } from "../lib/context.ts";
 
 const STATUSLINE_REPO = "https://github.com/daniel3303/ClaudeCodeStatusLine";
@@ -106,9 +108,9 @@ export function installHerdr(ctx: Context): void {
 }
 
 /**
- * plannotator --minimal: only the binary in ~/.local/bin. Its skills already
- * come from .agents/skills, and the full install would replace the stowed
- * skill links with copies and register hooks for every other agent host.
+ * plannotator --minimal: only the binary in ~/.local/bin. installAgentSkills
+ * adds the plugins and skills per harness; the full install would register
+ * hooks for every agent host and overwrite the stowed configs.
  */
 function installPlannotator(ctx: Context): void {
   const { user } = ctx;
@@ -167,6 +169,134 @@ function installOpencode(ctx: Context): void {
   const { user } = ctx;
   if (user.which("opencode")) return note(`opencode already installed: ${user.which("opencode")}`);
   user.run("pnpm", ["add", "-g", "--allow-build=opencode-ai", "opencode-ai"]);
+}
+
+/** codex (OpenAI's CLI) as a pnpm global. */
+function installCodex(ctx: Context): void {
+  const { user } = ctx;
+  if (user.which("codex")) return note(`codex already installed: ${user.which("codex")}`);
+  user.run("pnpm", ["add", "-g", "--allow-build=@openai/codex", "@openai/codex"]);
+}
+
+// Third-party skills. An official plugin wins where the harness has one; every
+// other harness gets the skills through the skills CLI (`npx skills add`):
+//
+//                 Matt Pocock's skills            plannotator
+//   Claude Code   plugin (claude-plugins-official) plugin (hooks) + npx skills
+//   Codex         plugin (mattpocock marketplace)  npx skills
+//   Pi            npx skills                       pi package (.pi/agent/settings.json) + npx skills
+//   OpenCode      npx skills                       plugin in .config/opencode/opencode.jsonc + npx skills
+//
+// The skills CLI keeps Codex, Pi and OpenCode skills in ~/.agents/skills, the
+// directory the repo's own skills are stowed into, so a skill already there
+// (one of ours, or installed before) is never reinstalled or overwritten.
+
+/** Pinned so a new machine gets the CLI these steps were tested with. */
+export const SKILLS_CLI = "skills@1.9.0";
+const POCOCK_REPO = "mattpocock/skills";
+const POCOCK_PLUGIN_MANIFEST =
+  "https://raw.githubusercontent.com/mattpocock/skills/main/.claude-plugin/plugin.json";
+/** Upstream but outside the plugin, so every harness gets it from npx. */
+export const POCOCK_EXTRA_SKILLS = ["claude-handoff"];
+const PLANNOTATOR_REPO = "backnotprop/plannotator";
+export const PLANNOTATOR_SKILLS = [
+  "plannotator",
+  "plannotator-annotate",
+  "plannotator-inbox",
+  "plannotator-last",
+  "plannotator-review",
+  "plannotator-compound",
+  "plannotator-setup-goal",
+  "plannotator-visual-explainer",
+];
+export const CLAUDE_MARKETPLACES = {
+  "claude-plugins-official": "anthropics/claude-plugins-official",
+  plannotator: "backnotprop/plannotator",
+};
+export const CLAUDE_PLUGINS = [
+  "mattpocock-skills@claude-plugins-official",
+  "plannotator@plannotator",
+];
+export const CODEX_PLUGIN = "mattpocock-skills@mattpocock";
+
+/** Skill names the plugin manifest lists: the set Claude Code and Codex get. */
+export function pluginSkillNames(manifest: string): string[] {
+  const skills = (JSON.parse(manifest) as { skills?: unknown }).skills;
+  if (!Array.isArray(skills)) throw new Error("plugin manifest lists no skills");
+  return skills.filter((s): s is string => typeof s === "string").map((s) => basename(s));
+}
+
+/** `skills` that neither the repo nor an earlier install already put in ~/.agents/skills. */
+export function missingSkills(skills: readonly string[], repoDir: string, home: string): string[] {
+  return skills.filter(
+    (s) =>
+      !existsSync(join(repoDir, ".agents", "skills", s)) &&
+      !existsSync(join(home, ".agents", "skills", s)),
+  );
+}
+
+/** Installed skills tracked in the skills CLI lock (`$XDG_STATE_HOME/skills`). */
+export function skillsLockPath(home: string): string {
+  return join(home, ".local", "state", "skills", ".skill-lock.json");
+}
+
+function npxSkills(ctx: Context, repo: string, skills: readonly string[], agents: string[]): void {
+  const { user } = ctx;
+  const missing = missingSkills(skills, ctx.repoDir, user.home);
+  if (missing.length === 0)
+    return note(`${repo} skills already installed for ${agents.join(", ")}`);
+  user.run(
+    "npx",
+    ["-y", SKILLS_CLI, "add", repo, "-g", "-y", "--full-depth", "-a", ...agents, "-s", ...missing],
+    {
+      // the lock goes where the dotfiles' shell keeps it, not into
+      // ~/.agents/.skill-lock.json, which is the repo's file through stow
+      env: { XDG_STATE_HOME: user.path(".local", "state"), DISABLE_TELEMETRY: "1" },
+      input: "",
+    },
+  );
+}
+
+/** The plugins settings.json declares; `claude plugin` writes the same entries into it. */
+function installClaudePlugins(ctx: Context): void {
+  const { user } = ctx;
+  const claude = user.path(".local", "bin", "claude");
+  const list = () =>
+    (JSON.parse(user.output(claude, ["plugin", "list", "--json"])) as { id: string }[]).map(
+      (p) => p.id,
+    );
+  const missing = CLAUDE_PLUGINS.filter((id) => !list().includes(id));
+  if (missing.length === 0)
+    return note(`claude plugins already installed: ${CLAUDE_PLUGINS.join(" ")}`);
+  user.preserving(user.path(".claude", "settings.json"), () => {
+    for (const repo of Object.values(CLAUDE_MARKETPLACES)) {
+      user.run(claude, ["plugin", "marketplace", "add", repo]);
+    }
+    for (const id of missing) user.run(claude, ["plugin", "install", id, "--scope", "user"]);
+  });
+}
+
+/** ~/.codex/config.toml isn't stowed, so codex may record the plugin itself. */
+function installCodexPlugin(ctx: Context): void {
+  const { user } = ctx;
+  const config = user.readFile(user.path(".codex", "config.toml")) ?? "";
+  if (config.includes(`[plugins."${CODEX_PLUGIN}"]`)) {
+    return note(`codex plugin already installed: ${CODEX_PLUGIN}`);
+  }
+  const codex = user.which("codex") ?? "codex";
+  if (!config.includes("[marketplaces.mattpocock]")) {
+    user.run(codex, ["plugin", "marketplace", "add", POCOCK_REPO]);
+  }
+  user.run(codex, ["plugin", "add", CODEX_PLUGIN]);
+}
+
+export function installAgentSkills(ctx: Context): void {
+  installClaudePlugins(ctx);
+  installCodexPlugin(ctx);
+  const pocock = pluginSkillNames(fetchText(POCOCK_PLUGIN_MANIFEST));
+  npxSkills(ctx, POCOCK_REPO, pocock, ["pi", "opencode"]);
+  npxSkills(ctx, POCOCK_REPO, POCOCK_EXTRA_SKILLS, ["claude-code", "codex", "pi", "opencode"]);
+  npxSkills(ctx, PLANNOTATOR_REPO, PLANNOTATOR_SKILLS, ["claude-code", "codex", "pi", "opencode"]);
 }
 
 export interface LinkProblem {
@@ -240,6 +370,8 @@ export function installAgents(ctx: Context, opts: { opencode: boolean }): void {
   installPlannotator(ctx);
   installPi(ctx);
   if (opts.opencode) installOpencode(ctx);
+  installCodex(ctx);
+  installAgentSkills(ctx);
 
   const problems = agentLinkProblems(ctx.repoDir, ctx.user.home);
   if (problems.length > 0) {

@@ -96,8 +96,6 @@
   "model": "opus",
   "skillOverrides": {
     "find-skills": "off",
-    "grilling": "user-invocable-only",
-    "research": "off",
     "resolving-merge-conflicts": "off",
     "plannotator": "off",
     "plannotator-compound": "off",
@@ -110,7 +108,6 @@
     "sf-review-code": "user-invocable-only",
     "sf-scratch-org-cleanup": "user-invocable-only",
     "deslop": "user-invocable-only",
-    "grill-with-docs": "user-invocable-only",
     "implement": "user-invocable-only",
     "implement-pr-fixes": "user-invocable-only",
     "merge-pr-into-main": "user-invocable-only",
@@ -381,5 +378,23 @@
   "theme": "dark",
   "editorMode": "vim",
   "agentPushNotifEnabled": true,
-  "skipWorkflowUsageWarning": true
+  "skipWorkflowUsageWarning": true,
+  "enabledPlugins": {
+    "mattpocock-skills@claude-plugins-official": true,
+    "plannotator@plannotator": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "plannotator": {
+      "source": {
+        "source": "github",
+        "repo": "backnotprop/plannotator"
+      }
+    }
+  }
 }

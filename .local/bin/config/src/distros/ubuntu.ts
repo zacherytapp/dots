@@ -682,8 +682,10 @@ export const ubuntu: Distro = {
         ),
         step("herdr", "herdr and its claude integration", installHerdr),
         step("claude", "Claude Code and its statusline", installClaude),
-        step("agents", "plannotator, pi, opencode; check skills, rules and hooks", (c) =>
-          installAgents(c, { opencode: true }),
+        step(
+          "agents",
+          "plannotator, pi, opencode, codex, their plugins and skills; check the links",
+          (c) => installAgents(c, { opencode: true }),
         ),
         step("nvim", "neovim plugins at lazy-lock.json", syncNeovimPlugins),
         step("flatpaks", "flatpak apps from flathub", flatpaks),

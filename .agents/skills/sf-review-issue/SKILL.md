@@ -45,7 +45,7 @@ Apply the generic design bar plus these Salesforce checks:
 ## Stop and ask
 
 - Metadata is absent from both org and source, or they disagree beyond clean reconciliation.
-- A design ambiguity would misdirect the implementer; grill the user by following [grill-with-docs](../grill-with-docs/SKILL.md).
+- A design ambiguity would misdirect the implementer; grill the user by following the `grill-with-docs` skill.
 - The org convention is unclear (no definition file, scripts, or Dev Hub) and the repo doesn't reveal it.
 - The work needs production deployment, packaging, or Dev Hub changes.
 - The behavior may already exist or conflicts with in-flight work.

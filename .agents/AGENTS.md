@@ -31,8 +31,6 @@ This exhaustive list is checked against skill directories not recorded in `.skil
 - `babysit-pr` — keep GitHub and Forgejo pull requests merge-ready
 - `deslop` — remove AI-generated slop from diffs
 - `file-pr` — create clear pull requests with the correct host CLI
-- `grill-with-docs` — grill a plan while recording the glossary and ADRs in `docs/`
-- `grilling` — interview the user in rounds to stress-test a plan
 - `implement` — build a spec's tickets in `.worktrees/` with minimal tests
 - `implement-pr-fixes` — apply PR review feedback
 - `merge-pr-into-main` — merge a PR and clean up

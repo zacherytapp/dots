@@ -11,25 +11,6 @@
       "installedAt": "2026-05-09T18:48:12.236Z",
       "updatedAt": "2026-05-09T18:48:12.236Z"
     },
-    "research": {
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/mattpocock/skills.git",
-      "skillPath": "skills/engineering/research/SKILL.md",
-      "skillFolderHash": "06c848c1a1f3ae7afd88f040f73a8f3efee3494d",
-      "pluginName": "mattpocock-skills",
-      "installedAt": "2026-07-11T12:35:15.746Z",
-      "updatedAt": "2026-07-11T12:35:15.746Z"
-    },
-    "claude-handoff": {
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/mattpocock/skills.git",
-      "skillPath": "skills/in-progress/claude-handoff/SKILL.md",
-      "skillFolderHash": "4da139722cd74d7be7927f9c70a107cd73e05b0e",
-      "installedAt": "2026-07-11T12:35:15.748Z",
-      "updatedAt": "2026-07-11T12:35:15.748Z"
-    },
     "resolving-merge-conflicts": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -38,69 +19,6 @@
       "skillFolderHash": "b601c90446f887a94ec68e5c2301a8919f949a2c",
       "installedAt": "2026-07-11T12:35:15.750Z",
       "updatedAt": "2026-07-11T12:35:15.750Z"
-    },
-    "plannotator-compound": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/extra/plannotator-compound/SKILL.md",
-      "skillFolderHash": "e7cb3bf5836705facedb2f94c6648f269d3f0748",
-      "installedAt": "2026-08-12T21:25:29.644Z",
-      "updatedAt": "2026-08-12T21:25:29.644Z"
-    },
-    "plannotator-setup-goal": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/extra/plannotator-setup-goal/SKILL.md",
-      "skillFolderHash": "29d5d60c2b8a88c1786d7bbdbbfa37e44b64f6a5",
-      "installedAt": "2026-08-12T21:25:29.644Z",
-      "updatedAt": "2026-08-12T21:25:29.644Z"
-    },
-    "plannotator-visual-explainer": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/extra/plannotator-visual-explainer/SKILL.md",
-      "skillFolderHash": "e63f538e4fe05f9b101f3ad11559a79d43073d06",
-      "installedAt": "2026-08-12T21:25:29.645Z",
-      "updatedAt": "2026-08-12T21:25:29.645Z"
-    },
-    "plannotator": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/core/plannotator/SKILL.md",
-      "skillFolderHash": "9de7296c79a93a3fe714df027c087e99fcad7407",
-      "installedAt": "2026-11-05T19:16:16.000Z",
-      "updatedAt": "2026-11-05T19:16:16.000Z"
-    },
-    "plannotator-annotate": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/core/plannotator-annotate/SKILL.md",
-      "skillFolderHash": "e02ac47fba36fe22b41c6501575ee5c51ecf3ec8",
-      "installedAt": "2026-11-05T19:16:16.000Z",
-      "updatedAt": "2026-11-05T19:16:16.000Z"
-    },
-    "plannotator-last": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/core/plannotator-last/SKILL.md",
-      "skillFolderHash": "ccb34fe1725400970d626d0dafa120bdb88a7aa3",
-      "installedAt": "2026-11-05T19:16:16.000Z",
-      "updatedAt": "2026-11-05T19:16:16.000Z"
-    },
-    "plannotator-review": {
-      "source": "backnotprop/plannotator",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/backnotprop/plannotator.git",
-      "skillPath": "apps/skills/core/plannotator-review/SKILL.md",
-      "skillFolderHash": "da2d79190405f5182a0f9614d7b36b56e23fc339",
-      "installedAt": "2026-11-05T19:16:16.000Z",
-      "updatedAt": "2026-11-05T19:16:16.000Z"
     },
     "find-skills": {
       "source": "vercel-labs/skills",

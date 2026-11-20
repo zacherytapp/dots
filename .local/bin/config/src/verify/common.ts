@@ -8,7 +8,16 @@ import { join } from "node:path";
 import { capture } from "../lib/exec.ts";
 import { MIN_NVIM_MINOR, nvimVersion } from "../steps/editor.ts";
 import { MIN_JAVA, javaMajor } from "../steps/salesforce.ts";
-import { STATUSLINE_CMD, agentLinkProblems, hookDoctorReport } from "../steps/agents.ts";
+import {
+  CLAUDE_PLUGINS,
+  CODEX_PLUGIN,
+  PLANNOTATOR_SKILLS,
+  POCOCK_EXTRA_SKILLS,
+  STATUSLINE_CMD,
+  agentLinkProblems,
+  hookDoctorReport,
+  skillsLockPath,
+} from "../steps/agents.ts";
 import { PNPM_GLOBALS } from "../steps/toolchains.ts";
 import type { Context } from "../lib/context.ts";
 import type { Verifier } from "../lib/verify.ts";
@@ -146,7 +155,7 @@ function statuslineRenders(ctx: Context): boolean {
 
 export function verifyAgents(ctx: Context, v: Verifier): void {
   v.section("agent harnesses");
-  v.commands("claude", "herdr", "plannotator", "pi", "opencode");
+  v.commands("claude", "herdr", "plannotator", "pi", "opencode", "codex");
   v.runs("claude runs", "claude", ["--version"]);
   v.runs("plannotator runs", "plannotator", ["--version"]);
   v.runs("pi runs", "pi", ["--version"]);
@@ -179,6 +188,8 @@ export function verifyAgents(ctx: Context, v: Verifier): void {
     ),
   );
 
+  verifyAgentSkills(ctx, v);
+
   v.section("agent config linked from the repo");
   const problems = agentLinkProblems(ctx.repoDir, ctx.user.home);
   v.check("skills, rules, hooks and settings are links into the repo", () => problems.length === 0);
@@ -189,6 +200,46 @@ export function verifyAgents(ctx: Context, v: Verifier): void {
     return doctor === null;
   });
   if (doctor) console.log(`        ${doctor}`);
+}
+
+function verifyAgentSkills(ctx: Context, v: Verifier): void {
+  const { user } = ctx;
+  v.section("agent plugins and skills");
+  const env = { env: { PATH: user.searchPath() } };
+  const claudePlugins = capture("claude", ["plugin", "list", "--json"], env);
+  for (const id of CLAUDE_PLUGINS) {
+    v.check(`claude plugin ${id} enabled`, () => {
+      if (claudePlugins.status !== 0) return false;
+      const list = JSON.parse(claudePlugins.stdout) as { id: string; enabled?: boolean }[];
+      return list.some((p) => p.id === id && p.enabled !== false);
+    });
+  }
+  v.check(`codex plugin ${CODEX_PLUGIN}`, () =>
+    (user.readFile(user.path(".codex", "config.toml")) ?? "").includes(
+      `[plugins."${CODEX_PLUGIN}"]`,
+    ),
+  );
+  v.check("opencode plannotator plugin configured", () =>
+    (user.readFile(user.path(".config", "opencode", "opencode.jsonc")) ?? "").includes(
+      "@plannotator/opencode",
+    ),
+  );
+  const skillDir = (name: string) => user.path(".agents", "skills", name, "SKILL.md");
+  for (const name of [...PLANNOTATOR_SKILLS, ...POCOCK_EXTRA_SKILLS]) {
+    v.check(`skill ${name} for codex, pi and opencode`, () => existsSync(skillDir(name)));
+    v.check(`skill ${name} for claude code`, () =>
+      existsSync(user.path(".claude", "skills", name, "SKILL.md")),
+    );
+  }
+  v.check("matt pocock skills for pi and opencode", () => {
+    const lock = user.readFile(skillsLockPath(user.home));
+    if (!lock) return false;
+    const skills = (JSON.parse(lock) as { skills?: Record<string, { source?: string }> }).skills;
+    const pocock = Object.entries(skills ?? {}).filter(
+      ([name, s]) => s.source === "mattpocock/skills" && !POCOCK_EXTRA_SKILLS.includes(name),
+    );
+    return pocock.length > 0 && pocock.every(([name]) => existsSync(skillDir(name)));
+  });
 }
 
 export function verifyIdentity(ctx: Context, v: Verifier): void {

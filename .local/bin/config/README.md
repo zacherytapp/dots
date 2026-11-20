@@ -41,7 +41,7 @@ Every distro gets, on top of its own packages:
   commits. Fedora and Ubuntu build Neovim from source (`NVIM_REF`, `NVIM_REBUILD=1`).
 - **Salesforce.** JDK 17+, PMD 7 in `/opt/pmd`, the Apex, Visualforce and Aura language servers,
   and `sf code-analyzer`.
-- **AI agents.** Claude Code, herdr, Plannotator, pi and opencode.
+- **AI agents.** Claude Code, herdr, Plannotator, pi, opencode and Codex, with Matt Pocock's and Plannotator's skills.
 - **Dictation.** hyprwhspr push-to-talk with local faster-whisper.
 - **Security.** ufw, fail2ban, sshd hardening on Arch, and gpg, pass and ssh keys when none exist.
 
@@ -75,6 +75,13 @@ Every distro gets, on top of its own packages:
 The `claude`, `herdr` and `agents` steps add the tools themselves. The `agents` step then fails if
 any linked skill, rule, hook or settings file isn't the repo's copy, and runs `hook-doctor` to
 check every hook can run. `install.sh verify` repeats both checks.
+
+Matt Pocock's skills and Plannotator's come from upstream, not the repo. The official plugin is
+used wherever a harness has one: `mattpocock-skills` and `plannotator` in Claude Code (declared in
+`.claude/settings.json`), `mattpocock-skills` in Codex, `@plannotator/opencode` in OpenCode
+(`opencode.jsonc`) and `@plannotator/pi-extension` in pi. Every other combination gets the skills
+through `npx skills add -g` into `~/.agents/skills`. That install skips any name already there, so
+it never overwrites a local skill such as `to-spec`. Update the npx skills with `npx skills update -g`.
 
 Some things are untracked on purpose: credentials, history, sessions, caches, project memory,
 `~/.claude/plugins`, and files that herdr, Plannotator and pi generate.

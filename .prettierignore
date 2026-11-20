@@ -5,22 +5,9 @@ node_modules/
 .worktrees/
 
 # Vendored skills: upstream owns their formatting (sources in .agents/.skill-lock.json)
-.agents/skills/claude-handoff/
 .agents/skills/find-skills/
-.agents/skills/plannotator/
-.agents/skills/plannotator-annotate/
-.agents/skills/plannotator-compound/
-.agents/skills/plannotator-last/
-.agents/skills/plannotator-review/
-.agents/skills/plannotator-setup-goal/
-.agents/skills/plannotator-visual-explainer/
-.agents/skills/research/
 .agents/skills/resolving-merge-conflicts/
 .agents/skills/write-a-skill/
-
-# Grilling visual companion, adapted from obra/superpowers; keep close to upstream
-.agents/skills/grilling/visual-companion.md
-.agents/skills/grilling/scripts/
 
 # Vendored from dwarvesf/claude-guardrails; keep byte-identical to upstream
 .claude/hooks/patterns/

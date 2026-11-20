@@ -27,7 +27,7 @@ Review ownership stays with `review-code` or `sf-review-code`, normally coordina
 
 ## Plan the fixes
 
-Work from the review's findings ledger in the PR comments. The `open` **blockers** are your mandatory worklist; every one must be resolved. Also fold in `open` **nits** where the fix is cheap and low-risk; a nit you skip stays in the ledger and never blocks. Turn the blockers, selected nits, and other PR feedback into an actionable plan. Resolve ambiguity before touching code by following [grill-with-docs](../grill-with-docs/SKILL.md); don't proceed until the plan is unambiguous.
+Work from the review's findings ledger in the PR comments. The `open` **blockers** are your mandatory worklist; every one must be resolved. Also fold in `open` **nits** where the fix is cheap and low-risk; a nit you skip stays in the ledger and never blocks. Turn the blockers, selected nits, and other PR feedback into an actionable plan. Resolve ambiguity before touching code by following the `grill-with-docs` skill; don't proceed until the plan is unambiguous.
 
 ## Implement the fixes
 
