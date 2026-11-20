@@ -4,7 +4,17 @@
 import { div, View, type Cx, type El } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import { panes, readTextFile, theme } from "herdr";
-import { CPU_CHIPS, cpuPercent, fahrenheit, format, parseCpu, type CpuSample } from "./stats.ts";
+import { badge, ICON, icon, MONO, TEXT, type IconName } from "../../shared/ui.ts";
+import {
+  batteryIcon,
+  CPU_CHIPS,
+  cpuPercent,
+  fahrenheit,
+  parseCpu,
+  readout,
+  type CpuSample,
+  type Stats,
+} from "./stats.ts";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -13,7 +23,7 @@ const clock = (d: Date) =>
   `${DAYS[d.getDay()]} ${MONTHS[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 export default class TmuxStatus extends View {
-  declare stats: string;
+  declare stats: Stats | null;
   declare now: string;
   declare busy: boolean;
   declare cpu: CpuSample | null;
@@ -22,7 +32,7 @@ export default class TmuxStatus extends View {
   declare batteryDir: string | undefined;
 
   init(_props: unknown, cx: Cx): void {
-    this.stats = "";
+    this.stats = null;
     this.now = clock(new Date());
     this.busy = false;
     this.cpu = null;
@@ -65,7 +75,7 @@ export default class TmuxStatus extends View {
   }
 
   /** Reads /proc and /sys in one pass; no process is spawned. */
-  async readStats(): Promise<string> {
+  async readStats(): Promise<Stats> {
     this.tempFile ??= await this.findTempFile();
     this.batteryDir ??= await this.findBattery();
     const [stat, temp, capacity, status] = await Promise.all([
@@ -77,8 +87,7 @@ export default class TmuxStatus extends View {
     const sample = parseCpu(stat);
     const cpu = cpuPercent(this.cpu, sample);
     this.cpu = sample;
-    const pct = (capacity ?? "").trim();
-    return format(cpu, fahrenheit(temp), pct ? ` ${pct}%` : "");
+    return readout(cpu, fahrenheit(temp), capacity, status);
   }
 
   refresh(cx: Cx): void {
@@ -92,7 +101,7 @@ export default class TmuxStatus extends View {
     cx.spawn(async (cx) => {
       try {
         const stats = await this.readStats();
-        if (stats !== this.stats) {
+        if (JSON.stringify(stats) !== JSON.stringify(this.stats)) {
           this.stats = stats;
           cx.notify();
         }
@@ -104,23 +113,46 @@ export default class TmuxStatus extends View {
     });
   }
 
+  /** A muted Lucide icon and a Geist Mono value. */
+  item(name: IconName, value: string, color: string): El {
+    const muted = theme().muted;
+    return h_flex()
+      .flex_none()
+      .gap(6)
+      .items_center()
+      .child(icon(name, ICON.sm, muted))
+      .child(div().font_family(MONO).text_color(color).child(value));
+  }
+
   render(): El {
     const t = theme();
     const zoomed = panes().some((p) => p.focused && p.zoomed);
+    const s = this.stats;
     return h_flex()
       .size_full()
       .justify_end()
       .items_center()
       .gap(16)
-      .pr(14)
+      .pr(12)
       .bg(t.chrome)
       .border_b(1)
       .border_color(t.border)
-      .font_family("JetBrainsMono Nerd Font")
-      .text_size(12)
+      .text_size(TEXT.xs)
       .text_color(t.muted)
-      .when(zoomed, (el: El) => el.child(div().flex_none().text_color(t.accent).child("󰁌 zoom")))
-      .when(Boolean(this.stats), (el: El) => el.child(div().flex_none().child(this.stats)))
-      .child(div().flex_none().text_color(t.foreground).child(this.now));
+      .when(zoomed, (el: El) => el.child(badge("zoom", { tone: t.accent, icon: "zoom-in" })))
+      .when(Boolean(s), (el: El) => el.child(this.item("cpu", `${s?.cpu}%`, t.muted)))
+      .when(s?.temp != null, (el: El) =>
+        el.child(this.item("thermometer", `${s?.temp}°F`, t.muted)),
+      )
+      .when(s?.battery != null, (el: El) =>
+        el.child(
+          this.item(
+            batteryIcon(s?.battery as number, Boolean(s?.charging)),
+            `${s?.battery}%`,
+            t.muted,
+          ),
+        ),
+      )
+      .child(this.item("clock", this.now, t.foreground));
   }
 }

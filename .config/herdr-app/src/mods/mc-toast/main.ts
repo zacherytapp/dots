@@ -5,7 +5,7 @@
 import { div, image, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { closeOverlay, props, run, theme } from "herdr";
-import { asset, iconButton } from "../../shared/ui.ts";
+import { button, ICON, icon, MONO, TEXT, type IconName } from "../../shared/ui.ts";
 
 interface ToastProps {
   title?: string;
@@ -16,11 +16,11 @@ interface ToastProps {
   overlay: string;
 }
 
-const DOT: Record<string, string> = {
-  error: "blocked",
-  warning: "working",
-  success: "done",
-  info: "accent",
+const LEVEL: Record<string, { icon: IconName; color: string }> = {
+  error: { icon: "circle-x", color: "blocked" },
+  warning: { icon: "triangle-alert", color: "working" },
+  success: { icon: "circle-check", color: "done" },
+  info: { icon: "info", color: "accent" },
 };
 
 /** herdr-core's "needs login" toast, which gets a copy button for its command. */
@@ -38,29 +38,24 @@ export default class Toast extends View {
     const p = (props() ?? {}) as ToastProps;
     const login = LOGIN.exec(p.body ?? "");
     const command = login ? `hc machine login ${login[1]}` : "";
+    const level = LEVEL[p.level ?? "info"] ?? LEVEL.info;
     const close = () => closeOverlay(p.overlay);
     return h_flex()
       .id("toast")
       .size_full()
-      .pl(18)
-      .pr(8)
+      .px(16)
       .gap(12)
       .items_center()
       .bg(t.popover)
       .cursor_pointer()
-      .hover((s: El) => s.bg(t.hover))
       .on_click(() => {
         if (p.action?.name) run(p.action.name, p.action.args ?? {});
         close();
       })
       .child(
         p.icon
-          ? image(p.icon).w(18).h(18).flex_none()
-          : div()
-              .size(8)
-              .rounded(4)
-              .flex_none()
-              .bg(t[DOT[p.level ?? "info"] ?? "accent"] ?? t.accent),
+          ? image(p.icon).w(ICON.md).h(ICON.md).flex_none()
+          : icon(level.icon, ICON.md, t[level.color] ?? t.accent),
       )
       .child(
         v_flex()
@@ -70,8 +65,8 @@ export default class Toast extends View {
           .child(
             div()
               .truncate()
-              .font_semibold()
-              .text_size(13)
+              .font_medium()
+              .text_size(TEXT.sm)
               .text_color(t.foreground)
               .child(login ? `${login[1]} needs a login: run` : (p.title ?? "")),
           )
@@ -79,7 +74,7 @@ export default class Toast extends View {
             el.child(
               div()
                 .truncate()
-                .text_size(12)
+                .text_size(TEXT.sm)
                 .text_color(t.muted)
                 .child(p.body ?? ""),
             ),
@@ -95,44 +90,37 @@ export default class Toast extends View {
                     .min_w(0)
                     .truncate()
                     .tooltip(command)
-                    .text_size(12)
+                    .font_family(MONO)
+                    .text_size(TEXT.xs)
                     .text_color(t.muted)
                     .child(command),
                 )
                 .child(
-                  div()
-                    .id("toast-login-copy")
-                    .flex_none()
-                    .px(6)
-                    .py(3)
-                    .rounded(4)
-                    .bg(t.raised)
-                    .text_size(12)
-                    .text_color(t.foreground)
-                    .cursor_pointer()
-                    .hover((s: El) => s.bg(t.hover))
-                    .on_click((_e: unknown, cx: Cx) => {
+                  button("toast-login-copy", {
+                    label: this.copied ? "Copied" : "Copy",
+                    variant: "outline",
+                    size: "xs",
+                    onClick: (_e: unknown, cx: Cx) => {
                       cx.stop_propagation();
                       cx.write_to_clipboard(command);
                       this.copied = true;
                       cx.notify();
-                    })
-                    .child(this.copied ? "Copied" : "Copy"),
+                    },
+                  }),
                 ),
             ),
           ),
       )
       .child(
-        iconButton(
-          "toast-dismiss",
-          asset("close"),
-          "Dismiss",
-          (_e, cx) => {
+        button("toast-dismiss", {
+          icon: "x",
+          size: "icon-xs",
+          tooltip: "Dismiss",
+          onClick: (_e, cx) => {
             cx.stop_propagation();
             close();
           },
-          { size: 24, iconSize: 13 },
-        ),
+        }),
       );
   }
 }

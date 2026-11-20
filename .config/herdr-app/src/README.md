@@ -2,7 +2,7 @@
 
 TypeScript sources for every mod in `../mods/`, laid out like
 [herdr-mission-control](https://github.com/CiprianSpiridon/herdr-mission-control/tree/main/mission-control):
-one folder per mod under `mods/`, shared code in `shared/`, icons in `assets/`. This folder is
+one folder per mod under `mods/`, shared code in `shared/`, brand icons in `assets/`. This folder is
 stow-ignored; only the built `../mods/<name>/` folders are linked into `~/.config/herdr-app`.
 
 ```bash
@@ -16,6 +16,19 @@ symlink into this repo, so each mod is bundled by esbuild into a single `main.js
 inside it too: `shared/icons.ts` writes them into the live mod folder (`mods/<name>/icons/`, not
 in the repo) the first time they're drawn, because Herdr won't draw a symlinked SVG either.
 After adding an SVG to `assets/`, add it to `shared/icon-data.ts`.
+
+## Look
+
+The mods follow [shadcn/ui](https://ui.shadcn.com/) (new-york v4), one step denser, in the
+layout's theme colors (gruvbox-material). `shared/ui.ts` holds the tokens (text 12 / 13 / 14,
+radius 6 / 8 / 10 / 14, icons 12 / 14 / 16) and the components built from them: `button`,
+`badge`, `kbd`, `tabs`, `searchBox`, `card`, `alert`, `emptyState`, and the sidebar's
+`groupLabel`, `menuButton` and `menuBadge`. Build from those rather than restating sizes. Text is
+Geist (`ui_font` in `../settings.json`), with Geist Mono for numbers, paths and branch names.
+
+Icons are [Lucide](https://lucide.dev/), from the `lucide-static` dev dependency; `assets/` keeps
+only the Forgejo and Jira marks Lucide doesn't ship. Add a Lucide icon by importing it in
+`shared/icon-data.ts` under its Lucide name.
 
 ## Mods
 

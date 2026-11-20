@@ -4,7 +4,7 @@
 // that starts waiting for you posts a notification. It sits under Spaces and takes the height Spaces leaves (see mc-spaces), so it reports
 // its own height and fold state through shared state.
 
-import { div, svg, View, type Cx, type El } from "gpui-kit";
+import { div, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex, InputState } from "gpui-base";
 import {
   agents,
@@ -28,15 +28,20 @@ import { findTab, publishSessions } from "../../shared/launch.ts";
 import { spaceFolders } from "../../shared/repo.ts";
 import { countBySpace, publishSpaceAgents } from "../../shared/space-agents.ts";
 import {
-  alpha,
-  asset,
-  chromeIcon,
-  iconButton,
+  agentIcon,
+  badge,
+  button,
+  groupLabel,
+  ICON,
+  icon,
+  menuButton,
+  MONO,
   programIcon,
+  RADIUS,
   searchBox,
-  sectionHeader,
+  separator,
   statusMark,
-  stopPress,
+  TEXT,
   type Theme,
 } from "../../shared/ui.ts";
 import { compactNumber, duration, findNode, parseJson, stepIn } from "../../shared/util.ts";
@@ -395,36 +400,28 @@ export default class Agents extends View {
 
   row(t: Theme, r: Row): El {
     const pic =
-      programIcon(r.program, 16, t.foreground) ??
-      (r.job ? svg(asset("agent")).size(16).text_color(t.muted) : null);
+      programIcon(r.program, ICON.md, t.foreground) ??
+      (r.job ? icon("bot", ICON.md, t.muted) : null);
     if (r.depth > 0) {
+      // SidebarMenuSub: a 1px line down the left, rows h28 beside it.
       return h_flex()
-        .id(`ag-${r.address}`)
-        .h(26)
+        .w_full()
         .flex_none()
-        .pl(14 + r.depth * 14)
-        .pr(8)
-        .gap(8)
-        .items_center()
-        .rounded(7)
-        .text_size(12.5)
-        .cursor_pointer()
-        .hover((s: El) => s.bg(t.hover))
-        .on_click(() => this.focus(r))
+        .pl(14 + (r.depth - 1) * 14)
         .child(
-          div()
-            .w(8)
-            .h(12)
-            .flex_none()
-            .border_l(1.5)
-            .border_b(1.5)
-            .rounded_bl(5)
-            .border_color(t.input)
-            .mt(-6),
-        )
-        .when(Boolean(pic), (el: El) => el.child(programIcon(r.program, 13, t.foreground) as El))
-        .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(r.title))
-        .child(statusMark(r.status, true));
+          h_flex()
+            .flex_1()
+            .min_w(0)
+            .pl(10)
+            .border_l(1)
+            .border_color(t.border)
+            .child(
+              menuButton(`ag-${r.address}`, { size: "sm", onClick: () => this.focus(r) })
+                .child(r.program ? agentIcon(r.program, ICON.xs, t.foreground) : div().w(ICON.xs))
+                .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(r.title))
+                .child(statusMark(r.status, true)),
+            ),
+        );
     }
     const since = r.job && !r.pane ? r.job.updated : this.changed[r.address]?.at;
     const reading = this.readings.get(r.address);
@@ -434,27 +431,26 @@ export default class Agents extends View {
         .filter(Boolean)
         .join(" · ") || "Outside spaces";
     const idle = r.status === "idle" && !r.focused;
-    return v_flex()
-      .id(`ag-${r.address}`)
+    return menuButton(`ag-${r.address}`, {
+      active: r.focused,
+      size: "auto",
+      onClick: () => this.focus(r),
+    })
+      .relative()
+      .flex_col()
+      .items_stretch()
       .flex_none()
-      .px(8)
-      .py(6)
       .gap(2)
-      .rounded(8)
-      .cursor_pointer()
-      .when(r.focused, (el: El) => el.bg(t.selected))
-      .hover((s: El) => s.bg(t.hover))
       .on_hover((over: boolean, cx: Cx) => {
         if (over) this.hovered = r.address;
         else if (this.hovered === r.address) this.hovered = null;
         cx.notify();
       })
-      .on_click(() => this.focus(r))
       .child(
         h_flex()
           .gap(8)
           .items_center()
-          .child(pic ? div().w(16).flex_none().child(pic) : div().w(16).flex_none())
+          .child(pic ? div().w(ICON.md).flex_none().child(pic) : div().w(ICON.md).flex_none())
           .child(
             div()
               .flex_1()
@@ -465,37 +461,16 @@ export default class Agents extends View {
           )
           .when(r.kids > 0, (el: El) =>
             el.child(
-              div()
-                .id(`kids-${r.address}`)
-                .flex_none()
-                .px(4)
-                .rounded(4)
-                .text_size(11)
-                .text_color(t.dim)
-                .cursor_pointer()
-                .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-                .on_click((_e: unknown, cx: Cx) => {
+              button(`kids-${r.address}`, {
+                label: String(r.kids),
+                icon: this.folded.has(r.address) ? "chevron-right" : "chevron-down",
+                size: "xs",
+                tooltip: this.folded.has(r.address) ? "Show sub-agents" : "Hide sub-agents",
+                onClick: (_e, cx) => {
                   cx.stop_propagation();
                   this.fold(r.address, cx);
-                })
-                .tooltip(this.folded.has(r.address) ? "Show sub-agents" : "Hide sub-agents")
-                .child(`${this.folded.has(r.address) ? "▸" : "▾"} ${r.kids}`),
-            ),
-          )
-          .when(hovered && r.native, (el: El) =>
-            el.child(
-              iconButton(
-                `pin-${r.address}`,
-                chromeIcon(r.pinned ? "pin-off" : "pin"),
-                r.pinned ? "Unpin" : "Pin to the top",
-                (_e, cx) => {
-                  cx.stop_propagation();
-                  run("terminal.pin", { terminal: r.address, pinned: !r.pinned });
-                  this.hovered = null;
-                  cx.notify();
                 },
-                { size: 20, iconSize: 12 },
-              ),
+              }),
             ),
           )
           .child(statusMark(r.status, true)),
@@ -505,13 +480,14 @@ export default class Agents extends View {
           .pl(24)
           .gap(6)
           .items_center()
-          .text_size(11.5)
-          .text_color(t.dim)
+          .text_size(TEXT.xs)
+          .text_color(t.muted)
           .child(div().flex_1().min_w(0).truncate().child(where))
           .when(Boolean(since), (el: El) =>
             el.child(
               div()
                 .flex_none()
+                .font_family(MONO)
                 .child(duration(Date.now() - (since as number))),
             ),
           ),
@@ -522,7 +498,7 @@ export default class Agents extends View {
             .pl(24)
             .min_w(0)
             .truncate()
-            .text_size(11.5)
+            .text_size(TEXT.xs)
             .text_color(r.status === "blocked" ? t.blocked : t.muted)
             .tooltip(r.detail)
             .child(r.detail as string),
@@ -536,10 +512,16 @@ export default class Agents extends View {
             .pl(24)
             .gap(5)
             .min_w(0)
-            .text_size(11)
-            .text_color(t.dim)
+            .text_size(TEXT.xs)
+            .text_color(t.muted)
             .child(div().flex_none().child("Context"))
-            .child(div().flex_none().text_color(t.muted).child(compactNumber(tokens)))
+            .child(
+              div()
+                .flex_none()
+                .font_family(MONO)
+                .text_color(t.foreground)
+                .child(compactNumber(tokens)),
+            )
             .when(runsOn.length > 0, (e: El) =>
               e.child(
                 div()
@@ -551,37 +533,40 @@ export default class Agents extends View {
               ),
             ),
         );
-      });
+      })
+      .when(hovered && r.native, (el: El) =>
+        el.child(
+          // Over the title line's right edge (left of the status mark), so nothing shifts on hover.
+          h_flex()
+            .absolute()
+            .right(28)
+            .top(4)
+            .rounded(RADIUS.md)
+            .bg(r.focused ? t.selected : t.hover)
+            .child(
+              button(`pin-${r.address}`, {
+                icon: r.pinned ? "pin-off" : "pin",
+                tooltip: r.pinned ? "Unpin" : "Pin to the top",
+                size: "icon-xs",
+                onClick: (_e, cx) => {
+                  cx.stop_propagation();
+                  run("terminal.pin", { terminal: r.address, pinned: !r.pinned });
+                  this.hovered = null;
+                  cx.notify();
+                },
+              }),
+            ),
+        ),
+      );
   }
 
   groupHeader(t: Theme, g: Group): El {
-    const open = !this.folded.has(g.id);
-    return h_flex()
-      .id(`group-${g.id}`)
-      .h(26)
-      .mt(4)
-      .flex_none()
-      .px(8)
-      .gap(6)
-      .items_center()
-      .text_size(11.5)
-      .cursor_pointer()
-      .hover((s: El) => s.text_color(t.foreground))
-      .on_click((_e: unknown, cx: Cx) => this.fold(g.id, cx))
-      .child(
-        div()
-          .min_w(0)
-          .truncate()
-          .text_color(g.tone ? (t[g.tone] ?? t.dim) : t.dim)
-          .child(g.label),
-      )
-      .child(div().text_color(t.dim).child(String(g.count)))
-      .child(div().flex_1())
-      .child(
-        svg(chromeIcon(open ? "chevron-down" : "chevron-right"))
-          .size(11)
-          .text_color(t.dim),
-      );
+    return groupLabel(`group-${g.id}`, g.label, {
+      count: g.count,
+      open: !this.folded.has(g.id),
+      tone: g.tone ? t[g.tone] : undefined,
+      onToggle: (cx) => this.fold(g.id, cx),
+    }).mt(4);
   }
 
   /** A line per machine still being read (spinner) or unreachable, so it isn't silently empty. */
@@ -595,9 +580,9 @@ export default class Agents extends View {
         .py(4)
         .gap(8)
         .items_center()
-        .text_size(11.5)
-        .text_color(t.dim)
-        .child(mark ?? div().w(12).flex_none())
+        .text_size(TEXT.xs)
+        .text_color(t.muted)
+        .child(mark ?? div().w(ICON.sm).flex_none())
         .child(div().flex_1().min_w(0).truncate().child(text));
     return [
       ...loading.map((m) => line(`l-${m}`, statusMark("working"), `Reading ${m}…`)),
@@ -609,33 +594,31 @@ export default class Agents extends View {
     return v_flex()
       .size_full()
       .bg(t.chrome)
-      .border_t(1)
-      .border_color(t.border)
-      .pt(6)
-      .children(
-        rows
-          .filter((r) => r.depth === 0)
-          .map((r, i) =>
-            h_flex()
-              .id(`ag-${r.address}`)
-              .h(26)
-              .flex_none()
-              .px(8)
-              .gap(4)
-              .items_center()
-              .cursor_pointer()
-              .hover((s: El) => s.bg(t.hover))
-              .on_click(() => this.focus(r))
-              .tooltip(`${r.title} · ${r.status}`)
-              .child(
-                div()
-                  .flex_1()
-                  .text_right()
-                  .text_size(12)
-                  .text_color(t.muted)
-                  .child(String(i + 1)),
-              )
-              .child(statusMark(r.status, true)),
+      .child(div().px(4).child(separator()))
+      .child(
+        v_flex()
+          .p(4)
+          .gap(2)
+          .children(
+            rows
+              .filter((r) => r.depth === 0)
+              .map((r) =>
+                h_flex()
+                  .id(`ag-${r.address}`)
+                  .h(32)
+                  .flex_none()
+                  .justify_center()
+                  .items_center()
+                  .gap(4)
+                  .rounded(RADIUS.md)
+                  .cursor_pointer()
+                  .when(r.focused, (el: El) => el.bg(t.selected))
+                  .when(!r.focused, (el: El) => el.hover((s: El) => s.bg(t.hover)))
+                  .on_click(() => this.focus(r))
+                  .tooltip(`${r.title} · ${r.status}`)
+                  .child(agentIcon(r.program, ICON.md, t.foreground))
+                  .child(statusMark(r.status, true)),
+              ),
           ),
       );
   }
@@ -712,34 +695,23 @@ export default class Agents extends View {
     this.urgent = full.needsYou;
     this.navRows = full.groups.flatMap((g) => g.rows);
     const urgent = full.needsYou.length;
-    const needsYou = div()
-      .id("needs-you")
-      .flex_none()
-      .px(6)
-      .h(18)
-      .flex()
-      .items_center()
-      .rounded(5)
-      .bg(alpha(t.blocked, "26"))
-      .text_size(10.5)
-      .font_semibold()
-      .text_color(t.blocked)
-      .cursor_pointer()
-      .hover((s: El) => s.bg(alpha(t.blocked, "40")))
-      .on_mouse_down("left", stopPress)
-      .on_click((_e: unknown, cx: Cx) => {
+    const needsYou = badge(`${urgent} need${urgent === 1 ? "s" : ""} you`, {
+      id: "needs-you",
+      variant: "destructive",
+      tooltip:
+        urgent === 1 ? "Show the agent waiting for you" : "Show the next agent waiting for you",
+      onClick: (_e, cx) => {
         cx.stop_propagation();
         this.nextNeedingYou();
-      })
-      .tooltip(
-        urgent === 1 ? "Show the agent waiting for you" : "Show the next agent waiting for you",
-      )
-      .child(`${urgent} need${urgent === 1 ? "s" : ""} you`);
-    const toggle = (m: Mode, icon: string, label: string) =>
-      iconButton(`mode-${m}`, chromeIcon(icon), label, () => setShared("mc.agents.mode", m), {
+      },
+    });
+    const toggle = (m: Mode, iconName: "clock" | "layers", label: string) =>
+      button(`mode-${m}`, {
+        icon: iconName,
+        tooltip: label,
+        size: "icon-xs",
         active: mode === m,
-        size: 24,
-        iconSize: 13,
+        onClick: () => setShared("mc.agents.mode", m),
       });
 
     return v_flex()
@@ -747,44 +719,46 @@ export default class Agents extends View {
       .size_full()
       .min_h(0)
       .bg(t.chrome)
-      .border_t(1)
-      .border_color(t.border)
-      .text_size(13)
+      .text_size(TEXT.sm)
       .on_size_change((size: { height: number }) => {
         const h = Math.round(size.height);
         if (shared(KEYS.agentsHeight) !== h) setShared(KEYS.agentsHeight, h);
       })
+      .child(div().px(8).child(separator()))
       .child(
-        sectionHeader(
-          "agents-header",
-          "Agents",
-          model.total,
-          open,
-          () => setShared(KEYS.agentsFolded, open),
-          [
-            ...(urgent ? [needsYou] : []),
-            ...(open
-              ? [
-                  toggle("priority", "clock", "Sort by priority"),
-                  toggle("spaces", "layers", "Group by space"),
-                ]
-              : []),
-          ],
-        ),
+        div()
+          .flex_none()
+          .px(8)
+          .child(
+            groupLabel("agents-header", "Agents", {
+              count: model.total,
+              open,
+              onToggle: () => setShared(KEYS.agentsFolded, open),
+              trailing: [
+                ...(urgent ? [needsYou] : []),
+                ...(open
+                  ? [
+                      toggle("priority", "clock", "Sort by priority"),
+                      toggle("spaces", "layers", "Group by space"),
+                    ]
+                  : []),
+              ],
+            }),
+          ),
       )
       .when(open, (el: El) =>
         el
           .child(
-            h_flex().flex_none().h(38).px(10).pb(8).child(searchBox("agent-search", this.search)),
+            h_flex().flex_none().h(40).px(8).pb(8).child(searchBox("agent-search", this.search)),
           )
           .child(
             v_flex()
               .id("agent-list")
               .flex_1()
               .min_h(0)
-              .px(6)
-              .pb(10)
-              .gap(1)
+              .px(8)
+              .pb(8)
+              .gap(2)
               .overflow_y_scrollbar()
               .children(this.machineNotes_(t))
               .when(model.total === 0, (e: El) =>
@@ -792,8 +766,8 @@ export default class Agents extends View {
                   div()
                     .px(8)
                     .py(6)
-                    .text_size(12)
-                    .text_color(t.dim)
+                    .text_size(TEXT.xs)
+                    .text_color(t.muted)
                     .child(
                       "No agents running. Agents show up here, from every machine, once they report their status.",
                     ),

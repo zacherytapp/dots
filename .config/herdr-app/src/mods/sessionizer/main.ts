@@ -9,14 +9,28 @@
 // so ↑/↓ (which the input keeps for itself) reach the list. Keys: ↑/↓, ctrl-n/p, ctrl-j/k, tab
 // to move; enter to open; ctrl-w / ctrl-u to delete a word / everything; esc to close.
 
-import { div, svg, View, type Cx, type El, type FocusHandle } from "gpui-kit";
+import { div, View, type Cx, type El, type FocusHandle } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { appHome, closeOverlay, exec, home, notify, props, spaces, theme } from "herdr";
-import { chromeIcon, stopPress, type Theme } from "../../shared/ui.ts";
+import {
+  badge,
+  ICON,
+  icon,
+  kbd,
+  MONO,
+  RADIUS,
+  spinner,
+  stopPress,
+  TEXT,
+  type IconName,
+  type Theme,
+} from "../../shared/ui.ts";
 import { fuzzyFilter, segments, type Match } from "./fuzzy.ts";
 import { keyAction, parseRow, rowText, spaceNameFor, type Key, type Row } from "./model.ts";
 
-const ROW_H = 30;
+const ROW_H = 32;
+const ROW_GAP = 1;
+const LIST_PAD = 4;
 /** Most rows drawn at once; the list scrolls through the matches in a window this big. */
 const MAX_ROWS = 40;
 
@@ -252,37 +266,27 @@ export default class Sessionizer extends View {
       ? `Find a folder on ${remote}`
       : "Find a project, dotfile or machine";
     return h_flex()
-      .h(44)
-      .px(14)
-      .gap(10)
+      .h(48)
+      .px(12)
+      .gap(8)
       .flex_none()
       .items_center()
       .border_b(1)
       .border_color(t.border)
-      .child(svg(chromeIcon("search")).size(15).flex_none().text_color(t.dim))
+      .child(icon("search", ICON.md, t.muted))
       .when(Boolean(remote), (el: El) =>
         el.child(
-          h_flex()
-            .id("stage-back")
-            .h(24)
-            .px(8)
-            .gap(5)
-            .flex_none()
-            .items_center()
-            .rounded(6)
-            .bg(t.selected)
-            .text_size(12)
-            .text_color(t.accent)
-            .cursor_pointer()
-            .tooltip("Back to this computer (backspace)")
-            .on_mouse_down("left", stopPress)
-            .on_click((_e: unknown, cx: Cx) => {
+          badge(remote as string, {
+            id: "stage-back",
+            variant: "secondary",
+            icon: "server",
+            tooltip: "Back to this computer (backspace)",
+            onClick: (_e: unknown, cx: Cx) => {
               this.back();
               this.focus.focus();
               cx.notify();
-            })
-            .child(svg(chromeIcon("server")).size(12))
-            .child(remote as string),
+            },
+          }),
         ),
       )
       .child(
@@ -290,14 +294,14 @@ export default class Sessionizer extends View {
           .flex_1()
           .min_w(0)
           .items_center()
-          .text_size(15)
+          .text_size(TEXT.md)
           .when(Boolean(this.query), (el: El) =>
             el.child(div().text_color(t.foreground).child(this.query)),
           )
           // The caret, then the placeholder after it while the prompt is empty.
-          .child(div().w(2).h(18).flex_none().bg(t.accent))
+          .child(div().w(1.5).h(18).flex_none().bg(t.foreground))
           .when(!this.query, (el: El) =>
-            el.child(div().pl(2).text_color(t.dim).child(placeholder)),
+            el.child(div().pl(2).text_color(t.muted).child(placeholder)),
           ),
       )
       .child(this.counter(t));
@@ -312,19 +316,17 @@ export default class Sessionizer extends View {
       .gap(6)
       .flex_none()
       .items_center()
-      .text_size(11.5)
-      .text_color(t.dim)
-      .when(loading, (el: El) =>
-        el.child(svg(chromeIcon("spinner")).size(12).text_color(t.muted).spin(900)),
-      )
-      .child(`${hits}/${total}`);
+      .text_size(TEXT.xs)
+      .text_color(t.muted)
+      .when(loading, (el: El) => el.child(spinner(ICON.xs, t.muted)))
+      .child(div().font_family(MONO).child(`${hits}/${total}`));
   }
 
   row(t: Theme, hit: Hit, index: number, open: Set<string>): El {
     const on = index === this.selected;
     const { row, match } = hit;
     const text = match.text;
-    // Dim the parent folders so the folder's own name stands out; matched letters in the accent.
+    // Dim the parent folders so the folder's own name stands out; matched letters in medium weight.
     const base = row.kind === "dir" ? text.lastIndexOf("/") + 1 : 0;
     const runs: El[] = [];
     let at = 0;
@@ -334,12 +336,12 @@ export default class Sessionizer extends View {
           ? [seg.text.slice(0, base - at), seg.text.slice(base - at)]
           : [seg.text];
       for (const part of parts) {
-        const color = seg.hit ? t.accent : at < base ? t.muted : t.foreground;
+        const color = seg.hit || at >= base ? t.foreground : t.muted;
         runs.push(
           div()
             .flex_none()
             .text_color(color)
-            .when(seg.hit, (el: El) => el.font_weight(700))
+            .when(seg.hit, (el: El) => el.font_medium())
             .child(part),
         );
         at += part.length;
@@ -353,22 +355,17 @@ export default class Sessionizer extends View {
           : open.has(text)
             ? "open"
             : null;
-    const icon =
-      row.kind === "machine"
-        ? chromeIcon("server")
-        : row.kind === "host"
-          ? chromeIcon("plus")
-          : null;
+    const glyph: IconName =
+      row.kind === "machine" ? "server" : row.kind === "host" ? "plus" : "folder";
     return h_flex()
       .id(`row-${index}`)
       .h(ROW_H)
-      .px(10)
-      .mx(6)
+      .px(8)
       .gap(8)
       .flex_none()
       .items_center()
-      .rounded(6)
-      .text_size(13)
+      .rounded(RADIUS.sm)
+      .text_size(TEXT.sm)
       .cursor_pointer()
       .overflow_hidden()
       .when(on, (el: El) => el.bg(t.selected))
@@ -378,35 +375,14 @@ export default class Sessionizer extends View {
         this.selected = index;
         this.choose(row, cx);
       })
-      .child(
-        div()
-          .w(3)
-          .h(16)
-          .flex_none()
-          .rounded(2)
-          .when(on, (el: El) => el.bg(t.accent)),
-      )
-      .when(Boolean(icon), (el: El) =>
-        el.child(
-          svg(icon as string)
-            .size(13)
-            .flex_none()
-            .text_color(t.muted),
-        ),
-      )
+      .child(icon(glyph, ICON.md, t.muted))
       .child(h_flex().flex_1().min_w(0).overflow_hidden().children(runs))
       .when(Boolean(tag), (el: El) =>
         el.child(
-          div()
-            .px(6)
-            .py(1)
-            .flex_none()
-            .rounded(4)
-            .text_size(10.5)
-            .text_color(tag === "open" ? t.done : t.dim)
-            .border(1)
-            .border_color(t.border)
-            .child(tag as string),
+          badge(tag as string, {
+            variant: tag === "open" ? "secondary" : "outline",
+            tone: tag === "open" ? t.done : undefined,
+          }),
         ),
       );
   }
@@ -446,11 +422,11 @@ export default class Sessionizer extends View {
       .id("sessionizer-list")
       .flex_1()
       .min_h(0)
-      .py(6)
-      .gap(1)
+      .p(LIST_PAD)
+      .gap(ROW_GAP)
       .overflow_hidden()
       .on_size_change((size: { height: number }) => {
-        const fits = Math.max(1, Math.floor((size.height - 12) / (ROW_H + 1)));
+        const fits = Math.max(1, Math.floor((size.height - LIST_PAD * 2) / (ROW_H + ROW_GAP)));
         if (fits !== this.visible) {
           this.visible = fits;
           this.reveal();
@@ -465,33 +441,29 @@ export default class Sessionizer extends View {
       .when(!hits.length, (el: El) =>
         el.child(
           div()
-            .px(18)
-            .py(10)
-            .text_size(12.5)
-            .text_color(t.dim)
+            .py(24)
+            .text_center()
+            .text_size(TEXT.sm)
+            .text_color(t.muted)
             .child(loading ? "Loading…" : this.query ? "No matches" : "Nothing to show"),
         ),
       );
   }
 
   footer(t: Theme): El {
-    const hint = (keys: string, what: string): El =>
-      h_flex()
-        .gap(5)
-        .items_center()
-        .child(div().px(5).rounded(4).bg(t.raised).text_color(t.muted).child(keys))
-        .child(what);
+    const hint = (key: El, what: string): El =>
+      h_flex().gap(6).items_center().child(key).child(what);
     const status = this.busy ?? this.error;
     return h_flex()
-      .h(30)
-      .px(14)
-      .gap(14)
+      .h(32)
+      .px(12)
+      .gap(12)
       .flex_none()
       .items_center()
       .border_t(1)
       .border_color(t.border)
-      .text_size(11)
-      .text_color(t.dim)
+      .text_size(TEXT.xs)
+      .text_color(t.muted)
       .when(Boolean(status), (el: El) =>
         el.child(
           div()
@@ -504,10 +476,12 @@ export default class Sessionizer extends View {
       )
       .when(!status, (el: El) =>
         el
-          .child(hint("↑↓", "move"))
-          .child(hint("enter", "open"))
-          .when(this.stage.kind === "remote", (el: El) => el.child(hint("⌫", "back")))
-          .child(hint("esc", "close")),
+          .child(
+            hint(h_flex().gap(2).child(kbd("", "arrow-up")).child(kbd("", "arrow-down")), "move"),
+          )
+          .child(hint(kbd("", "corner-down-left"), "open"))
+          .when(this.stage.kind === "remote", (el: El) => el.child(hint(kbd("", "delete"), "back")))
+          .child(hint(kbd("Esc"), "close")),
       );
   }
 

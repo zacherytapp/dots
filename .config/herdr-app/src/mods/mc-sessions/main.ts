@@ -6,12 +6,24 @@
 import { div, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { home, run, spaces, type Program, type SpaceInfo } from "herdr";
-import { agentButton, useAgentProgram } from "../../shared/board.ts";
+import { useAgentProgram } from "../../shared/board.ts";
 import { loadConfig } from "../../shared/config.ts";
 import { copyText, findTab, isPending, namedTabs, trackPending } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope } from "../../shared/list-view.ts";
 import { repoOf, spaceFolders } from "../../shared/repo.ts";
-import { statusMark, type Theme } from "../../shared/ui.ts";
+import {
+  agentIcon,
+  alert,
+  button,
+  dot,
+  groupLabel,
+  ICON,
+  menuButton,
+  mono,
+  spinner,
+  TEXT,
+  type Theme,
+} from "../../shared/ui.ts";
 import { ago, baseName, matches, tildify } from "../../shared/util.ts";
 import { collect } from "./collect.ts";
 import { dayOf, within, type Day, type Session } from "./parse.ts";
@@ -124,32 +136,20 @@ export default class Sessions extends ListView<Session> {
       .id("sessions")
       .flex_1()
       .min_h(0)
-      .px(8)
+      .px(12)
       .pb(14)
       .gap(1)
       .overflow_y_scrollbar()
       .when(Boolean(this.failed), (el: El) =>
         el.child(
           div()
-            .px(6)
             .pb(6)
-            .text_size(11.5)
-            .text_color(t.blocked)
-            .child(`Couldn't read ${this.failed}`),
+            .child(alert(`Couldn't read ${this.failed}`, { variant: "destructive" })),
         ),
       )
       .children(
         this.groups(items).flatMap(({ day, rows }) => [
-          h_flex()
-            .h(26)
-            .pt(6)
-            .px(6)
-            .gap(7)
-            .items_center()
-            .text_size(12)
-            .text_color(t.muted)
-            .child(day)
-            .child(div().text_size(11).text_color(t.dim).child(String(rows.length))),
+          groupLabel(`group-${day}`, day, { count: rows.length }),
           ...rows.map((s) => this.row(t, s, program, all, tabs, here)),
         ]),
       );
@@ -168,44 +168,53 @@ export default class Sessions extends ListView<Session> {
     const starting = isPending(key);
     const go = (cx: Cx) => trackPending(key, cx, () => resume(s));
     const folder = s.cwd === here ? "~" : baseName(s.cwd);
-    const where = [all || s.machine ? folder : null, s.branch, s.machine, ago(s.updated)]
-      .filter(Boolean)
-      .join(" · ");
+    const folderShown = all || s.machine ? folder : null;
     const agentName = program?.name ?? "agent";
-    return h_flex()
-      .id(`session-${s.machine ?? ""}-${s.id}`)
+    return menuButton(`session-${s.machine ?? ""}-${s.id}`, {
+      size: "auto",
+      onClick: (_e: unknown, cx: Cx) => go(cx),
+    })
       .flex_none()
-      .px(8)
-      .py(7)
       .gap(10)
-      .items_center()
-      .rounded(8)
-      .cursor_pointer()
-      .hover((st: El) => st.bg(t.hover))
       .tooltip(`${tildify(s.cwd, home())}\n${s.id}`)
-      .on_click((_e: unknown, cx: Cx) => go(cx))
       .on_mouse_down("right", (_e: unknown, cx: Cx) => {
         cx.stop_propagation();
         void copyText(s.id);
       })
       .child(
-        agentButton(
-          `resume-${s.machine ?? ""}-${s.id}`,
-          open ? `Show the ${tabNameOf(s)} tab` : `Resume with ${agentName}`,
-          (_e, cx) => go(cx),
-          program,
-          t,
-        ),
+        button(key, {
+          variant: "ghost",
+          size: "icon-xs",
+          icon: agentIcon(program, ICON.sm, t.foreground),
+          tooltip: open ? `Show the ${tabNameOf(s)} tab` : `Resume with ${agentName}`,
+          onClick: (_e, cx) => go(cx),
+        }),
       )
       .child(
         v_flex()
           .flex_1()
           .min_w(0)
           .gap(2)
-          .child(div().truncate().text_size(13).text_color(t.foreground).child(s.title))
-          .child(div().truncate().text_size(11.5).text_color(t.dim).child(where)),
+          .child(div().truncate().child(s.title))
+          .child(
+            h_flex()
+              .min_w(0)
+              .gap(4)
+              .text_size(TEXT.xs)
+              .text_color(t.muted)
+              .children(
+                [
+                  folderShown ? mono(folderShown) : null,
+                  s.branch ? mono(s.branch) : null,
+                  s.machine ? div().child(s.machine) : null,
+                  div().child(ago(s.updated)),
+                ]
+                  .filter((p): p is El => p !== null)
+                  .flatMap((part, i) => (i ? [div().flex_none().child("·"), part] : [part])),
+              ),
+          ),
       )
-      .when(starting, (el: El) => el.child(statusMark("working")))
-      .when(open && !starting, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)));
+      .when(starting, (el: El) => el.child(spinner(ICON.sm, t.working)))
+      .when(open && !starting, (el: El) => el.child(dot(t.working)));
   }
 }

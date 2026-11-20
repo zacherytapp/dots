@@ -100,9 +100,13 @@ export function titleMark(title: string | null | undefined): Status | null {
  * record alone knows Claude Code is waiting for you (a permission prompt or a question keeps the
  * spinner going), so its `blocked` wins. Without a title mark, the job decides.
  */
-export function liveStatus(title: string | null | undefined, job: Job | null): Status {
+export function liveStatus(
+  title: string | null | undefined,
+  job: Job | null,
+  now = Date.now(),
+): Status {
   if (job?.state === "blocked") return "blocked";
-  return titleMark(title) ?? (job ? jobStatus(job.state) : "idle");
+  return titleMark(title) ?? (job ? jobStatus(job, now) : "idle");
 }
 
 /**
@@ -253,7 +257,7 @@ export function buildModel(input: Input): Model {
     taken.add(job.id);
     r.job = job;
     r.detail = job.detail || null;
-    if (r.guessed) r.status = liveStatus(rawTitle.get(r.address), job);
+    if (r.guessed) r.status = liveStatus(rawTitle.get(r.address), job, now);
   };
   const titles = (r: Row) => [rawTitle.get(r.address), r.title];
   // By name first, for every pane; then the only open job in a folder, for the only pane left there.
@@ -344,7 +348,7 @@ export function buildModel(input: Input): Model {
     spaceName: j.cwd.split("/").filter(Boolean).pop() ?? "",
     tabName: "",
     title: j.name,
-    status: jobStatus(j.state),
+    status: jobStatus(j, now),
     program: claude,
     pinned: false,
     focused: false,

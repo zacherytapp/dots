@@ -8,7 +8,7 @@
 // The panel is the layout's `panel` column holding the `panel-body` stack. Which source is
 // open is remembered per space, like Herdr's own tab bar does for Files and Changes.
 
-import { div, image, svg, View, type Cx, type El } from "gpui-kit";
+import { div, View, type Cx, type El } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import {
   home,
@@ -28,14 +28,21 @@ import {
 } from "herdr";
 import { NODES, SOURCES, type Source } from "../../shared/sources.ts";
 import {
-  alpha,
-  asset,
-  chromeIcon,
-  iconButton,
-  sourceIcon,
+  avatar,
+  button,
+  ICON,
+  icon,
+  MONO,
+  programIcon,
+  RADIUS,
+  separator,
   spaceFill,
+  spinner,
   statusMark,
   stopPress,
+  TEXT,
+  TRANSPARENT,
+  type IconName,
   type Theme,
 } from "../../shared/ui.ts";
 import { duration, findNode, parseJson, type LayoutNode } from "../../shared/util.ts";
@@ -171,13 +178,12 @@ export default class Tabs extends View {
       .id("space-chip")
       .flex_none()
       .when(sidebarWidth > 0, (el: El) => el.w(sidebarWidth - 10))
-      .h(30)
+      .h(32)
       .ml(-5)
-      .pl(5)
-      .pr(10)
+      .px(8)
       .gap(8)
       .items_center()
-      .rounded(7)
+      .rounded(RADIUS.md)
       .cursor_pointer()
       .hover((s: El) => s.bg(t.hover))
       .on_mouse_down("left", stopPress)
@@ -185,25 +191,13 @@ export default class Tabs extends View {
       .tooltip("Switch space")
       .when(Boolean(space), (el: El) =>
         el
-          .child(
-            h_flex()
-              .size(20)
-              .flex_none()
-              .rounded(5)
-              .bg(fill)
-              .items_center()
-              .justify_center()
-              .text_size(11)
-              .font_bold()
-              .text_color("#ffffff")
-              .child([...(space?.name ?? "?")][0]?.toUpperCase() ?? "?"),
-          )
+          .child(avatar(space?.name ?? "?", fill, 20))
           .child(
             div()
               .min_w(0)
               .truncate()
-              .text_size(13)
-              .font_semibold()
+              .text_size(TEXT.sm)
+              .font_medium()
               .text_color(t.foreground)
               .child(space?.name ?? ""),
           )
@@ -213,9 +207,9 @@ export default class Tabs extends View {
                 .flex_none()
                 .gap(4)
                 .items_center()
-                .text_size(11.5)
-                .text_color(t.dim)
-                .child(svg(chromeIcon("server")).size(11))
+                .text_size(TEXT.xs)
+                .text_color(t.muted)
+                .child(icon("server", ICON.xs))
                 .child(space?.machine ?? ""),
             ),
           ),
@@ -244,20 +238,26 @@ export default class Tabs extends View {
       .join("\n");
     return h_flex()
       .id(`tab-${tab.id}`)
-      .h(30)
+      .h(32)
       .pl(8)
-      .pr(active ? 4 : 8)
+      .pr(active ? 3 : 8)
       .gap(6)
       .items_center()
       .flex_none()
-      .rounded(7)
-      .text_size(12.5)
+      .rounded(RADIUS.md)
+      .text_size(TEXT.sm)
+      .font_medium()
       .border(1)
-      .border_color(active ? t.border : alpha(t.chrome, "00"))
-      .bg(active ? t.raised : t.chrome)
-      .text_color(active ? t.foreground : t.muted)
       .cursor_pointer()
-      .hover((s: El) => s.bg(active ? t.raised : t.hover))
+      .when(active, (el: El) =>
+        el.bg(t.selected).border_color(t.input).text_color(t.foreground).shadow_sm(),
+      )
+      .when(!active, (el: El) =>
+        el
+          .border_color(TRANSPARENT)
+          .text_color(t.muted)
+          .hover((s: El) => s.text_color(t.foreground)),
+      )
       .tooltip(tooltip)
       .on_mouse_down("left", (e: { click_count?: number }, cx: Cx) => {
         cx.stop_propagation();
@@ -280,56 +280,51 @@ export default class Tabs extends View {
           props: { tab: "tab", target: { id: tab.id, space: space?.id } },
         });
       })
-      .child(div().flex_none().text_size(10.5).text_color(t.dim).child(String(tab.index)))
+      .child(
+        div()
+          .flex_none()
+          .font_family(MONO)
+          .text_size(TEXT.xs)
+          .text_color(t.muted)
+          .child(String(tab.index)),
+      )
       .when(Boolean(program?.icon), (el: El) =>
-        el.child(
-          program?.tint
-            ? svg(program.icon as string)
-                .size(14)
-                .flex_none()
-                .text_color(active ? t.foreground : t.muted)
-            : image(program?.icon as string)
-                .size(14)
-                .flex_none(),
-        ),
+        el.child(programIcon(program, ICON.sm, active ? t.foreground : t.muted) as El),
       )
       .child(div().flex_none().child(label.short))
-      .when(tab.zoomed, (el: El) =>
-        el.child(div().flex_none().text_size(10.5).font_bold().text_color(t.accent).child("Z")),
-      )
-      .when(Boolean(working), (el: El) => el.child(statusMark("working")))
+      .when(tab.zoomed, (el: El) => el.child(icon("zoom-in", ICON.xs, t.accent)))
+      .when(Boolean(working), (el: El) => el.child(spinner(ICON.sm, t.working)))
       .when(tab.status === "blocked" || tab.status === "done", (el: El) =>
         el.child(statusMark(tab.status, true)),
       )
       .when(active, (el: El) =>
         el.child(
-          iconButton(
-            `close-${tab.id}`,
-            asset("close"),
-            "Close tab",
-            (_e, cx) => {
+          button(`close-${tab.id}`, {
+            icon: "x",
+            size: "icon-xs",
+            iconSize: ICON.xs,
+            tooltip: "Close tab",
+            onClick: (_e, cx) => {
               cx.stop_propagation();
               run("tab.close", { id: tab.id });
             },
-            { size: 18, iconSize: 11 },
-          ),
+          }),
         ),
       );
   }
 
-  sourceButtons(t: Theme, p: Panel): El[] {
-    return p.available.map((s) =>
-      iconButton(
-        `src-${s.id}`,
-        sourceIcon(s),
-        p.open && p.active === s.id ? `Hide ${s.label}` : s.label,
-        () => toggleSource(s.id),
-        {
-          active: p.open && p.active === s.id,
-          iconSize: 14,
-        },
-      ),
-    );
+  sourceButtons(_t: Theme, p: Panel): El[] {
+    return p.available.map((s) => {
+      const on = p.open && p.active === s.id;
+      return button(`src-${s.id}`, {
+        icon: s.icon as IconName,
+        size: "icon-sm",
+        iconSize: ICON.sm,
+        active: on,
+        tooltip: on ? `Hide ${s.label}` : s.label,
+        onClick: () => toggleSource(s.id),
+      });
+    });
   }
 
   topbar(t: Theme): El {
@@ -344,29 +339,13 @@ export default class Tabs extends View {
     const sidebar = findNode(root, NODES.sidebar);
     const sidebarWidth = sidebar && !sidebar.hidden ? (sidebar.size?.px ?? 0) : 0;
     const w = window();
-    const button = (id: string, label: El | string, tip: string, action: () => void) =>
-      div()
-        .id(id)
-        .size(26)
-        .flex_none()
-        .flex()
-        .items_center()
-        .justify_center()
-        .rounded(6)
-        .cursor_pointer()
-        .text_color(t.dim)
-        .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-        .on_mouse_down("left", stopPress)
-        .on_click(action)
-        .tooltip(tip)
-        .child(label);
     return h_flex()
       .id("root")
       .size_full()
       .min_w(0)
       .pl(10)
       .pr(6)
-      .gap(3)
+      .gap(4)
       .items_center()
       .bg(t.chrome)
       .border_b(1)
@@ -390,30 +369,47 @@ export default class Tabs extends View {
           .min_w(0)
           .h_full()
           .items_center()
-          .gap(3)
+          .gap(4)
           .overflow_x_scrollbar()
           .children(tabs.map((_tab, i) => this.pill(t, space, i, live, homeDir))),
       )
       .child(
-        iconButton("tab-new", chromeIcon("plus"), "New tab", () =>
-          openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 }),
-        ),
+        button("tab-new", {
+          icon: "plus",
+          size: "icon-sm",
+          tooltip: "New tab",
+          onClick: () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 }),
+        }),
       )
-      .child(div().w(1).h(18).mx(4).bg(t.border))
+      .child(separator(true, 16))
       .children(this.sourceButtons(t, p))
       .when(Boolean(w?.buttons), (el: El) =>
         el
-          .child(div().w(1).h(18).mx(4).bg(t.border))
-          .child(button("minimize", "−", "Minimize", () => run("window.minimize")))
+          .child(separator(true, 16))
           .child(
-            button("maximize", "□", w?.maximized ? "Restore" : "Maximize", () =>
-              run("window.maximize"),
-            ),
+            button("minimize", {
+              icon: "minus",
+              size: "icon-sm",
+              tooltip: "Minimize",
+              onClick: () => run("window.minimize"),
+            }),
           )
           .child(
-            button("close-window", svg(asset("close")).size(13), "Close window", () =>
-              run("window.close"),
-            ),
+            button("maximize", {
+              icon: "square",
+              size: "icon-sm",
+              iconSize: ICON.sm,
+              tooltip: w?.maximized ? "Restore" : "Maximize",
+              onClick: () => run("window.maximize"),
+            }),
+          )
+          .child(
+            button("close-window", {
+              icon: "x",
+              size: "icon-sm",
+              tooltip: "Close window",
+              onClick: () => run("window.close"),
+            }),
           ),
       );
   }
@@ -437,7 +433,7 @@ export default class Tabs extends View {
       .size_full()
       .min_w(0)
       .px(8)
-      .gap(2)
+      .gap(4)
       .items_center()
       .bg(t.chrome)
       .border_b(1)
@@ -461,13 +457,14 @@ export default class Tabs extends View {
                 : "";
           return h_flex()
             .id(`nav-${s.id}`)
-            .h(26)
+            .h(28)
             .px(8)
             .gap(6)
             .flex_none()
             .items_center()
-            .rounded(6)
-            .text_size(12.5)
+            .rounded(RADIUS.md)
+            .text_size(TEXT.sm)
+            .font_medium()
             .cursor_pointer()
             .when(on, (el: El) => el.bg(t.selected).text_color(t.foreground))
             .when(!on, (el: El) =>
@@ -475,28 +472,27 @@ export default class Tabs extends View {
             )
             .on_click(() => showSource(s.id))
             .tooltip(s.label)
-            .child(svg(sourceIcon(s)).size(14).flex_none())
+            .child(icon(s.icon as IconName, ICON.sm))
             .when(Boolean(text), (el: El) => el.child(text));
         }),
       )
       .child(div().flex_1())
       .child(
-        iconButton(
-          "nav-expand",
-          asset(wide ? "shrink" : "expand"),
-          wide ? "Narrow the panel" : "Widen the panel",
-          () => this.expand(),
-          { iconSize: 13 },
-        ),
+        button("nav-expand", {
+          icon: wide ? "minimize-2" : "maximize-2",
+          size: "icon-sm",
+          iconSize: ICON.sm,
+          tooltip: wide ? "Narrow the panel" : "Widen the panel",
+          onClick: () => this.expand(),
+        }),
       )
       .child(
-        iconButton(
-          "nav-close",
-          asset("close"),
-          "Hide the panel",
-          () => run("layout.hide", { id: NODES.panel }),
-          { iconSize: 13 },
-        ),
+        button("nav-close", {
+          icon: "x",
+          size: "icon-sm",
+          tooltip: "Hide the panel",
+          onClick: () => run("layout.hide", { id: NODES.panel }),
+        }),
       );
   }
 }

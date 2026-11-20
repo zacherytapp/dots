@@ -22,20 +22,50 @@ export function cpuPercent(prev: CpuSample | null, now: CpuSample | null): numbe
   return Math.floor((100 * (total - (now.idle - prev.idle))) / total);
 }
 
-/** "74°F" from a sysfs millidegree-Celsius reading. */
-export function fahrenheit(milli: string | null): string {
+/** Whole °F from a sysfs millidegree-Celsius reading; null when there is none. */
+export function fahrenheit(milli: string | null): number | null {
   const c = Number((milli ?? "").trim()) / 1000;
-  if (!Number.isFinite(c) || c <= 0) return "";
-  return `${Math.round((c * 9) / 5 + 32)}°F`;
+  if (!Number.isFinite(c) || c <= 0) return null;
+  return Math.round((c * 9) / 5 + 32);
 }
 
 /** Hwmon chips whose temp1_input is the CPU package (same preference as status.sh's sensors). */
 export const CPU_CHIPS = ["k10temp", "coretemp", "zenpower", "nvme"];
 
-/** The readout exactly as status.sh printed it: " 12%  74°F   80%". */
-export function format(cpu: number | null, temp: string, battery: string): string {
-  let out = ` ${cpu ?? 0}%`;
-  if (temp) out += `  ${temp}`;
-  if (battery) out += `  ${battery}`;
-  return out;
+export interface Stats {
+  cpu: number;
+  /** °F, when a sensor was found. */
+  temp: number | null;
+  /** Percent, when there is a battery. */
+  battery: number | null;
+  charging: boolean;
+}
+
+/** The readout's parts: cpu defaults to 0 before the second sample; battery from sysfs text. */
+export function readout(
+  cpu: number | null,
+  temp: number | null,
+  capacity: string | null,
+  status: string | null,
+): Stats {
+  const pct = Number((capacity ?? "").trim());
+  const has = (capacity ?? "").trim() !== "" && Number.isFinite(pct);
+  return {
+    cpu: cpu ?? 0,
+    temp,
+    battery: has ? pct : null,
+    charging: (status ?? "").trim() === "Charging",
+  };
+}
+
+/** The Lucide battery icon for a charge level and status. */
+export function batteryIcon(
+  pct: number,
+  charging: boolean,
+): "battery-charging" | "battery-full" | "battery-medium" | "battery-low" | "battery-warning" {
+  if (charging) return "battery-charging";
+  if (pct >= 70) return "battery-full";
+  if (pct >= 40) return "battery-medium";
+  if (pct >= 15) return "battery-low";
+  return "battery-warning";
 }

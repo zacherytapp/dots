@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cpuPercent, fahrenheit, format, parseCpu } from "./stats.ts";
+import { batteryIcon, cpuPercent, fahrenheit, parseCpu, readout } from "./stats.ts";
 
 test("cpu percent from two samples", () => {
   const a = parseCpu("cpu  100 0 100 800 5 0 0\ncpu0 1 1 1 1");
@@ -13,12 +13,27 @@ test("cpu percent from two samples", () => {
 });
 
 test("fahrenheit from millidegrees", () => {
-  assert.equal(fahrenheit("45000\n"), "113°F");
-  assert.equal(fahrenheit(null), "");
-  assert.equal(fahrenheit("junk"), "");
+  assert.equal(fahrenheit("45000\n"), 113);
+  assert.equal(fahrenheit(null), null);
+  assert.equal(fahrenheit("junk"), null);
 });
 
-test("battery icon and format", () => {
-  assert.equal(format(7, "113°F", ""), " 7%  113°F");
-  assert.equal(format(null, "", ""), " 0%");
+test("readout parts and battery icon", () => {
+  assert.deepEqual(readout(7, 113, "80\n", "Charging\n"), {
+    cpu: 7,
+    temp: 113,
+    battery: 80,
+    charging: true,
+  });
+  assert.deepEqual(readout(null, null, null, null), {
+    cpu: 0,
+    temp: null,
+    battery: null,
+    charging: false,
+  });
+  assert.equal(batteryIcon(80, false), "battery-full");
+  assert.equal(batteryIcon(50, false), "battery-medium");
+  assert.equal(batteryIcon(20, false), "battery-low");
+  assert.equal(batteryIcon(5, false), "battery-warning");
+  assert.equal(batteryIcon(5, true), "battery-charging");
 });

@@ -3,10 +3,10 @@
 // unresolved threads and size, and starts an agent to Review, Address comments or Fix checks,
 // in a tab named after the PR (a second click shows that tab).
 
-import { div, svg, type Cx, type El } from "gpui-kit";
+import { div, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import type { Program, SpaceInfo } from "herdr";
-import { agentButton, useAgentProgram } from "../../shared/board.ts";
+import { useAgentProgram } from "../../shared/board.ts";
 import {
   forgejo,
   forgejoMyPulls,
@@ -33,11 +33,19 @@ import {
 } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope } from "../../shared/list-view.ts";
 import {
-  asset,
-  chromeIcon,
-  iconButton,
-  statusMark,
-  stopPress,
+  agentIcon,
+  badge,
+  button,
+  card,
+  dot,
+  groupLabel,
+  ICON,
+  icon,
+  MONO,
+  mono,
+  spinner,
+  TEXT,
+  type IconName,
   type Theme,
 } from "../../shared/ui.ts";
 import { ago, matches } from "../../shared/util.ts";
@@ -155,29 +163,10 @@ export default class Pulls extends ListView<PullItem> {
       .overflow_y_scrollbar()
       .children(
         this.groups(items).flatMap((g) => [
-          h_flex()
-            .h(26)
-            .pt(4)
-            .gap(7)
-            .items_center()
-            .text_size(12.5)
-            .text_color(t.muted)
-            .child(g.label)
-            .child(div().text_size(11).text_color(t.dim).child(String(g.rows.length))),
+          groupLabel(`group-${g.label}`, g.label, { count: g.rows.length }),
           ...g.rows.map((p) => this.row(t, p, program, all, tabs, background)),
         ]),
       );
-  }
-
-  badge(t: Theme, icon: string, text: string, color: string, tooltip: string): El {
-    return h_flex()
-      .flex_none()
-      .gap(4)
-      .items_center()
-      .text_color(color)
-      .tooltip(tooltip)
-      .child(svg(icon).size(12))
-      .child(text);
   }
 
   row(
@@ -199,9 +188,9 @@ export default class Pulls extends ListView<PullItem> {
       ? `Show the ${p.tabName} tab`
       : `${p.tabName} is running in the background: open it from Agents`;
     const checks = {
-      passing: [chromeIcon("check"), "Checks", t.ansi2, "All checks passed"],
-      failing: [chromeIcon("x"), "Checks", t.blocked, "Some checks failed"],
-      pending: [chromeIcon("clock"), "Checks", t.working, "Checks are running"],
+      passing: [icon("circle-check", ICON.xs), t.ansi2, "All checks passed"],
+      failing: [icon("circle-x", ICON.xs), t.blocked, "Some checks failed"],
+      pending: [spinner(ICON.xs), t.working, "Checks are running"],
       none: null,
     }[p.checks];
     const review = {
@@ -211,32 +200,30 @@ export default class Pulls extends ListView<PullItem> {
       none: null,
     }[p.review];
     const agentName = program?.name ?? "agent";
-    return v_flex()
+    const prIcon: IconName =
+      p.provider === "forgejo"
+        ? "forgejo"
+        : p.draft
+          ? "git-pull-request-draft"
+          : "git-pull-request";
+    return card()
       .id(`pr-${p.id}`)
       .flex_none()
-      .p(12)
-      .gap(7)
-      .rounded(9)
-      .border(1)
-      .border_color(t.border)
-      .bg(t.surface)
       .hover((s: El) => s.border_color(t.input))
       .child(
         h_flex()
           .gap(8)
           .items_center()
           .child(
-            svg(asset(p.provider === "forgejo" ? "forgejo" : "pull-request"))
-              .size(14)
-              .flex_none()
-              .text_color(p.draft ? t.dim : t.ansi2)
-              .tooltip(p.provider === "forgejo" ? "Forgejo" : "GitHub"),
+            icon(prIcon, ICON.sm, p.draft ? t.muted : t.ansi2).tooltip(
+              p.provider === "forgejo" ? "Forgejo" : "GitHub",
+            ),
           )
           .child(
-            div()
+            mono(`#${p.number}`)
               .id(`num-${p.id}`)
               .flex_none()
-              .text_size(12)
+              .text_size(TEXT.xs)
               .text_color(t.accent)
               .cursor_pointer()
               .hover((s: El) => s.underline())
@@ -245,8 +232,7 @@ export default class Pulls extends ListView<PullItem> {
               .on_mouse_down("right", (_e: unknown, cx: Cx) => {
                 cx.stop_propagation();
                 void copyText(p.url);
-              })
-              .child(`#${p.number}`),
+              }),
           )
           .child(
             div()
@@ -254,63 +240,72 @@ export default class Pulls extends ListView<PullItem> {
               .flex_1()
               .min_w(0)
               .truncate()
-              .text_size(13.5)
+              .text_size(TEXT.sm)
+              .font_medium()
               .cursor_pointer()
               .hover((s: El) => s.underline())
               .on_click(() => void openUrl(p.url))
               .tooltip(p.title)
               .child(p.title),
           )
-          .when(p.draft, (el: El) =>
-            el.child(div().flex_none().text_size(11).text_color(t.dim).child("Draft")),
+          .when(p.draft, (el: El) => el.child(badge("Draft", { variant: "outline" }))),
+      )
+      .child(
+        h_flex()
+          .gap(4)
+          .items_center()
+          .text_size(TEXT.xs)
+          .text_color(t.muted)
+          .when(all, (el: El) =>
+            el.child(div().min_w(0).truncate().child(p.slug)).child(div().flex_none().child("·")),
+          )
+          .child(div().min_w(0).truncate().font_family(MONO).child(`${p.head} → ${p.base}`))
+          .child(
+            div()
+              .flex_none()
+              .child(`· ${[p.author, ago(p.updated)].filter(Boolean).join(" · ")}`),
           ),
       )
       .child(
         h_flex()
           .gap(6)
-          .text_size(11.5)
-          .text_color(t.dim)
-          .child(
-            div()
-              .min_w(0)
-              .truncate()
-              .child(
-                [all ? p.slug : null, `${p.head} → ${p.base}`, p.author, ago(p.updated)]
-                  .filter(Boolean)
-                  .join(" · "),
-              ),
-          ),
-      )
-      .child(
-        h_flex()
-          .gap(12)
           .items_center()
-          .text_size(11.5)
           .when(Boolean(checks), (el: El) => {
-            const [icon, text, color, tip] = checks as string[];
-            return el.child(this.badge(t, icon, text, color, tip));
+            const [glyph, color, tip] = checks as [El, string, string];
+            return el.child(
+              badge("Checks", {
+                id: `checks-${p.id}`,
+                tone: color,
+                variant: "outline",
+                icon: glyph,
+                tooltip: tip,
+              }),
+            );
           })
           .when(Boolean(review), (el: El) => {
             const [text, color] = review as string[];
-            return el.child(div().flex_none().text_color(color).child(text));
+            return el.child(badge(text, { tone: color, variant: "outline" }));
           })
           .when(p.comments + p.unresolved > 0, (el: El) =>
             el.child(
-              this.badge(
-                t,
-                asset("comment"),
-                p.unresolved ? `${p.unresolved} open` : String(p.comments),
-                p.unresolved ? t.working : t.dim,
-                `${p.comments} comments, ${p.unresolved} unresolved threads`,
-              ),
+              badge(p.unresolved ? `${p.unresolved} open` : String(p.comments), {
+                id: `comments-${p.id}`,
+                variant: "outline",
+                tone: p.unresolved ? t.working : undefined,
+                icon: "message-square",
+                tooltip: `${p.comments} comments, ${p.unresolved} unresolved threads`,
+              }),
             ),
           )
           .child(
             h_flex()
               .flex_none()
               .gap(4)
+              .ml_auto()
+              .font_family(MONO)
+              .text_size(TEXT.xs)
               .child(div().text_color(t.ansi2).child(`+${p.additions}`))
-              .child(div().text_color(t.ansi1).child(`−${p.deletions}`)),
+              .child(div().text_color(t.blocked).child(`−${p.deletions}`)),
           ),
       )
       .child(
@@ -318,46 +313,35 @@ export default class Pulls extends ListView<PullItem> {
           .gap(4)
           .items_center()
           .child(
-            agentButton(
-              `agent-${p.id}`,
-              started ? shown : `Start ${agentName} to review #${p.number}`,
-              (_e, cx) => start("review", cx),
-              program,
-              t,
-            ),
+            button(`agent-${p.id}`, {
+              variant: "outline",
+              size: "icon-xs",
+              icon: agentIcon(program, ICON.sm, t.foreground),
+              tooltip: started ? shown : `Start ${agentName} to review #${p.number}`,
+              onClick: (_e, cx) => start("review", cx),
+            }),
           )
           .children(
             ACTIONS.map((a) =>
-              div()
-                .id(`${a.id}-${p.id}`)
-                .h(24)
-                .px(8)
-                .flex()
-                .items_center()
-                .rounded(6)
-                .text_size(12)
-                .cursor_pointer()
-                .text_color(t.muted)
-                .border(1)
-                .border_color(t.border)
-                .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-                .on_mouse_down("left", stopPress)
-                .tooltip(started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`)
-                .on_click((_e: unknown, cx: Cx) => start(a.id, cx))
-                .child(a.label),
+              button(`${a.id}-${p.id}`, {
+                variant: "outline",
+                size: "xs",
+                label: a.label,
+                tooltip: started ? shown : `Start ${agentName}: ${a.label.toLowerCase()}`,
+                onClick: (_e, cx) => start(a.id, cx),
+              }),
             ),
           )
           .child(div().flex_1())
-          .when(starting, (el: El) => el.child(statusMark("working")))
-          .when(started && !starting, (el: El) => el.child(div().size(6).rounded(3).bg(t.working)))
+          .when(starting, (el: El) => el.child(spinner(ICON.sm, t.working)))
+          .when(started && !starting, (el: El) => el.child(dot(t.working)))
           .child(
-            iconButton(
-              `open-${p.id}`,
-              asset("external"),
-              "Open in browser",
-              () => void openUrl(p.url),
-              { iconSize: 13 },
-            ),
+            button(`open-${p.id}`, {
+              icon: "external-link",
+              size: "icon-xs",
+              tooltip: "Open in browser",
+              onClick: () => void openUrl(p.url),
+            }),
           ),
       );
   }

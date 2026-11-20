@@ -1,10 +1,11 @@
 // How tall the Spaces block wants to be. Pure, so the floating behavior is tested directly.
-// Pixel sizes match what main.ts draws.
+// Pixel sizes match what main.ts draws: header, machine headers and rows are 32 tall (shadcn
+// sidebar), the search field 32 plus 8 below it.
 
-export const HEADER = 34;
-export const SEARCH = 38;
+export const HEADER = 32;
+export const SEARCH = 40;
 export const ROW = 32;
-export const GROUP = 26;
+export const GROUP = 32;
 export const GAP = 2;
 export const PAD = 8;
 /** Agents always keeps at least this much under Spaces before Spaces starts scrolling. */

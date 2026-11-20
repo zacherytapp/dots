@@ -172,6 +172,9 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      lucide-static:
+        specifier: ^1.76.0
+        version: 1.76.0
       markdownlint-cli:
         specifier: ^0.49.1
         version: 0.49.1
@@ -590,6 +593,9 @@ packages:
   linkify-it@5.0.2:
     resolution: {integrity: sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q==}
 
+  lucide-static@1.76.0:
+    resolution: {integrity: sha512-8izOkC4xBdjtiIF641S1a21rEZP2DXiAcaRFYMXxwxnaFmgUUqLgelmRMxrNenjuW2pUJZIXEpOMuUcVyadF5Q==}
+
   markdown-it@14.3.3:
     resolution: {integrity: sha512-L//tDAkjTjJCU6pBUSBTgs3Kg4InVaZuUZog/b6V12UKhcDQ7S78877ibbCanRExwPuYP1CZD7Gd2dxSy1GXRg==}
     hasBin: true
@@ -999,6 +1005,8 @@ snapshots:
   linkify-it@5.0.2:
     dependencies:
       uc.micro: 2.1.0
+
+  lucide-static@1.76.0: {}
 
   markdown-it@14.3.3:
     dependencies:

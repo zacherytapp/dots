@@ -2,7 +2,7 @@
 // and settings buttons, a body, and a footer saying how much loaded and when. Subclasses
 // say what to load (`fetch`) and how to draw it (`body`).
 
-import { div, svg, View, type Cx, type El } from "gpui-kit";
+import { div, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex, InputState } from "gpui-base";
 import { layout, run, setShared, shared, theme, type SpaceInfo } from "herdr";
 import { editConfigArgs, saveToken } from "./config.ts";
@@ -10,13 +10,18 @@ import { openUrl } from "./launch.ts";
 import { activeSpace } from "./repo.ts";
 import { KEYS, NODES } from "./sources.ts";
 import {
+  alert,
+  button,
+  card,
   emptyState,
-  iconButton,
+  ICON,
+  icon,
   searchBox,
-  segmented,
-  textButton,
-  chromeIcon,
-  asset,
+  separator,
+  skeleton,
+  tabs,
+  TEXT,
+  type IconName,
   type Theme,
 } from "./ui.ts";
 import { ago, findNode } from "./util.ts";
@@ -191,62 +196,76 @@ export class ListView<T> extends View {
     const buttons = h_flex()
       .gap(8)
       .child(
-        textButton(
-          "token-save",
-          this.saving ? "Saving…" : "Save token",
-          (_e, cx) => this.saveToken(cx),
-          {
-            primary: true,
-          },
-        ),
+        button("token-save", {
+          label: this.saving ? "Saving…" : "Save token",
+          variant: "default",
+          size: "sm",
+          onClick: (_e, cx) => this.saveToken(cx),
+        }),
       )
       .when(Boolean(ask.createUrl), (el: El) =>
         el.child(
-          textButton("token-create", "Create a token", () => void openUrl(ask.createUrl as string)),
+          button("token-create", {
+            label: "Create a token",
+            variant: "outline",
+            size: "sm",
+            onClick: () => void openUrl(ask.createUrl as string),
+          }),
         ),
       );
     const field = h_flex().w_full().max_w(420).child(searchBox("token-input", this.tokenInput));
     if (compact) {
-      return v_flex()
+      return card()
         .flex_none()
         .mx(12)
         .mb(8)
-        .p(10)
-        .gap(8)
-        .rounded(9)
-        .border(1)
-        .border_color(t.border)
-        .bg(t.surface)
-        .child(div().text_size(12.5).text_color(t.foreground).child(ask.title))
-        .child(div().text_size(11.5).text_color(t.muted).child(ask.body))
+        .child(div().text_size(TEXT.sm).font_medium().text_color(t.foreground).child(ask.title))
+        .child(div().text_size(TEXT.xs).text_color(t.muted).child(ask.body))
         .child(field)
         .child(buttons);
     }
+    return emptyState(ask.title, ask.body, [
+      v_flex()
+        .gap(8)
+        .items_center()
+        .w_full()
+        .max_w(420)
+        .child(field)
+        .child(buttons)
+        .when(Boolean(this.error), (el: El) =>
+          el.child(
+            h_flex()
+              .w_full()
+              .child(alert(this.error as string, { variant: "destructive" })),
+          ),
+        )
+        .child(
+          div()
+            .text_size(TEXT.xs)
+            .text_color(t.muted)
+            .text_center()
+            .child(
+              "Saved in ~/.config/herdr-app/mission-control/, readable only by you and never in the dots repo.",
+            ),
+        ),
+    ]);
+  }
+
+  /** Placeholder cards while the first load runs. */
+  skeletons(): El {
     return v_flex()
       .flex_1()
       .min_h(0)
-      .items_center()
-      .justify_center()
-      .gap(10)
-      .p(24)
-      .child(div().text_size(13.5).font_medium().text_color(t.foreground).child(ask.title))
-      .child(div().max_w(420).text_size(12.5).text_color(t.muted).text_center().child(ask.body))
-      .child(field)
-      .child(buttons)
-      .when(Boolean(this.error), (el: El) =>
-        el.child(
-          div().max_w(420).text_size(12).text_color(t.blocked).text_center().child(this.error),
+      .p(12)
+      .gap(8)
+      .children(
+        [0, 1, 2].map(() =>
+          card()
+            .flex_none()
+            .child(skeleton(120, 12))
+            .child(skeleton(null, 14))
+            .child(skeleton(180, 12)),
         ),
-      )
-      .child(
-        div()
-          .max_w(420)
-          .text_size(11)
-          .text_color(t.dim)
-          .text_center()
-          .child(
-            "Saved in ~/.config/herdr-app/mission-control/, readable only by you and never in the dots repo.",
-          ),
       );
   }
 
@@ -342,47 +361,52 @@ export class ListView<T> extends View {
 
   toolbar(t: Theme): El {
     const narrow = this.width > 0 && this.width < 460;
-    const scope = segmented("scope", SCOPES, this.scope(), (s, cx) => this.setScope(s, cx));
+    const scope = tabs("scope", SCOPES, this.scope(), (s, cx) => this.setScope(s, cx));
     const buttons = h_flex()
       .flex_none()
       .gap(2)
       .items_center()
       .children(this.tools(t))
       .child(
-        iconButton(
-          "refresh",
-          asset("refresh"),
-          this.busy ? "Loading…" : "Refresh",
-          (_e, cx) => this.reload(cx),
-          { active: this.busy, spin: this.busy },
-        ),
+        button("refresh", {
+          icon: "refresh-cw",
+          tooltip: this.busy ? "Loading…" : "Refresh",
+          size: "icon-sm",
+          active: this.busy,
+          spin: this.busy,
+          onClick: (_e, cx) => this.reload(cx),
+        }),
       )
       .when(this.hasSettings(), (el: El) =>
         el.child(
-          iconButton("settings", chromeIcon("settings"), "Edit mission-control.json", () =>
-            run("tab.new", editConfigArgs()),
-          ),
+          button("settings", {
+            icon: "settings",
+            tooltip: "Edit mission-control.json",
+            size: "icon-sm",
+            onClick: () => run("tab.new", editConfigArgs()),
+          }),
         ),
       );
     const search = searchBox("search", this.search);
-    if (narrow) {
-      return v_flex()
-        .flex_none()
-        .px(12)
-        .pt(10)
-        .gap(8)
-        .child(h_flex().items_center().gap(8).child(scope).child(div().flex_1()).child(buttons))
-        .child(h_flex().child(search));
-    }
-    return h_flex()
-      .flex_none()
-      .px(14)
-      .pt(12)
-      .gap(10)
-      .items_center()
-      .child(scope)
-      .child(search)
-      .child(buttons);
+    // The bottom border mirrors the footer's top one.
+    const bar = narrow
+      ? v_flex()
+          .flex_none()
+          .px(12)
+          .py(8)
+          .gap(8)
+          .child(h_flex().items_center().gap(8).child(scope).child(div().flex_1()).child(buttons))
+          .child(h_flex().child(search))
+      : h_flex()
+          .flex_none()
+          .px(12)
+          .py(8)
+          .gap(8)
+          .items_center()
+          .child(scope)
+          .child(search)
+          .child(buttons);
+    return v_flex().flex_none().child(bar).child(separator());
   }
 
   footer(t: Theme, shown: number): El {
@@ -405,14 +429,14 @@ export class ListView<T> extends View {
           : "";
     return h_flex()
       .flex_none()
-      .h(30)
-      .px(14)
+      .h(32)
+      .px(12)
       .gap(8)
       .items_center()
       .border_t(1)
       .border_color(t.border)
-      .text_size(11.5)
-      .text_color(t.dim)
+      .text_size(TEXT.xs)
+      .text_color(t.muted)
       .child(div().flex_none().child([count, when].filter(Boolean).join(" · ")))
       .when(Boolean(this.error && total > 0) || Boolean(this.snap.warning), (el: El) => {
         const text = (this.error && total > 0 ? this.error : "") || this.snap.warning;
@@ -441,7 +465,7 @@ export class ListView<T> extends View {
       .size_full()
       .min_h(0)
       .bg(t.background)
-      .text_size(13)
+      .text_size(TEXT.sm)
       .text_color(t.foreground)
       .on_size_change((size: { width: number }, cx: Cx) => {
         if (Math.abs(size.width - this.width) >= 1) {
@@ -458,24 +482,39 @@ export class ListView<T> extends View {
     let content: El;
     if (this.snap.setup) {
       content = emptyState(this.snap.setup.title, this.snap.setup.body, [
-        textButton("setup", "Edit mission-control.json", () => run("tab.new", editConfigArgs()), {
-          primary: true,
+        button("setup", {
+          label: "Edit mission-control.json",
+          variant: "default",
+          size: "sm",
+          onClick: () => run("tab.new", editConfigArgs()),
         }),
       ]);
     } else if (this.snap.token && !this.snap.items.length) {
       content = this.tokenForm(t, this.snap.token, false);
     } else if (this.error && !this.snap.items.length) {
       content = emptyState("Couldn't load", this.error, [
-        textButton("retry", "Try again", (_e, cx) => this.reload(cx)),
+        button("retry", {
+          label: "Try again",
+          variant: "outline",
+          size: "sm",
+          onClick: (_e, cx) => this.reload(cx),
+        }),
       ]);
     } else if (!this.snap.items.length) {
       content = this.loading
-        ? emptyState("Loading…", "")
+        ? this.skeletons()
         : emptyState(
             this.snap.note || `No ${this.noun()}`,
             "",
             this.scope() === "space"
-              ? [textButton("all", "Show all spaces", (_e, cx) => this.setScope("all", cx))]
+              ? [
+                  button("all", {
+                    label: "Show all spaces",
+                    variant: "outline",
+                    size: "sm",
+                    onClick: (_e, cx) => this.setScope("all", cx),
+                  }),
+                ]
               : [],
           );
     } else {
@@ -491,18 +530,18 @@ export class ListView<T> extends View {
     return root
       .child(this.toolbar(t))
       .when(Boolean(sub), (el: El) => el.child(sub as El))
-      .child(v_flex().flex_1().min_h(0).pt(10).child(content))
+      .child(v_flex().flex_1().min_h(0).child(content))
       .child(this.footer(t, items.length));
   }
 }
 
-/** A dim one-line notice with an icon. */
-export function notice(t: Theme, icon: string, text: string): El {
+/** A muted one-line notice with an icon. */
+export function notice(t: Theme, name: IconName, text: string): El {
   return h_flex()
     .gap(6)
     .items_center()
-    .text_size(12)
-    .text_color(t.dim)
-    .child(svg(icon).size(12).flex_none())
+    .text_size(TEXT.xs)
+    .text_color(t.muted)
+    .child(icon(name, ICON.xs))
     .child(div().min_w(0).truncate().child(text));
 }

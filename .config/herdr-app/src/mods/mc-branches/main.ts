@@ -5,7 +5,7 @@
 // use that machine's own git access; a remote that can't be reached falls back to what the last
 // fetch saw.
 
-import { div, svg, type Cx, type El } from "gpui-kit";
+import { div, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { exec, spaces, type SpaceInfo } from "herdr";
 import { forgejo, TokenError, type Forgejo } from "../../shared/forgejo.ts";
@@ -14,11 +14,18 @@ import { copyText, openUrl } from "../../shared/launch.ts";
 import { ListView, type Loaded, type Scope, type TokenAsk } from "../../shared/list-view.ts";
 import { repoOf, type SpaceRepo } from "../../shared/repo.ts";
 import {
-  asset,
-  chromeIcon,
-  countChip,
-  iconButton,
-  stopPress,
+  badge,
+  button,
+  groupLabel,
+  ICON,
+  icon,
+  menuButton,
+  MONO,
+  mono,
+  tabsList,
+  tabsTrigger,
+  TEXT,
+  type IconName,
   type Theme,
 } from "../../shared/ui.ts";
 import { ago, matches } from "../../shared/util.ts";
@@ -325,16 +332,21 @@ export default class Branches extends ListView<Item> {
     const { counts } = this.derive(items);
     return h_flex()
       .flex_none()
-      .px(14)
+      .px(12)
       .pt(10)
-      .gap(4)
-      .items_center()
-      .children(
-        FILTERS.map((f) =>
-          countChip(`filter-${f.id}`, f.label, counts[f.id], this.filter === f.id, (cx) => {
-            this.filter = f.id;
-            cx.notify();
-          }),
+      .child(
+        tabsList(
+          FILTERS.map((f) =>
+            tabsTrigger(`filter-${f.id}`, {
+              label: f.label,
+              count: counts[f.id],
+              active: this.filter === f.id,
+              onClick: (cx) => {
+                this.filter = f.id;
+                cx.notify();
+              },
+            }),
+          ),
         ),
       );
   }
@@ -345,45 +357,33 @@ export default class Branches extends ListView<Item> {
       .id("branches")
       .flex_1()
       .min_h(0)
-      .px(8)
+      .px(12)
       .pb(14)
       .gap(1)
       .overflow_y_scrollbar()
       .children(
         groups.flatMap(({ repo, rows }) => [
-          ...(all
-            ? [
-                h_flex()
-                  .h(26)
-                  .pt(6)
-                  .px(6)
-                  .gap(7)
-                  .items_center()
-                  .text_size(12)
-                  .text_color(t.muted)
-                  .child(repo)
-                  .child(div().text_size(11).text_color(t.dim).child(String(rows.length))),
-              ]
-            : []),
+          ...(all ? [groupLabel(`group-${repo}`, repo, { count: rows.length })] : []),
           ...rows.map((b) => this.row(t, b)),
         ]),
       );
   }
 
-  pill(t: Theme, text: string, color: string, tooltip: string): El {
-    return div()
+  /** A "where it lives" badge: outline in a status tone. */
+  where(id: string, text: string, tone: string, tooltip: string, iconName?: IconName): El {
+    return badge(text, { id, variant: "outline", tone, icon: iconName, tooltip });
+  }
+
+  /** ↑ahead / ↓behind: a Lucide arrow and a mono number. */
+  delta(name: IconName, n: number, color: string): El {
+    return h_flex()
       .flex_none()
-      .px(5)
-      .h(18)
-      .flex()
+      .gap(2)
       .items_center()
-      .rounded(5)
-      .border(1)
-      .border_color(t.border)
-      .text_size(10.5)
       .text_color(color)
-      .tooltip(tooltip)
-      .child(text);
+      .text_size(TEXT.xs)
+      .child(icon(name, ICON.xs))
+      .child(mono(String(n)));
   }
 
   row(t: Theme, b: Item): El {
@@ -392,126 +392,106 @@ export default class Branches extends ListView<Item> {
     const inStep = kind === "both" && b.remotes.every((r) => r.same);
     const where =
       kind === "local"
-        ? this.pill(t, "local only", t.working, "Not on any remote")
+        ? this.where(`where-${b.id}`, "local only", t.working, "Not on any remote", "laptop")
         : kind === "remote"
-          ? this.pill(t, "remote only", t.ansi4, `Only on ${remoteNames}`)
-          : this.pill(
-              t,
+          ? this.where(`where-${b.id}`, "remote only", t.ansi4, `Only on ${remoteNames}`, "cloud")
+          : this.where(
+              `where-${b.id}`,
               inStep ? "synced" : "local + remote",
               inStep ? t.ansi2 : t.muted,
               inStep ? `Same commit on ${remoteNames}` : `On ${remoteNames}, at a different commit`,
             );
     const link = b.pr?.url ?? b.web;
-    return (
-      v_flex()
-        .id(`branch-${b.id}`)
-        .flex_none()
-        .px(8)
-        .py(6)
-        .gap(3)
-        .rounded(8)
-        .cursor_pointer()
-        .when(b.current, (el: El) => el.bg(t.selected))
-        .hover((s: El) => s.bg(t.hover))
-        // No PR and no web page (a local-only branch): a click copies its name instead.
-        .on_click(() => void (link ? openUrl(link) : copyText(b.name)))
-        .on_mouse_down("right", (_e: unknown, cx: Cx) => {
-          cx.stop_propagation();
-          void copyText(b.name);
-        })
-        .tooltip(
-          link
-            ? `Open ${b.pr ? `#${b.pr.number}` : "on the web"} · right-click copies the name`
-            : "Click copies the name",
-        )
-        .child(
-          h_flex()
-            .gap(7)
-            .items_center()
-            .child(
-              svg(chromeIcon("git-branch"))
-                .size(13)
-                .flex_none()
-                .text_color(b.current ? t.accent : t.dim),
-            )
-            .child(
+    return menuButton(`branch-${b.id}`, {
+      active: b.current,
+      size: "auto",
+      // No PR and no web page (a local-only branch): a click copies its name instead.
+      onClick: () => void (link ? openUrl(link) : copyText(b.name)),
+    })
+      .flex_none()
+      .on_mouse_down("right", (_e: unknown, cx: Cx) => {
+        cx.stop_propagation();
+        void copyText(b.name);
+      })
+      .tooltip(
+        link
+          ? `Open ${b.pr ? `#${b.pr.number}` : "on the web"} · right-click copies the name`
+          : "Click copies the name",
+      )
+      .child(icon("git-branch", ICON.md, b.current ? t.foreground : t.muted))
+      .child(
+        v_flex()
+          .flex_1()
+          .min_w(0)
+          .gap(2)
+          .child(
+            h_flex()
+              .gap(8)
+              .items_center()
+              .child(div().min_w(0).truncate().font_family(MONO).child(b.name))
+              .child(where)
+              .when(Boolean(b.local?.gone), (el: El) =>
+                el.child(
+                  this.where(
+                    `gone-${b.id}`,
+                    "upstream gone",
+                    t.blocked,
+                    "Its upstream branch was deleted",
+                  ),
+                ),
+              ),
+          )
+          .when(Boolean(b.subject), (el: El) =>
+            el.child(
               div()
                 .min_w(0)
                 .truncate()
-                .text_size(13)
-                .text_color(b.current ? t.foreground : t.muted)
-                .when(b.current, (el: El) => el.font_medium())
-                .child(b.name),
-            )
-            .child(where)
-            .when(Boolean(b.local?.gone), (el: El) =>
-              el.child(this.pill(t, "upstream gone", t.blocked, "Its upstream branch was deleted")),
-            )
-            .child(div().flex_1())
-            .when((b.local?.ahead ?? 0) > 0, (el: El) =>
-              el.child(
-                div().flex_none().text_size(11.5).text_color(t.ansi2).child(`↑${b.local?.ahead}`),
-              ),
-            )
-            .when((b.local?.behind ?? 0) > 0, (el: El) =>
-              el.child(
-                div().flex_none().text_size(11.5).text_color(t.ansi1).child(`↓${b.local?.behind}`),
-              ),
-            )
-            .when(Boolean(b.pr), (el: El) => {
-              const pr = b.pr as BranchPr;
-              return el.child(
-                h_flex()
-                  .id(`pr-${b.id}`)
-                  .flex_none()
-                  .gap(4)
-                  .px(6)
-                  .h(20)
-                  .items_center()
-                  .rounded(5)
-                  .bg(t.surface)
-                  .text_size(11.5)
-                  .text_color(pr.draft ? t.dim : t.accent)
-                  .cursor_pointer()
-                  .hover((s: El) => s.bg(t.hover))
-                  .on_mouse_down("left", stopPress)
-                  .tooltip(`${pr.draft ? "Draft: " : ""}${pr.title}`)
-                  .on_click((_e: unknown, cx: Cx) => {
-                    cx.stop_propagation();
-                    void openUrl(pr.url);
-                  })
-                  .child(
-                    svg(asset(pr.provider === "forgejo" ? "forgejo" : "pull-request")).size(11),
-                  )
-                  .child(`#${pr.number}`),
-              );
-            })
-            .when(Boolean(b.web), (el: El) =>
-              el.child(
-                iconButton(
-                  `web-${b.id}`,
-                  asset("external"),
-                  "Open the branch on the web",
-                  (_e, cx) => {
-                    cx.stop_propagation();
-                    void openUrl(b.web as string);
-                  },
-                  { size: 22, iconSize: 12 },
-                ),
-              ),
+                .text_size(TEXT.xs)
+                .text_color(t.muted)
+                .child([b.subject, b.date ? ago(b.date) : ""].filter(Boolean).join(" · ")),
             ),
-        )
-        .when(Boolean(b.subject), (el: El) =>
-          el.child(
-            div()
-              .pl(20)
-              .min_w(0)
-              .truncate()
-              .text_size(11.5)
-              .text_color(t.dim)
-              .child([b.subject, b.date ? ago(b.date) : ""].filter(Boolean).join(" · ")),
           ),
-        )
-    );
+      )
+      .when((b.local?.ahead ?? 0) > 0, (el: El) =>
+        el.child(this.delta("arrow-up", b.local?.ahead as number, t.ansi2)),
+      )
+      .when((b.local?.behind ?? 0) > 0, (el: El) =>
+        el.child(this.delta("arrow-down", b.local?.behind as number, t.blocked)),
+      )
+      .when(Boolean(b.pr), (el: El) => {
+        const pr = b.pr as BranchPr;
+        return el.child(
+          badge(`#${pr.number}`, {
+            id: `pr-${b.id}`,
+            variant: "secondary",
+            tone: pr.draft ? t.muted : undefined,
+            mono: true,
+            icon:
+              pr.provider === "forgejo"
+                ? "forgejo"
+                : pr.draft
+                  ? "git-pull-request-draft"
+                  : "git-pull-request",
+            tooltip: `${pr.draft ? "Draft: " : ""}${pr.title}`,
+            onClick: (_e: unknown, cx: Cx) => {
+              cx.stop_propagation();
+              void openUrl(pr.url);
+            },
+          }),
+        );
+      })
+      .when(Boolean(b.web), (el: El) =>
+        el.child(
+          button(`web-${b.id}`, {
+            icon: "external-link",
+            size: "icon-xs",
+            tooltip: "Open the branch on the web",
+            onClick: (_e, cx) => {
+              cx.stop_propagation();
+              void openUrl(b.web as string);
+            },
+          }),
+        ),
+      );
   }
 }

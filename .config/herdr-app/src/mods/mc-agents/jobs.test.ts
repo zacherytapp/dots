@@ -67,8 +67,11 @@ test("job records parse from the reader's blocks, skipping a half-written one", 
       tokens: 197091,
     },
   );
-  assert.equal(jobStatus("blocked"), "blocked");
-  assert.equal(jobStatus("stopped"), "idle");
+  assert.equal(jobStatus(job({ state: "blocked" }), NOW), "blocked");
+  assert.equal(jobStatus(job({ state: "stopped" }), NOW), "idle");
+  assert.equal(jobStatus(job({ state: "working" }), NOW), "working");
+  // Left "working" for hours: died without closing out, so no endless spinner.
+  assert.equal(jobStatus(job({ state: "working", updated: NOW - 3 * 3600000 }), NOW), "idle");
 });
 
 test("a pane finds its job by folder and title, else the only open job there", () => {
@@ -280,8 +283,8 @@ test("a Claude pane's state: waiting for you from its job, working and idle from
   assert.equal(liveStatus("◐ Fix login", done), "working");
   assert.equal(liveStatus("✳ Fix login", working), "idle");
   // No mark in the title: the job decides.
-  assert.equal(liveStatus("Fix login", working), "working");
-  assert.equal(liveStatus("Fix login", null), "idle");
+  assert.equal(liveStatus("Fix login", working, NOW), "working");
+  assert.equal(liveStatus("Fix login", null, NOW), "idle");
 });
 
 test("a pane in a parent folder with a renamed tab takes its job and reads its spinner", () => {

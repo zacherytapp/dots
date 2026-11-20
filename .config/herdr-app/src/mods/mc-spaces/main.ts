@@ -7,7 +7,7 @@
 // read every 15 s and fetched every 5 min in the background, and its agents' state as mc-agents
 // publishes it: working (spinner), waiting for you (red), finished unseen (green), idle (ring).
 
-import { div, svg, View, type Cx, type El } from "gpui-kit";
+import { div, View, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex, InputState } from "gpui-base";
 import {
   exec,
@@ -29,19 +29,28 @@ import {
 import { spaceAgents, urgent, type SpaceAgents } from "../../shared/space-agents.ts";
 import { KEYS, NODES } from "../../shared/sources.ts";
 import {
-  asset,
-  chromeIcon,
-  iconButton,
+  avatar,
+  button,
+  dot,
+  groupLabel,
+  ICON,
+  icon,
+  MONO,
+  menuBadge,
+  menuButton,
+  RADIUS,
   searchBox,
-  sectionHeader,
+  separator,
   SPACE_MARKS,
   spaceFill,
+  spinner,
   statusMark,
+  TEXT,
   type Theme,
 } from "../../shared/ui.ts";
 import { findNode, matches, parseJson, stepIn } from "../../shared/util.ts";
 import { backoff, BATCH_SCRIPT, describe, FETCH_SCRIPT, parseBatch, type GitState } from "./git.ts";
-import { GROUP, PAD, ROW, SEARCH, targetHeight } from "./size.ts";
+import { PAD, ROW, SEARCH, targetHeight } from "./size.ts";
 
 const GIT_MS = 15000;
 const FETCH_MS = 5 * 60000;
@@ -305,31 +314,25 @@ export default class Spaces extends View {
     });
   }
 
-  /** The git chips on a row: ↓ to pull, ↑ to push, ● uncommitted changes. */
+  /** The git badges on a row: arrow-down to pull, arrow-up to push, a dot for uncommitted changes. */
   gitChips(t: Theme, s: SpaceInfo): El | null {
     const g = this.git.get(s.id);
     if (!g) return null;
     const dirty = g.changed + g.untracked;
     if (!g.ahead && !g.behind && !dirty) return null;
-    const chip = (text: string, color: string) =>
-      div().flex_none().text_size(11).font_semibold().text_color(color).child(text);
     return h_flex()
       .id(`space-git-${s.id}`)
       .flex_none()
-      .gap(5)
+      .gap(2)
       .items_center()
       .tooltip(describe(g))
-      .when(g.behind > 0, (el: El) => el.child(chip(`↓${g.behind}`, t.ansi4 ?? t.accent)))
-      .when(g.ahead > 0, (el: El) => el.child(chip(`↑${g.ahead}`, t.ansi2 ?? t.done)))
-      .when(dirty > 0, (el: El) =>
-        el.child(
-          div()
-            .size(6)
-            .flex_none()
-            .rounded(3)
-            .bg(t.ansi3 ?? t.working),
-        ),
-      );
+      .when(g.behind > 0, (el: El) =>
+        el.child(menuBadge(String(g.behind), t.ansi4 ?? t.accent, "arrow-down")),
+      )
+      .when(g.ahead > 0, (el: El) =>
+        el.child(menuBadge(String(g.ahead), t.ansi2 ?? t.done, "arrow-up")),
+      )
+      .when(dirty > 0, (el: El) => el.child(dot(t.ansi3 ?? t.working)));
   }
 
   /**
@@ -355,7 +358,7 @@ export default class Spaces extends View {
     return h_flex()
       .id(`space-agents-${s.id}`)
       .flex_none()
-      .gap(3)
+      .gap(4)
       .items_center()
       .tooltip(`Agents: ${tip}`)
       .when(!shown.length, (el: El) => el.child(statusMark("idle", true)))
@@ -368,8 +371,9 @@ export default class Spaces extends View {
             .when(n > 1, (el: El) =>
               el.child(
                 div()
-                  .text_size(10.5)
-                  .text_color(t[status] ?? t.dim)
+                  .font_family(MONO)
+                  .text_size(TEXT.xs)
+                  .text_color(t[status] ?? t.muted)
                   .child(String(n)),
               ),
             ),
@@ -473,18 +477,10 @@ export default class Spaces extends View {
     const index = all.findIndex((x) => x.id === s.id);
     const branch = s.branch && !["main", "master", s.name].includes(s.branch) ? s.branch : "";
     const hovered = this.hovered === s.id;
-    return h_flex()
-      .id(`space-${s.id}`)
+    return menuButton(`space-${s.id}`, { active: on })
       .relative()
       .h(ROW)
       .flex_none()
-      .px(8)
-      .gap(9)
-      .items_center()
-      .rounded(8)
-      .cursor_pointer()
-      .when(on, (el: El) => el.bg(t.selected))
-      .when(!on, (el: El) => el.hover((st: El) => st.bg(t.hover)))
       .when(this.pressed === s.id && this.over !== s.id, (el: El) => el.opacity(0.5))
       .when(dragging, (el: El) =>
         el.child(
@@ -525,34 +521,17 @@ export default class Spaces extends View {
         cx.notify();
       })
       .on_mouse_down("right", () => this.menu(s))
-      .child(
-        h_flex()
-          .size(20)
-          .flex_none()
-          .rounded(5)
-          .bg(fill)
-          .items_center()
-          .justify_center()
-          .text_size(11)
-          .font_bold()
-          .text_color("#ffffff")
-          .child([...s.name][0]?.toUpperCase() ?? "?"),
-      )
-      .child(
-        div()
-          .min_w(0)
-          .max_w(150)
-          .truncate()
-          .text_color(on ? t.foreground : t.muted)
-          .child(s.name),
-      )
+      .child(avatar([...s.name][0] ?? "?", fill))
+      .child(div().min_w(0).max_w(150).truncate().child(s.name))
       .child(
         div()
           .flex_1()
           .min_w(0)
           .truncate()
-          .text_size(11.5)
-          .text_color(t.dim)
+          .font_family(MONO)
+          .font_normal()
+          .text_size(TEXT.xs)
+          .text_color(t.muted)
           .when(Boolean(branch), (el: El) => el.child(branch)),
       )
       .children(
@@ -560,16 +539,24 @@ export default class Spaces extends View {
       )
       .when(hovered, (el: El) =>
         el.child(
-          iconButton(
-            `space-more-${s.id}`,
-            asset("more"),
-            "Space menu",
-            (_e, cx) => {
-              cx.stop_propagation();
-              this.menu(s);
-            },
-            { size: 22, iconSize: 14 },
-          ),
+          // Over the row's right edge, so the content doesn't shift on hover.
+          h_flex()
+            .absolute()
+            .right(4)
+            .top(3)
+            .rounded(RADIUS.md)
+            .bg(on ? t.selected : t.hover)
+            .child(
+              button(`space-more-${s.id}`, {
+                icon: "ellipsis",
+                tooltip: "Space menu",
+                size: "icon-xs",
+                onClick: (_e, cx) => {
+                  cx.stop_propagation();
+                  this.menu(s);
+                },
+              }),
+            ),
         ),
       );
   }
@@ -584,112 +571,71 @@ export default class Spaces extends View {
     const info = this.machineList.find((m) => m.name === machine);
     const connected = !machine || info?.state === "connected";
     const folded = this.folded.has(key);
-    return h_flex()
-      .id(`machine-${machine ?? "local"}`)
-      .h(GROUP)
-      .flex_none()
-      .px(8)
-      .gap(7)
-      .items_center()
-      .text_size(11.5)
-      .text_color(t.dim)
-      .cursor_pointer()
-      .hover((s: El) => s.text_color(t.muted))
-      .on_click((_e: unknown, cx: Cx) => {
+    const state = (info?.state ?? "offline").replace(/_/g, " ");
+    const note = (text: string) => div().flex_none().text_color(t.muted).child(text);
+    return groupLabel(`machine-${machine ?? "local"}`, machine ?? "This computer", {
+      count,
+      open: !folded,
+      leading: icon(machine ? "server" : "monitor", ICON.sm),
+      onToggle: (cx) => {
         if (folded) {
           this.folded.delete(key);
           this.refreshGit(cx);
         } else this.folded.add(key);
         localStorage.setItem("machines.folded", JSON.stringify([...this.folded]));
         cx.notify();
-      })
-      .child(
-        svg(chromeIcon(folded ? "chevron-right" : "chevron-down"))
-          .size(11)
-          .flex_none(),
-      )
-      .child(
-        svg(chromeIcon(machine ? "server" : "monitor"))
-          .size(12)
-          .flex_none(),
-      )
-      .child(
-        div()
-          .min_w(0)
-          .truncate()
-          .child(machine ?? "This computer"),
-      )
-      .child(div().flex_none().child(String(count)))
-      .child(div().flex_1())
-      .when(!connected, (el: El) =>
-        el.child(
-          div()
-            .flex_none()
-            .child((info?.state ?? "offline").replace(/_/g, " ")),
-        ),
-      )
-      .when(connected && layoutState === "loading", (el: El) =>
-        el.child(div().flex_none().child("loading…")),
-      )
-      .when(connected && this.loadingGit.has(key), (el: El) =>
-        el.child(svg(chromeIcon("spinner")).size(10).flex_none().text_color(t.dim).spin(900)),
-      )
-      .when(connected, (el: El) =>
-        el.child(
-          iconButton(
-            `machine-new-${machine ?? "local"}`,
-            chromeIcon("plus"),
-            `New space on ${machine ?? "this computer"}`,
-            (_e, cx) => {
-              cx.stop_propagation();
-              run("space.new", { machine: machine ?? "" });
-            },
-            { size: 20, iconSize: 12 },
-          ),
-        ),
-      )
-      .child(
-        div()
+      },
+      trailing: [
+        ...(!connected ? [note(state)] : []),
+        ...(connected && layoutState === "loading" ? [note("loading…")] : []),
+        ...(connected && this.loadingGit.has(key) ? [spinner(ICON.xs, t.muted)] : []),
+        ...(connected
+          ? [
+              button(`machine-new-${machine ?? "local"}`, {
+                icon: "plus",
+                tooltip: `New space on ${machine ?? "this computer"}`,
+                size: "icon-xs",
+                onClick: (_e, cx) => {
+                  cx.stop_propagation();
+                  run("space.new", { machine: machine ?? "" });
+                },
+              }),
+            ]
+          : []),
+        dot(connected ? (t.ansi2 ?? t.done) : t.muted)
           .id(`machine-state-${machine ?? "local"}`)
-          .size(6)
-          .rounded(3)
-          .flex_none()
-          .bg(connected ? t.ansi2 : t.dim)
-          .tooltip(
-            connected
-              ? machine
-                ? "Connected"
-                : "This computer"
-              : `${(info?.state ?? "offline").replace(/_/g, " ")}`,
-          ),
-      );
+          .tooltip(connected ? (machine ? "Connected" : "This computer") : state),
+      ],
+    });
   }
 
-  compact(t: Theme, list: SpaceInfo[], counts: Record<string, SpaceAgents> | null): El {
+  compact(
+    t: Theme,
+    list: SpaceInfo[],
+    colors: Record<string, string>,
+    counts: Record<string, SpaceAgents> | null,
+  ): El {
     return v_flex()
       .size_full()
       .bg(t.chrome)
-      .pt(6)
-      .text_size(12.5)
+      .p(4)
+      .gap(2)
       .children(
-        list.map((s, i) =>
+        list.map((s) =>
           h_flex()
             .id(`space-${s.id}`)
-            .h(26)
+            .h(32)
             .flex_none()
             .justify_center()
             .items_center()
             .gap(4)
+            .rounded(RADIUS.md)
             .cursor_pointer()
             .when(s.active, (el: El) => el.bg(t.selected))
-            .hover((st: El) => st.bg(t.hover))
+            .when(!s.active, (el: El) => el.hover((st: El) => st.bg(t.hover)))
             .on_click(() => run("space.select", { id: s.id }))
             .tooltip(s.machine ? `${s.name} · ${s.machine}` : s.name)
-            .child(
-              div()
-                .text_color(s.active ? t.foreground : t.muted)
-                .child(String(i + 1)),
-            )
+            .child(avatar([...s.name][0] ?? "?", spaceFill(t, colors[s.id] ?? "ansi6")))
             .child(statusMark(counts ? urgent(counts[s.id]) : s.status, true)),
         ),
       );
@@ -703,7 +649,7 @@ export default class Spaces extends View {
     const agentCounts = spaceAgents();
     const countsOf = (id: string): SpaceAgents | null =>
       agentCounts ? (agentCounts[id] ?? { working: 0, blocked: 0, done: 0, idle: 0 }) : null;
-    if (narrow(root)) return this.compact(t, all, agentCounts);
+    if (narrow(root)) return this.compact(t, all, colors, agentCounts);
 
     const open = !this.spacesFolded();
     const query = this.search.value();
@@ -724,10 +670,10 @@ export default class Spaces extends View {
     if (!shown.length) {
       rows.push(
         div()
-          .px(10)
+          .px(8)
           .py(6)
-          .text_size(12)
-          .text_color(t.dim)
+          .text_size(TEXT.xs)
+          .text_color(t.muted)
           .child(query ? "No space matches." : "No spaces yet."),
       );
       rowCount += 1;
@@ -739,7 +685,7 @@ export default class Spaces extends View {
       .size_full()
       .min_h(0)
       .bg(t.chrome)
-      .text_size(13)
+      .text_size(TEXT.sm)
       .on_size_change((size: { height: number }, cx: Cx) => {
         if (Math.abs(size.height - this.height) >= 1) {
           this.height = size.height;
@@ -752,23 +698,28 @@ export default class Spaces extends View {
         cx.notify();
       })
       .child(
-        sectionHeader(
-          "spaces-header",
-          "Spaces",
-          all.length,
-          open,
-          (cx) => {
-            setShared(KEYS.spacesFolded, open);
-            // Unfolded: read git now rather than at the next tick (folded skips it).
-            if (!open) cx.timer.after(50, (cx) => this.refreshGit(cx));
-          },
-          [
-            iconButton("space-new", chromeIcon("plus"), "New space", () => run("space.new"), {
-              size: 24,
-              iconSize: 14,
+        div()
+          .flex_none()
+          .px(8)
+          .child(
+            groupLabel("spaces-header", "Spaces", {
+              count: all.length,
+              open,
+              onToggle: (cx) => {
+                setShared(KEYS.spacesFolded, open);
+                // Unfolded: read git now rather than at the next tick (folded skips it).
+                if (!open) cx.timer.after(50, (cx) => this.refreshGit(cx));
+              },
+              trailing: [
+                button("space-new", {
+                  icon: "plus",
+                  tooltip: "New space",
+                  size: "icon-xs",
+                  onClick: () => run("space.new"),
+                }),
+              ],
             }),
-          ],
-        ),
+          ),
       )
       .when(open, (el: El) =>
         el
@@ -776,7 +727,7 @@ export default class Spaces extends View {
             h_flex()
               .flex_none()
               .h(SEARCH)
-              .px(10)
+              .px(8)
               .pb(8)
               .child(searchBox("space-search", this.search)),
           )
@@ -785,7 +736,7 @@ export default class Spaces extends View {
               .id("space-list")
               .flex_1()
               .min_h(0)
-              .px(6)
+              .px(8)
               .pb(PAD)
               .gap(2)
               .overflow_y_scrollbar()

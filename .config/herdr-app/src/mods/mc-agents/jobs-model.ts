@@ -56,9 +56,16 @@ export function touchesState(paths: string[], root: string): boolean {
   return paths.some((p) => p.replace(/\/+$/, "") === base || p.endsWith("/state.json"));
 }
 
-export function jobStatus(state: string): Status {
-  if (state === "working") return "working";
-  if (state === "blocked") return "blocked";
+/**
+ * A working job rewrites its record every few seconds, and a long command still finishes well
+ * within this. A job left "working" longer than that died without closing out (its process was
+ * killed, or its session was resumed elsewhere), so it counts as idle, not as a spinner forever.
+ */
+export const STALE_WORKING = 60 * 60000;
+
+export function jobStatus(job: Pick<Job, "state" | "updated">, now: number): Status {
+  if (job.state === "working") return now - job.updated < STALE_WORKING ? "working" : "idle";
+  if (job.state === "blocked") return "blocked";
   return "idle";
 }
 

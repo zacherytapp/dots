@@ -2,7 +2,7 @@
 // columns when the panel is wide, or stacked groups when it is narrow. Each card links to the
 // tracker and starts an agent on the issue in the right space.
 
-import { div, image, svg, type Cx, type El } from "gpui-kit";
+import { div, type Cx, type El } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { knownAgents, type Program } from "herdr";
 import {
@@ -27,13 +27,20 @@ import {
 } from "./launch.ts";
 import { ListView } from "./list-view.ts";
 import {
-  alpha,
-  asset,
-  chromeIcon,
-  countChip,
-  iconButton,
-  statusMark,
-  stopPress,
+  agentIcon,
+  badge,
+  button,
+  card,
+  dot,
+  groupLabel,
+  icon,
+  ICON,
+  metaLine,
+  MONO,
+  spinner,
+  tabsList,
+  tabsTrigger,
+  TEXT,
   type Theme,
 } from "./ui.ts";
 import { ago } from "./util.ts";
@@ -83,6 +90,7 @@ export function useIssueActions(cx: Cx): IssueAction[] {
   return issueActions;
 }
 
+/** The agent's icon as a ghost icon button: resume, start or review with it. */
 export function agentButton(
   id: string,
   tooltip: string,
@@ -90,25 +98,12 @@ export function agentButton(
   program: Program | null,
   t: Theme,
 ): El {
-  const icon = program?.icon
-    ? program.tint
-      ? svg(program.icon).size(15).text_color(t.foreground)
-      : image(program.icon).size(15)
-    : svg(asset("agent")).size(15).text_color(t.foreground);
-  return div()
-    .id(id)
-    .size(26)
-    .flex_none()
-    .flex()
-    .items_center()
-    .justify_center()
-    .rounded(6)
-    .cursor_pointer()
-    .hover((s: El) => s.bg(t.hover))
-    .on_mouse_down("left", stopPress)
-    .on_click(onClick)
-    .tooltip(tooltip)
-    .child(icon);
+  return button(id, {
+    icon: agentIcon(program, ICON.md, t.foreground),
+    tooltip,
+    onClick,
+    size: "icon-sm",
+  });
 }
 
 export class BoardView extends ListView<BoardItem> {
@@ -133,19 +128,21 @@ export class BoardView extends ListView<BoardItem> {
 
   subbar(t: Theme, items: BoardItem[]): El {
     const counts = countByColumn(items);
-    const chip = (id: Filter, label: string) =>
-      countChip(`filter-${id}`, label, counts[id], this.filter === id, (cx) => {
-        this.filter = id;
-        cx.notify();
+    const tab = (id: Filter, label: string) =>
+      tabsTrigger(`filter-${id}`, {
+        label,
+        count: counts[id],
+        active: this.filter === id,
+        onClick: (cx) => {
+          this.filter = id;
+          cx.notify();
+        },
       });
     return h_flex()
       .flex_none()
-      .px(14)
-      .pt(10)
-      .gap(4)
-      .items_center()
-      .child(chip("all", "All"))
-      .children(COLUMNS.map((c) => chip(c.id, c.label)));
+      .px(12)
+      .pt(8)
+      .child(tabsList([tab("all", "All"), ...COLUMNS.map((c) => tab(c.id, c.label))]));
   }
 
   body(t: Theme, items: BoardItem[], cx: Cx): El {
@@ -168,7 +165,7 @@ export class BoardView extends ListView<BoardItem> {
         .id("board")
         .flex_1()
         .min_h(0)
-        .px(14)
+        .px(12)
         .gap(12)
         .items_start()
         .overflow_y_scrollbar()
@@ -179,7 +176,7 @@ export class BoardView extends ListView<BoardItem> {
               .flex_1()
               .min_w(0)
               .gap(8)
-              .pb(14)
+              .pb(12)
               .child(this.groupHeader(t, c.label, c.tone, mine.length))
               .children(mine.map(card));
           }),
@@ -191,7 +188,7 @@ export class BoardView extends ListView<BoardItem> {
       .flex_1()
       .min_h(0)
       .px(12)
-      .pb(14)
+      .pb(12)
       .gap(8)
       .overflow_y_scrollbar()
       .children(
@@ -204,45 +201,28 @@ export class BoardView extends ListView<BoardItem> {
   }
 
   groupHeader(t: Theme, label: string, tone: string, count: number): El {
-    return h_flex()
-      .flex_none()
-      .h(26)
-      .pt(4)
-      .gap(7)
-      .items_center()
-      .text_size(12.5)
-      .text_color(t.muted)
-      .child(
-        div()
-          .size(6)
-          .rounded(3)
-          .bg(t[tone] ?? t.dim),
-      )
-      .child(label)
-      .child(div().text_size(11).text_color(t.dim).child(String(count)));
+    return groupLabel(`group-${label}`, label, {
+      count,
+      leading: dot(t[tone] ?? t.dim),
+    });
   }
 
   card(t: Theme, item: BoardItem, all: boolean, acts: ActionContext): El {
     const labels = item.labels ?? [];
-    return v_flex()
+    return card()
       .id(`card-${item.id}`)
       .flex_none()
-      .p(12)
-      .gap(8)
-      .rounded(9)
-      .border(1)
-      .border_color(t.border)
-      .bg(t.surface)
       .hover((s: El) => s.border_color(t.input))
       .child(
         h_flex()
           .gap(8)
           .items_center()
-          .text_size(12)
+          .text_size(TEXT.xs)
           .child(
             div()
               .id(`key-${item.id}`)
               .flex_none()
+              .font_family(MONO)
               .text_color(t.accent)
               .cursor_pointer()
               .hover((s: El) => s.underline())
@@ -255,7 +235,7 @@ export class BoardView extends ListView<BoardItem> {
               .child(item.key),
           )
           .when(all && Boolean(item.where), (el: El) =>
-            el.child(div().min_w(0).truncate().text_color(t.dim).child(item.where)),
+            el.child(div().min_w(0).truncate().text_color(t.muted).child(item.where)),
           )
           .child(div().flex_1())
           .when(Boolean(item.priority), (el: El) =>
@@ -271,7 +251,8 @@ export class BoardView extends ListView<BoardItem> {
       .child(
         div()
           .id(`title-${item.id}`)
-          .text_size(13.5)
+          .text_size(TEXT.md)
+          .font_medium()
           .text_color(t.foreground)
           .cursor_pointer()
           .hover((s: El) => s.underline())
@@ -284,9 +265,9 @@ export class BoardView extends ListView<BoardItem> {
             .gap(4)
             .flex_wrap()
             .when(Boolean(item.milestone), (row: El) =>
-              row.child(milestoneChip(t, item.milestone as string)),
+              row.child(milestoneChip(item.id, item.milestone as string)),
             )
-            .children(labels.map((l) => labelChip(t, l, item.labelColors?.[l]))),
+            .children(labels.map((l) => labelChip(l, item.labelColors?.[l]))),
         ),
       )
       .when(hasWork(item), (el: El) => el.child(workRow(t, item)))
@@ -295,39 +276,32 @@ export class BoardView extends ListView<BoardItem> {
         h_flex()
           .gap(4)
           .items_center()
-          .text_size(11.5)
-          .text_color(t.dim)
-          .when(Boolean(item.assignees?.length), (el: El) =>
-            el.child(
-              div()
-                .min_w(0)
-                .truncate()
-                .child(`${(item.assignees ?? []).join(", ")} ·`),
-            ),
+          .child(
+            metaLine([
+              item.assignees?.length ? (item.assignees ?? []).join(", ") : null,
+              ago(item.updated),
+            ]),
           )
-          .child(div().flex_none().child(ago(item.updated)))
           .child(div().flex_1())
           .when((item.comments ?? 0) > 0, (el: El) =>
             el.child(
-              indicator(
-                `comments-${item.id}`,
-                asset("comment"),
-                String(item.comments),
-                t.muted,
-                `${item.comments} ${item.comments === 1 ? "comment" : "comments"}`,
-                item.url,
-                t,
-              ),
+              badge(String(item.comments), {
+                variant: "ghost",
+                mono: true,
+                icon: "message-square",
+                id: `comments-${item.id}`,
+                tooltip: `${item.comments} ${item.comments === 1 ? "comment" : "comments"}`,
+                onClick: () => void openUrl(item.url),
+              }),
             ),
           )
           .child(
-            iconButton(
-              `open-${item.id}`,
-              asset("external"),
-              "Open in browser",
-              () => void openUrl(item.url),
-              { iconSize: 13 },
-            ),
+            button(`open-${item.id}`, {
+              icon: "external-link",
+              tooltip: "Open in browser",
+              size: "icon-xs",
+              onClick: () => void openUrl(item.url),
+            }),
           ),
       );
   }
@@ -342,118 +316,52 @@ function columnColor(t: Theme, item: BoardItem): string {
 
 /** The tracker's own status word ("Open", "In Review"), tinted by its column. Never shrinks. */
 function statusPill(t: Theme, item: BoardItem): El {
-  const color = columnColor(t, item);
-  return h_flex()
-    .flex_none()
-    .h(18)
-    .px(7)
-    .gap(5)
-    .items_center()
-    .rounded(9)
-    .bg(alpha(color, "24"))
-    .text_size(11)
-    .text_color(color)
-    .child(div().size(6).rounded(3).bg(color))
-    .child(item.status);
+  return badge(item.status ?? "", { tone: columnColor(t, item), dot: columnColor(t, item) });
 }
 
 /** The milestone an issue is planned for. */
-function milestoneChip(t: Theme, name: string): El {
-  return h_flex()
-    .flex_none()
-    .h(18)
-    .px(6)
-    .gap(4)
-    .items_center()
-    .rounded(5)
-    .border(1)
-    .border_color(t.border)
-    .text_size(11)
-    .text_color(t.muted)
-    .tooltip(`Milestone: ${name}`)
-    .child(svg(chromeIcon("pin")).size(11).flex_none())
-    .child(name);
+function milestoneChip(id: string, name: string): El {
+  return badge(name, {
+    icon: "milestone",
+    id: `milestone-${id}`,
+    tooltip: `Milestone: ${name}`,
+  });
 }
 
-/** A label, in the tracker's color when it has one. */
-function labelChip(t: Theme, name: string, color: string | undefined): El {
+/** A label, with a dot in the tracker's color when it has one. */
+function labelChip(name: string, color: string | undefined): El {
   const known = Boolean(color && /^#[0-9a-f]{6}$/i.test(color));
-  return h_flex()
-    .flex_none()
-    .h(18)
-    .px(6)
-    .gap(5)
-    .items_center()
-    .rounded(5)
-    .bg(alpha(known ? color : t.accent, known ? "2e" : "1f"))
-    .when(known, (el: El) => el.border(1).border_color(alpha(color, "66")))
-    .text_size(11)
-    .text_color(t.foreground)
-    .when(known, (el: El) =>
-      el.child(
-        div()
-          .size(7)
-          .rounded(4)
-          .bg(color as string),
-      ),
-    )
-    .child(name);
+  return badge(name, { dot: known ? color : undefined });
 }
 
 function hasWork(item: BoardItem): boolean {
   return Boolean(item.pulls?.length || item.branches?.length);
 }
 
-/** A clickable icon + text indicator. */
-function indicator(
-  id: string,
-  icon: string,
-  text: string,
-  color: string,
-  tooltip: string,
-  url: string | null,
-  t: Theme,
-  trailing: El | null = null,
-): El {
-  return h_flex()
-    .id(id)
-    .flex_none()
-    .min_w(0)
-    .max_w(220)
-    .h(20)
-    .px(6)
-    .gap(4)
-    .items_center()
-    .rounded(5)
-    .text_color(color)
-    .tooltip(tooltip)
-    .when(Boolean(url), (el: El) =>
-      el
-        .cursor_pointer()
-        .hover((s: El) => s.bg(t.hover))
-        .on_mouse_down("left", stopPress)
-        .on_click(() => void openUrl(url as string)),
-    )
-    .child(svg(icon).size(12).flex_none())
-    .child(div().min_w(0).truncate().child(text))
-    .when(Boolean(trailing), (el: El) => el.child(trailing as El));
-}
-
-const CHECKS: Record<string, { icon: string; tone: string; say: string }> = {
-  passing: { icon: "check", tone: "ansi2", say: "checks passing" },
-  failing: { icon: "x", tone: "blocked", say: "checks failing" },
-  pending: { icon: "clock", tone: "working", say: "checks running" },
+export const CHECKS: Record<
+  string,
+  { icon: "circle-check" | "circle-x" | "loader-circle"; tone: string; say: string }
+> = {
+  passing: { icon: "circle-check", tone: "ansi2", say: "checks passing" },
+  failing: { icon: "circle-x", tone: "blocked", say: "checks failing" },
+  pending: { icon: "loader-circle", tone: "working", say: "checks running" },
 };
 
-/** A pull request's checks as a small tinted glyph, or null when it has none. */
-function checksGlyph(t: Theme, checks: string | undefined): El | null {
+/** A pull request's checks as a tinted status icon (spinning while running), or null with none. */
+export function checksIcon(
+  t: Theme,
+  checks: string | undefined,
+  size: number = ICON.xs,
+): El | null {
   const c = checks ? CHECKS[checks] : undefined;
-  return c
-    ? svg(chromeIcon(c.icon))
-        .size(11)
-        .flex_none()
-        .text_color(t[c.tone] ?? t.muted)
-    : null;
+  if (!c) return null;
+  const color = t[c.tone] ?? t.muted;
+  return c.icon === "loader-circle" ? spinner(size, color) : icon(c.icon, size, color);
+}
+
+/** The pull request glyph: Lucide's draft variant for drafts. */
+export function prIcon(draft: boolean | undefined, size: number = ICON.xs, color?: string): El {
+  return icon(draft ? "git-pull-request-draft" : "git-pull-request", size, color);
 }
 
 /** What every card's action row needs, read once per render. */
@@ -472,54 +380,38 @@ function actionRow(
   item: BoardItem,
   { actions, main, tabs, sessions }: ActionContext,
 ): El {
-  const fallback = agentProgram;
-  const lead = main ?? fallback;
+  const lead = main ?? agentProgram;
   const who = lead?.name ?? "the agent";
   return h_flex()
     .gap(4)
     .flex_wrap()
     .items_center()
-    .child(
-      lead?.icon
-        ? (lead.tint ? svg(lead.icon).size(14).text_color(t.muted) : image(lead.icon).size(14))
-            .flex_none()
-            .mr(2)
-        : svg(asset("agent")).size(14).flex_none().mr(2).text_color(t.muted),
-    )
+    .child(agentIcon(lead, ICON.sm, t.muted).mr(2))
     .children(
       actions.map((a, i) => {
         const name = actionTabName(a, item);
         const tab = tabs.has(name);
         const open = tab || sessions.has(name);
         const starting = isPending(name);
-        return h_flex()
-          .id(`action-${i}-${item.id}`)
-          .flex_none()
-          .h(22)
-          .px(8)
-          .gap(5)
-          .items_center()
-          .rounded(6)
-          .border(1)
-          .border_color(open ? t.working : t.border)
-          .text_size(11.5)
-          .text_color(t.muted)
-          .cursor_pointer()
-          .hover((s: El) => s.bg(t.hover).text_color(t.foreground))
-          .on_mouse_down("left", stopPress)
-          .on_click((_e: unknown, cx: Cx) => trackPending(name, cx, () => runIssueAction(a, item)))
-          .tooltip(
-            starting
-              ? `Starting "${name}"…`
-              : tab
-                ? `Show the "${name}" tab`
-                : open
-                  ? `"${name}" is running in the background: open it from Agents`
-                  : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
-          )
-          .when(starting, (el: El) => el.child(statusMark("working")))
-          .child(a.label)
-          .when(open && !starting, (el: El) => el.child(div().size(5).rounded(3).bg(t.working)));
+        return button(`action-${i}-${item.id}`, {
+          label: a.label,
+          variant: "outline",
+          size: "xs",
+          tone: open ? t.working : t.muted,
+          icon: starting
+            ? spinner(ICON.xs, t.working)
+            : open
+              ? dot(t.working, { size: 5 })
+              : undefined,
+          tooltip: starting
+            ? `Starting "${name}"…`
+            : tab
+              ? `Show the "${name}" tab`
+              : open
+                ? `"${name}" is running in the background: open it from Agents`
+                : `New ${a.agent ?? who} session running the ${a.skill} skill on ${item.url}`,
+          onClick: (_e, cx) => trackPending(name, cx, () => runIssueAction(a, item)),
+        });
       }),
     );
 }
@@ -528,44 +420,50 @@ function actionRow(
 function workRow(t: Theme, item: BoardItem): El {
   const pulls = item.pulls ?? [];
   const branches = item.branches ?? [];
-  const els: El[] = pulls
-    .slice(0, 3)
-    .map((p) =>
-      indicator(
-        `pr-${item.id}-${p.number}`,
-        asset("pull-request"),
-        p.draft ? `Draft #${p.number}` : `PR #${p.number}`,
-        p.draft ? t.muted : t.ansi2,
-        [
-          `${p.draft ? "Draft pull request" : "Open pull request"} #${p.number}: ${p.title}`,
-          p.checks && CHECKS[p.checks] ? CHECKS[p.checks].say : null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-        p.url,
-        t,
-        checksGlyph(t, p.checks),
-      ),
-    );
-  if (pulls.length > 3)
+  const els: El[] = pulls.slice(0, 3).map((p) => {
+    const checks = checksIcon(t, p.checks);
+    const glyph = h_flex()
+      .gap(4)
+      .items_center()
+      .child(prIcon(p.draft))
+      .when(Boolean(checks), (el: El) => el.child(checks as El));
+    return badge(p.draft ? `Draft #${p.number}` : `PR #${p.number}`, {
+      tone: p.draft ? undefined : t.ansi2,
+      variant: "outline",
+      mono: true,
+      icon: glyph,
+      id: `pr-${item.id}-${p.number}`,
+      tooltip: [
+        `${p.draft ? "Draft pull request" : "Open pull request"} #${p.number}: ${p.title}`,
+        p.checks && CHECKS[p.checks] ? CHECKS[p.checks].say : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      onClick: () => void openUrl(p.url),
+    });
+  });
+  if (pulls.length > 3) {
     els.push(
       div()
         .flex_none()
+        .text_size(TEXT.xs)
+        .text_color(t.muted)
         .child(`+${pulls.length - 3}`),
     );
+  }
   if (branches.length) {
     const [first] = branches;
     els.push(
-      indicator(
-        `branch-${item.id}`,
-        chromeIcon("git-branch"),
-        branches.length === 1 ? first.name : `${branches.length} branches`,
-        t.ansi5 ?? t.accent,
-        `Open ${branches.length === 1 ? "branch" : "branches"} on the remote: ${branches.map((b) => b.name).join(", ")}`,
-        first.url,
-        t,
-      ),
+      badge(branches.length === 1 ? first.name : `${branches.length} branches`, {
+        tone: t.ansi5 ?? t.accent,
+        variant: "outline",
+        mono: true,
+        icon: "git-branch",
+        id: `branch-${item.id}`,
+        tooltip: `Open ${branches.length === 1 ? "branch" : "branches"} on the remote: ${branches.map((b) => b.name).join(", ")}`,
+        onClick: first.url ? () => void openUrl(first.url as string) : undefined,
+      }),
     );
   }
-  return h_flex().gap(4).flex_wrap().items_center().text_size(11.5).ml(-6).children(els);
+  return h_flex().gap(4).flex_wrap().items_center().children(els);
 }

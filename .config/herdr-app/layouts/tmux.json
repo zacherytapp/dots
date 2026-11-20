@@ -56,7 +56,7 @@
           "id": "sidebar",
           "type": "column",
           "size": {
-            "px": 268
+            "px": 256
           },
           "min": 44,
           "max": 480,
