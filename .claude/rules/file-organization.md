@@ -8,6 +8,6 @@ When working in a project under `~/Projects` (or the legacy `~/projects`), excep
   - `.tmp/`: scratch work, debug or one-off test scripts, logs, command output (git-ignored)
   - `.worktrees/`: Worktrees should go in a root-level folder
 - Keep temporary files inside the project's `.tmp/` rather than `/tmp` or another system temp directory. This applies to shell redirects and heredocs too, not just the Write tool.
-- Standard root files (README, LICENSE, CLAUDE.md, AGENTS.md, manifests, config files, entrypoints) are fine where they belong.
+- Standard root files (README, LICENSE, CLAUDE.md, AGENTS.md, GLOSSARY.md, manifests, config files, entrypoints) are fine where they belong.
 
 The `organize-guard.ts` PreToolUse hook enforces this for Write. If it blocks a file that really belongs at the root, ask the user to add a glob to `<project>/.claude/organize.allow`.

@@ -12,7 +12,7 @@ Synthesize what is already known: the conversation, the codebase, the glossary, 
 
 ## Process
 
-1. **Gather.** Reread the conversation. Explore the code the feature touches, the glossary (`docs/glossary.md` or the project's equivalent), and ADRs. Use glossary terms throughout; respect ADRs or call out the conflict.
+1. **Gather.** Reread the conversation. Explore the code the feature touches, the glossary (`GLOSSARY.md`, or the contexts in `GLOSSARY-MAP.md`), and ADRs. Use glossary terms throughout; respect ADRs or call out the conflict.
 2. **Size it big.** One spec covers the whole feature or coherent change, across every surface it touches. Split into separate specs only when the parts ship and deliver value independently.
 3. **Pick the test seam.** Prefer the highest existing seam that exercises the feature through its public behavior; the ideal is one. List only the behaviors that prove the user stories work.
 4. **Write** with [SPEC_TEMPLATE.md](SPEC_TEMPLATE.md). Keep every section; write `None` where a section has nothing.

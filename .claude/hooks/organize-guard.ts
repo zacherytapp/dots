@@ -74,6 +74,8 @@ const ROOT_DOCS = [
   "contributors",
   "maintainers",
   "governance",
+  "glossary", // domain-modeling skill
+  "glossary-map",
 ].flatMap((name) => [name, `${name}.*`]);
 
 /** Root files that are always fine (matched case-insensitively against the name). */

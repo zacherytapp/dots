@@ -45,7 +45,7 @@ Use the tracker the user names. Otherwise inspect `git remote -v`: `gh` for GitH
 ### 2. Gather context
 
 - **Issues:** body, comments, labels, author, dates, and links for each. Parse prior triage notes and don't re-ask settled questions.
-- **Project:** `README`, `AGENTS.md`/`CLAUDE.md`, the glossary and ADRs under `docs/`, package scripts and task runners, CI config, recent commits, and open PRs (in-flight work).
+- **Project:** `README`, `AGENTS.md`/`CLAUDE.md`, `GLOSSARY.md` and the ADRs under `docs/adr/`, package scripts and task runners, CI config, recent commits, and open PRs (in-flight work).
 - **Per issue:** (a) **redundancy**: search the codebase by domain concept for an existing implementation and note where you looked; (b) **prior rejection**: match against `.out-of-scope/*.md`; (c) **verify**: reproduce a bug from its steps, or for a PR check out the diff and run the relevant tests. Record confirmed (with code path), failed, or insufficient detail.
 - **Across issues:** note duplicates, overlaps, shared decisions, and blocking edges.
 - **Open loops:** for each issue, list every decision an agent would otherwise guess at: behavior, scope, UX, interfaces, data shape, priority, ordering against other issues, and conflicts with the current project. Settle each from code, docs, and prior discussion where you can; what remains is the issue's open loops.

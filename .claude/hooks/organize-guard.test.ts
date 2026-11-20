@@ -125,6 +125,7 @@ describe("review fixes", () => {
       "CHANGELOG.md",
       "LICENSE-MIT",
       "CONTRIBUTING.md",
+      "GLOSSARY.md",
     ]) {
       assert.equal(check(join(app, name)), null, name);
     }
